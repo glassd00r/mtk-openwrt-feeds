@@ -30,6 +30,7 @@
 struct mtk_crypto;
 
 extern struct mtk_crypto mcrypto;
+extern int mac_filter_enable;
 
 #define TRANSFORM_RECORD_LEN		64
 #define EIP197_SMALL_TR			2

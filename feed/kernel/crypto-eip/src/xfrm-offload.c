@@ -132,9 +132,14 @@ static int mtk_xfrm_offload_cls_entry_setup(struct mtk_xfrm_params *xfrm_params)
 
 	cdesc = &xfrm_params->cdrt->cls->cdesc;
 
-	ppe_port = mtk_crypto_ppe_get_num(xs->xso.dev);
-	CLS_DESC_DATA(cdesc, fport, ppe_port);
-	CLS_DESC_DATA(cdesc, tport_idx, 0x2);
+	if (mac_filter_enable) {
+		CLS_DESC_DATA(cdesc, fport, PSE_PORT_TDMA);
+		CLS_DESC_DATA(cdesc, tport_idx, 0x3);
+	} else {
+		ppe_port = mtk_crypto_ppe_get_num(xs->xso.dev);
+		CLS_DESC_DATA(cdesc, fport, ppe_port);
+		CLS_DESC_DATA(cdesc, tport_idx, 0x2);
+	}
 	CLS_DESC_DATA(cdesc, cdrt_idx, xfrm_params->cdrt->idx);
 
 	if (xs->encap) {
