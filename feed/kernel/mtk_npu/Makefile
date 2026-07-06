@@ -31,6 +31,16 @@ define Build/Prepare
 	$(CP) ./src/* $(PKG_BUILD_DIR)/
 endef
 
+define Build/InstallDev
+	$(INSTALL_DIR) $(STAGING_DIR)/usr/include/npu
+	$(CP) $(PKG_BUILD_DIR)/inc/* $(STAGING_DIR)/usr/include/npu/
+	$(CP) $(PKG_BUILD_DIR)/protocol/inc/* $(STAGING_DIR)/usr/include/npu/
+	$(CP) $(PKG_BUILD_DIR)/npu-dpdk/inc/* $(STAGING_DIR)/usr/include/npu/
+	$(CP) $(PKG_BUILD_DIR)/npu-flow/inc/* $(STAGING_DIR)/usr/include/npu/
+	$(CP) $(PKG_BUILD_DIR)/npu-nf_hnat/inc/* $(STAGING_DIR)/usr/include/npu/
+	$(CP) $(PKG_BUILD_DIR)/npu-mcast/inc/* $(STAGING_DIR)/usr/include/npu/
+endef
+
 define Build/Compile
 	$(MAKE) -C "$(LINUX_DIR)" \
 		$(KERNEL_MAKE_FLAGS) \
