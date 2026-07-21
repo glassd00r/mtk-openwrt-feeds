@@ -3,6 +3,8 @@
 # Copyright (C) 2024 MediaTek Inc. All rights reserved.
 #
 
+. ${ab_global}/loglevel.sh
+
 list_add_after $(hooks autobuild_prepare) platform_change_kernel_config filogic_change_kernel_config
 list_add_after $(hooks autobuild_prepare) filogic_change_kernel_config change_kernel_flowoffload_conf
 list_add_after $(hooks autobuild_prepare) filogic_change_kernel_config change_kernel_security_config
