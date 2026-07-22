@@ -34,6 +34,11 @@ enable_kasan_kernel() {
 	kernel_config_enable CONFIG_FRAME_WARN 4096
 }
 
+# Source extra kernel_debug rules, EXTERNAL builds don't ship kernel_debug.sh
+if [ -n "${internal_build}" ] && [ -f "${ab_root}/global-dev/kernel_debug.sh" ]; then
+	. "${ab_root}/global-dev/kernel_debug.sh"
+fi
+
 if test x"${kasan_set}" == x"yes"; then
 	list_add_before $(hooks autobuild_prepare) make_defconfig enable_kasan_openwrt
 	list_add_after $(hooks autobuild_prepare) variant_change_kernel_config enable_kasan_kernel
