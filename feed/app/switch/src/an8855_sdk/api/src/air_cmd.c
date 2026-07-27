@@ -1320,7 +1320,9 @@ _str2ipv6(
          */
         for (idx = double_colon_pos; idx < last_pos; idx++)
         {
-            ptr_addr[16 - (last_pos - idx)] = tmp_ipv6[idx];
+            /* add check to avoid Coverity error reported for the access to ptr_addr[16] */
+            if ((last_pos - idx) > 0)
+                ptr_addr[16 - (last_pos - idx)] = tmp_ipv6[idx];
         }
     }
     else
@@ -1423,7 +1425,7 @@ _getIpv6Str(
     const AIR_IPV6_T *ptr_ipv6,
     C8_T *ptr_str)
 {
-    UI32_T idx = 0, next = 0, last = 16;
+    UI32_T idx = 0, next = 0, last = 15;
     UI32_T cont_zero = 0;
     int ret;
 

@@ -285,7 +285,6 @@ _findDIP6Entry(
         aml_writeReg(unit, ATC, u32dat);
     }
 
-    return AIR_E_OK;
 }
 
 /* STATIC VARIABLE DECLARATIONS
