@@ -32,6 +32,8 @@ enable_kasan_kernel() {
 	kernel_config_disable CONFIG_TEST_KASAN
 	kernel_config_enable CONFIG_SLUB_DEBUG
 	kernel_config_enable CONFIG_FRAME_WARN 4096
+	kernel_config_enable CONFIG_SLUB_RCU_DEBUG
+	kernel_config_enable CONFIG_KASAN_EXTRA_INFO
 }
 
 # Source extra kernel_debug rules, EXTERNAL builds don't ship kernel_debug.sh
