@@ -15,16 +15,150 @@ do_cmd() {
     echo ""
 }
 
+# ---- get_uboot_env_emmc ---------------------------------------------------
+# Corresponds to `uci show ubootenv`: extract dev offset envsize secsize
+# numsec and join them into a config string in order.
+get_uboot_env_emmc() {
+	e_dev=''; e_offset=''; e_envsize=''; e_secsize=''; e_numsec=''
+	while IFS= read -r line; do
+		case "$line" in
+			ubootenv.*=*)
+				key=${line%%=*}
+				key=${key##*.}
+				val=${line#*=}
+				val=${val#\'}; val=${val%\'}
+				case "$key" in
+					dev)     e_dev=$val ;;
+					offset)  e_offset=$val ;;
+					envsize) e_envsize=$val ;;
+					secsize) e_secsize=$val ;;
+					numsec)  e_numsec=$val ;;
+				esac
+				;;
+		esac
+	done <<-EOF
+	$(uci show ubootenv 2>/dev/null)
+	EOF
+
+	config=''
+	for v in "$e_dev" "$e_offset" "$e_envsize" "$e_secsize" "$e_numsec"; do
+		[ -n "$v" ] || continue
+		if [ -n "$config" ]; then
+			config="$config $v"
+		else
+			config="$v"
+		fi
+	done
+
+	[ -n "$config" ] || return 1
+	printf '%s' "$config"
+}
+
+# ---- get_uboot_env_ubi ----------------------------------------------------
+# $1: ubi part_num, $2: flash_sector_size
+# Scan /sys/class/ubi/ubi<N>/ubi<N>_* for volumes whose name contains ubootenv
+get_uboot_env_ubi() {
+	part_num=$1
+	flash_sector_size=$2
+	config=''
+
+	for p in $(ls "/sys/class/ubi/ubi${part_num}" 2>/dev/null | grep "ubi${part_num}_"); do
+		name=$(cat "/sys/class/ubi/ubi${part_num}/${p}/name" 2>/dev/null)
+		case "$name" in
+			*ubootenv*)
+				# Handle redundant ubootenv (ubootenv, ubootenv2) multi-line case
+				if [ -n "$config" ]; then
+					config="$config
+/dev/${p} 0x0000 0x20000 ${flash_sector_size}"
+				else
+					config="/dev/${p} 0x0000 0x20000 ${flash_sector_size}"
+				fi
+				;;
+		esac
+	done
+
+	[ -n "$config" ] || return 1
+	printf '%s' "$config"
+}
+
+# ---- get_uboot_env --------------------------------------------------------
+get_uboot_env() {
+	if [ -e /dev/mmcblk0 ]; then
+		get_uboot_env_emmc
+		return $?
+	fi
+
+	uboot_line=$(grep '"u-boot-env"' /proc/mtd 2>/dev/null)
+	ubi_line=$(grep '"ubi"' /proc/mtd 2>/dev/null)
+
+	if [ -z "$uboot_line" ]; then
+		# Full UBI
+		[ -n "$ubi_line" ] || return 1
+		# e.g. mtd5: 07f80000 00020000 "ubi"
+		part_num=$(echo "$ubi_line" | sed -n 's/^mtd\([0-9]*\):.*/\1/p')
+		size2=$(echo "$ubi_line" | awk '{print $3}')
+		[ -n "$part_num" ] && [ -n "$size2" ] || return 1
+		get_uboot_env_ubi "$part_num" "0x$size2"
+		return $?
+	else
+		# NMBM
+		# e.g. mtd0: 00080000 00020000 "u-boot-env"
+		partition=$(echo "$uboot_line" | awk -F: '{print $1}')
+		size2=$(echo "$uboot_line" | awk '{print $3}')
+		[ -n "$partition" ] && [ -n "$size2" ] || return 1
+		printf '/dev/%s 0x0000 0x20000 0x%s' "$partition" "$size2"
+		return 0
+	fi
+}
+
+# ---- gen_fw_env_config ----------------------------------------------------
+gen_fw_env_config() {
+	config=$(get_uboot_env)
+	[ -n "$config" ] || return 1
+	echo "$config" > /etc/fw_env.config
+	return 0
+}
+
+# ---- get_bootfile ---------------------------------------------------------
+get_bootfile() {
+	config_generated=0
+
+	if [ ! -e /etc/fw_env.config ]; then
+		gen_fw_env_config || return 1
+		config_generated=1
+	fi
+
+	bootfile=$(fw_printenv bootfile 2>/dev/null)
+	case "$bootfile" in
+		*bootfile=*) ;;
+		*)
+			# Might have bad CRC, generate our own fw_env.config
+			if [ "$config_generated" = "1" ]; then
+				return 1
+			fi
+			gen_fw_env_config || return 1
+			bootfile=$(fw_printenv bootfile 2>/dev/null)
+			case "$bootfile" in
+				*bootfile=*) ;;
+				*) return 1 ;;
+			esac
+			;;
+	esac
+
+	# Print the output returned by `fw_printenv bootfile`
+	echo "$bootfile"
+	return 0
+}
+
 dump_board_info() {
+    echo "command timeout: $command_timeout"
     # get bootfile name
-    part=$(cat /proc/mtd | grep "u-boot-env" | cut -d ":" -f 1)
-    part_size=$(cat /proc/mtd | grep "u-boot-env" | cut -d " " -f 3)
-    echo "/dev/${part} 0x0000 0x20000 0x${part_size}" > /etc/fw_env.config
-    do_cmd "fw_printenv bootfile"
+    do_cmd "get_bootfile"
 
     do_cmd "uname -a"
     do_cmd "lspci"
     do_cmd "cat /sys/kernel/debug/ieee80211/phy0/mt76/fw_version"
+    do_cmd "cat /sys/kernel/debug/ieee80211/phy0/mt76/eeprom_mode"
     do_cmd "cat /etc/config/wireless"
     do_cmd "cat /etc/config/network"
     do_cmd "iw dev"
@@ -34,12 +168,7 @@ dump_board_info() {
 dump_link_sta_info() {
     local phy="/sys/kernel/debug/ieee80211/phy0"
 
-    iw dev | awk '
-    $1 == "Interface" {iface=$2}
-    $1 == "type" {print iface, $2}
-    ' | while read iface type; do
-        [ "$type" = "AP" ] || continue
-
+    ls $phy | grep netdev | awk -F ':' '{print $2}'| while read iface; do
         local base="${phy}/netdev:${iface}"
         [ -d "$base" ] || { echo "[skip] ${base} not found"; continue; }
 
@@ -101,11 +230,29 @@ dump_connection_info() {
     done
 }
 
+dump_per_vif_sta_info() {
+    for i in /sys/kernel/debug/ieee80211/phy0/*/stations/; do
+        iface=${i#*netdev:}
+        iface=${iface%%/*}
+        echo
+        echo -e "\033[1m$iface:\033[0m"
+        ls -1 $i
+        echo $iface total station count: `ls $i | wc -l`
+    done
+}
+
+dump_fw_timestamp() {
+    echo 0x820eb37c > /sys/kernel/debug/ieee80211/phy0/mt76/regidx
+    val=$(($(cat /sys/kernel/debug/ieee80211/phy0/mt76/regval)))
+    echo "${val%??????}.${val#${val%??????}} (1~2s tolerance)"
+}
+
 dump_token_info() {
     do_cmd "cat /sys/kernel/debug/ieee80211/phy0/mt76/token"
 }
 
 dump_ple_info() {
+    echo $command_timeout > /sys/kernel/debug/ieee80211/phy0/mt76/ple_query_cr
     do_cmd "cat /sys/kernel/debug/ieee80211/phy0/mt76/ple_info"
 }
 
@@ -131,11 +278,19 @@ dump_twt_info() {
 }
 
 dump_ser_status() {
-    do_cmd "echo 0 > /sys/kernel/debug/ieee80211/phy0/mt76/band0/sys_recovery" # FW
-    do_cmd "cat /sys/kernel/debug/ieee80211/phy0/mt76/band0/sys_recovery" # Driver
+    local phy="/sys/kernel/debug/ieee80211/phy0"
+
+    if [ "$command_timeout" = "0" ]
+    then
+        do_cmd "echo 0 > $phy/mt76/band0/sys_recovery" # FW
+        sleep 1
+        dmesg | tail -n 200 | grep 'ieee80211 phy0: WM'
+    fi
+    do_cmd "cat $phy/mt76/band0/sys_recovery" # Driver
 }
 
 dump_sta_info() {
+    echo $command_timeout > /sys/kernel/debug/ieee80211/phy0/mt76/wtbl_query_cr
     do_cmd "cat /sys/kernel/debug/ieee80211/phy0/mt76/sta_info"
 }
 
@@ -159,7 +314,9 @@ dump_wed_cfg() {
 }
 
 per_10_min_work() {
-    dump_connection_info
+    do_cmd "dump_fw_timestamp"
+    [ "$command_timeout" = "0" ] && do_cmd "dump_connection_info"
+    do_cmd "dump_per_vif_sta_info"
     dump_sta_info
 
     local i=0
@@ -194,7 +351,7 @@ per_60_min_work() {
     while [ $i -lt $max ]
     do
         dump_wm_info
-	dump_wed_cfg
+        dump_wed_cfg
 
         true $(( i++ ))
         sleep 1
@@ -202,11 +359,18 @@ per_60_min_work() {
 }
 
 counter=0
-
+command_timeout=0
+[ $(dmesg | grep -c -e 'Message .* (seq.*) timeout' \
+                    -e 'Failed to send scs mcu cmd' \
+                    -e 'Failed to update noise floor') -gt 3 ] && command_timeout=1
 dump_board_info
 
 while true; do
     echo "===== $(date '+%Y-%m-%d %H:%M:%S') ====="
+    command_timeout=0
+    [ $(dmesg | grep -c -e 'Message .* (seq.*) timeout' \
+                        -e 'Failed to send scs mcu cmd' \
+                        -e 'Failed to update noise floor') -gt 3 ] && command_timeout=1
     # works for every 10-minute
     per_10_min_work
 
