@@ -2226,6 +2226,9 @@ hnat_skip_fill_inner:
 	hnat_foe_entry_commit(foe, &entry, BIND);
 	spin_unlock(&hnat_priv->entry_lock);
 
+	if (debug_level >= 7)
+		entry_detail(skb_hnat_ppe(skb), skb_hnat_entry(skb));
+
 	if (hnat_priv->data->per_flow_accounting &&
 	    skb_hnat_entry(skb) < hnat_priv->foe_etry_num &&
 	    skb_hnat_ppe(skb) < CFG_PPE_NUM)
@@ -3075,6 +3078,9 @@ hnat_entry_bind:
 	hnat_foe_entry_commit(foe, &entry, BIND);
 	spin_unlock_bh(&hnat_priv->entry_lock);
 
+	if (debug_level >= 7)
+		entry_detail(skb_hnat_ppe(skb), skb_hnat_entry(skb));
+
 	if (hnat_bind_callback && IS_HNAT_API_SUPPORTED(&entry))
 		hnat_trigger_callback(hnat_bind_callback, skb);
 
@@ -3429,6 +3435,9 @@ int mtk_sw_nat_hook_tx(struct sk_buff *skb, int gmac_no)
 	hnat_foe_entry_commit(hw_entry, &entry, BIND);
 	spin_unlock_bh(&hnat_priv->entry_lock);
 
+	if (debug_level >= 7)
+		entry_detail(skb_hnat_ppe(skb), skb_hnat_entry(skb));
+
 	if (hnat_bind_callback && IS_HNAT_API_SUPPORTED(&entry))
 		hnat_trigger_callback(hnat_bind_callback, skb);
 
@@ -3450,48 +3459,6 @@ int mtk_sw_nat_hook_tx(struct sk_buff *skb, int gmac_no)
 			skb_hnat_wc_id(skb), skb_hnat_entry(skb),
 			skb_hnat_sport(skb));
 
-		if (IS_IPV4_GRP(&entry)) {
-			pr_info("%s %d dp:%d rxid:%d tid:%d uinfo:%d bssid:%d wcid:%d hsh-idx:%d sp:%d\n",
-				__func__, __LINE__,
-				(hw_entry->ipv4_hnapt.iblk2.dp),
-				(hw_entry->ipv4_hnapt.iblk2.rxid),
-				(hw_entry->ipv4_hnapt.winfo_pao.tid),
-				(hw_entry->ipv4_hnapt.winfo_pao.usr_info),
-				(hw_entry->ipv4_hnapt.winfo.bssid),
-				(hw_entry->ipv4_hnapt.winfo.wcid),
-				skb_hnat_entry(skb), skb_hnat_sport(skb));
-			pr_info("%s %d dip:%x sip:%x dp:%x sp:%x hsh-idx:%d\n",
-				__func__, __LINE__,
-				hw_entry->ipv4_hnapt.dip, hw_entry->ipv4_hnapt.sip,
-				hw_entry->ipv4_hnapt.dport, hw_entry->ipv4_hnapt.sport,
-				skb_hnat_entry(skb));
-			pr_info("%s %d new_dip:%x new_sip:%x new_dp:%x new_sp:%x hsh-idx:%d\n",
-				__func__, __LINE__,
-				hw_entry->ipv4_hnapt.new_dip, hw_entry->ipv4_hnapt.new_sip,
-				hw_entry->ipv4_hnapt.new_dport,
-				hw_entry->ipv4_hnapt.new_sport, skb_hnat_entry(skb));
-		} else {
-			pr_info("%s %d dp:%d rxid:%d tid:%d uinfo:%d bssid:%d wcid:%d hidx:%d sp:%d\n",
-				__func__, __LINE__,
-				(hw_entry->ipv6_5t_route.iblk2.dp),
-				(hw_entry->ipv6_5t_route.iblk2.rxid),
-				(hw_entry->ipv6_5t_route.winfo_pao.tid),
-				(hw_entry->ipv6_5t_route.winfo_pao.usr_info),
-				(hw_entry->ipv6_5t_route.winfo.bssid),
-				(hw_entry->ipv6_5t_route.winfo.wcid),
-				skb_hnat_entry(skb), skb_hnat_sport(skb));
-			pr_info("sip:%x-:%x-:%x-:%x dip0:%x-:%x-:%x-:%x dport:%x sport:%x\n",
-				hw_entry->ipv6_5t_route.ipv6_sip0,
-				hw_entry->ipv6_5t_route.ipv6_sip1,
-				hw_entry->ipv6_5t_route.ipv6_sip2,
-				hw_entry->ipv6_5t_route.ipv6_sip3,
-				hw_entry->ipv6_5t_route.ipv6_dip0,
-				hw_entry->ipv6_5t_route.ipv6_dip1,
-				hw_entry->ipv6_5t_route.ipv6_dip2,
-				hw_entry->ipv6_5t_route.ipv6_dip3,
-				hw_entry->ipv6_5t_route.dport,
-				hw_entry->ipv6_5t_route.sport);
-		}
 	}
 #endif
 	return NF_ACCEPT;
