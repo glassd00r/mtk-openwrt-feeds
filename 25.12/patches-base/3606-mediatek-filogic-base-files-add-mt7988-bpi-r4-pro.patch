@@ -1,0 +1,24 @@
+Subject: [PATCH] mediatek-filogic-base-files-add-mt7988-bpi-r4-pro
+
+Change-Id: Ie64c082ae8181b3aba44713924a925b355b3b120
+---
+ .../linux/mediatek/filogic/base-files/etc/board.d/02_network   | 3 +++
+ 1 file changed, 3 insertions(+)
+
+diff --git a/target/linux/mediatek/filogic/base-files/etc/board.d/02_network b/target/linux/mediatek/filogic/base-files/etc/board.d/02_network
+index f13ef9f..cffdd95 100644
+--- a/target/linux/mediatek/filogic/base-files/etc/board.d/02_network
++++ b/target/linux/mediatek/filogic/base-files/etc/board.d/02_network
+@@ -226,6 +226,9 @@ mediatek_setup_interfaces()
+ 	bananapi,bpi-r4-poe)
+ 		ucidef_set_interfaces_lan_wan "lan1 lan2 lan3 lan4" "wan sfp-wan"
+ 		;;
++	bananapi,bpi-r4-pro)
++		ucidef_set_interfaces_lan_wan "lan1 lan2 lan3 lan4 lan5 lan6" wan
++		;;
+ 	comfast,cf-e393ax)
+ 		ucidef_set_interfaces_lan_wan "lan1" eth1
+ 		;;
+-- 
+2.45.2
+
