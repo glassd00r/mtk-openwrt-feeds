@@ -1354,8 +1354,10 @@ mtk_hnat_ipv4_nf_pre_routing(void *priv, struct sk_buff *skb,
 	if (skb_hnat_tops(skb) && skb_hnat_is_decap(skb) &&
 	    is_magic_tag_valid(skb) &&
 	    skb_hnat_iface(skb) == FOE_MAGIC_GE_VIRTUAL &&
-	    mtk_tnl_decap_offload && !mtk_tnl_decap_offload(skb))
+	    mtk_tnl_decap_offload && !mtk_tnl_decap_offload(skb)) {
+		hnat_set_head_frags(state, skb, 1, hnat_set_alg);
 		return NF_ACCEPT;
+	}
 
 	/*
 	 * Avoid mistakenly binding of outer IP, ports in SW L2TP decap flow.
@@ -1489,8 +1491,10 @@ mtk_hnat_br_nf_local_in(void *priv, struct sk_buff *skb,
 	if (skb_hnat_tops(skb) && skb_hnat_is_decap(skb) &&
 	    is_magic_tag_valid(skb) &&
 	    skb_hnat_iface(skb) == FOE_MAGIC_GE_VIRTUAL &&
-	    mtk_tnl_decap_offload && !mtk_tnl_decap_offload(skb))
+	    mtk_tnl_decap_offload && !mtk_tnl_decap_offload(skb)) {
+		hnat_set_head_frags(state, skb, 1, hnat_set_alg);
 		return NF_ACCEPT;
+	}
 
 	if (hnat_bridge_flood_check(skb, state->in) < 0)
 		return NF_ACCEPT;
