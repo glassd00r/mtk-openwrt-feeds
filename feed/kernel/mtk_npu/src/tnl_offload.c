@@ -344,7 +344,7 @@ struct npu_cls_entry *mtk_npu_tnl_info_cls_entry_alloc(struct npu_tnl_info *tnl_
 	}
 
 	INIT_LIST_HEAD(&tcls->node);
-	list_add_tail(&tnl_info->tnl_type->tcls_head, &tcls->node);
+	list_add_tail(&tcls->node, &tnl_info->tnl_type->tcls_head);
 
 	tnl_info->tcls = tcls;
 	refcount_set(&tcls->refcnt, 1);

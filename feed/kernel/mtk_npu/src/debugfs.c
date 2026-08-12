@@ -56,6 +56,9 @@ static void debugfs_tnl_info_cls_destroy(struct npu_tnl_info *tnl_info)
 {
 	struct npu_cls_entry *tcls = tnl_info->tcls;
 
+	if (!tcls)
+		return;
+
 	memset(&tcls->cls->cdesc, 0, sizeof(tcls->cls->cdesc));
 }
 

@@ -122,6 +122,9 @@ static void mtk_npu_flow_tnl_info_cls_destroy(struct npu_tnl_info *tnl_info)
 	struct npu_tnl_params *tnl_params = &tnl_info->tnl_params;
 	struct npu_cls_entry *tcls = tnl_info->tcls;
 
+	if (!tcls)
+		return;
+
 	if (!tnl_params->cdrt_idx)
 		memset(&tcls->cls->cdesc, 0, sizeof(tcls->cls->cdesc));
 	else {
