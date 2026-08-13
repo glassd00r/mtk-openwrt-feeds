@@ -7,7 +7,7 @@ Change-Id: Ia459434bacf894df9e5543e8647b45d7470393e9
 
 --- a/target/linux/mediatek/filogic/base-files/etc/board.d/02_network
 +++ b/target/linux/mediatek/filogic/base-files/etc/board.d/02_network
-@@ -3,6 +3,124 @@
+@@ -3,6 +3,132 @@
  . /lib/functions/uci-defaults.sh
  . /lib/functions/system.sh
  
@@ -82,7 +82,9 @@ Change-Id: Ia459434bacf894df9e5543e8647b45d7470393e9
 +    # Iterate over each compatible property for external dsa switch
 +    for dir in $dsa_base_path; do
 +        if [ -d "$dir" ]; then
-+            read compatible status < <(check_compatible_status "$dir")
++            set -- $(check_compatible_status "$dir")
++            compatible="$1"
++            status="$2"
 +
 +            if [ "$compatible" = "airoha,an8855-mfd" ] && [ "$status" = "okay" ]; then
 +                dts_is_dsa=1
@@ -97,7 +99,9 @@ Change-Id: Ia459434bacf894df9e5543e8647b45d7470393e9
 +    # Iterate over each compatible property for built-in mt7531-dsa
 +    for dir in $mt7531_dsa_base_path; do
 +        if [ -d "$dir" ]; then
-+            read compatible status < <(check_compatible_status "$dir")
++            set -- $(check_compatible_status "$dir")
++            compatible="$1"
++            status="$2"
 +
 +            if [ "$compatible" = "mediatek,mt7988-switch" ] && [ "$status" = "okay" ]; then
 +                dts_is_dsa=1
@@ -108,7 +112,9 @@ Change-Id: Ia459434bacf894df9e5543e8647b45d7470393e9
 +    # Iterate over each compatible property for an8855-gsw and mt7531-gsw
 +    for dir in $gsw_base_path; do
 +        if [ -d "$dir" ]; then
-+            read compatible status < <(check_compatible_status "$dir")
++            set -- $(check_compatible_status "$dir")
++            compatible="$1"
++            status="$2"
 +
 +            case $compatible in
 +                airoha,an8855|\
@@ -121,8 +127,10 @@ Change-Id: Ia459434bacf894df9e5543e8647b45d7470393e9
 +        fi
 +    done
 +
-+	# Sanity check for both dsa and gsw is true, always configure it to dsa
-+    if [ "$dts_is_gsw" -gt 0 ] && [ "$dts_is_dsa" -eq 0 ]; then
++    # Sanity check for both dsa and gsw is true, always configure it to dsa
++    if [ "$dts_is_gsw" -eq 0 ] && [ "$dts_is_dsa" -eq 0 ]; then
++        echo "sw_is_none"
++    elif [ "$dts_is_gsw" -gt 0 ] && [ "$dts_is_dsa" -eq 0 ]; then
 +        echo "sw_is_gsw"
 +    else
 +        echo "sw_is_dsa"
@@ -132,15 +140,12 @@ Change-Id: Ia459434bacf894df9e5543e8647b45d7470393e9
  mediatek_setup_interfaces()
  {
  	local board="$1"
-@@ -133,8 +251,29 @@ mediatek_setup_interfaces()
+@@ -186,8 +306,28 @@ mediatek_setup_interfaces()
  	mediatek,mt7986b-rfb)
  		ucidef_set_interfaces_lan_wan "lan0 lan1 lan2 lan3 lan4" eth1
  		;;
 -	mediatek,mt7988a-rfb)
 -		ucidef_set_interfaces_lan_wan "lan0 lan1 lan2 lan3 eth2" eth1
-+	mediatek,mt7987a-spim-nand-cob*)
-+		ucidef_set_interfaces_lan_wan "eth0 eth2" eth1
-+		;;
 +	mediatek,mt7987*|\
 +	mediatek,mt7988*)
 +		local sys_switch=$(mediatek_get_switch_type)
@@ -153,14 +158,16 @@ Change-Id: Ia459434bacf894df9e5543e8647b45d7470393e9
 +			fi
 +		else
 +			ucidef_set_interfaces_lan_wan "eth0 eth2" eth1
-+			if [ "$sys_mt7531_p5" = "p5_exist" ]; then
-+				ucidef_add_switch "switch0" \
-+					"0:lan" "1:lan" "2:lan" "3:lan" "5:lan" "6u@eth0"
-+			else
-+				ucidef_add_switch "switch0" \
-+					"0:lan" "1:lan" "2:lan" "3:lan" "6u@eth0"
++			if [ "$sys_switch" = "sw_is_gsw" ]; then
++				if [ "$sys_mt7531_p5" = "p5_exist" ]; then
++					ucidef_add_switch "switch0" \
++						"0:lan" "1:lan" "2:lan" "3:lan" "5:lan" "6u@eth0"
++				else
++					ucidef_add_switch "switch0" \
++						"0:lan" "1:lan" "2:lan" "3:lan" "6u@eth0"
++				fi
 +			fi
 +		fi
  		;;
- 	mercusys,mr90x-v1|\
- 	mercusys,mr90x-v1-ubi)
+ 	mercusys,mr85x)
+ 		ucidef_add_switch "switch0" "0:lan0" "1:lan1" "2:lan2" "6@eth0"
