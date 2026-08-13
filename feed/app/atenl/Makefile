@@ -33,10 +33,12 @@ TARGET_CFLAGS += -lblkid
 
 define Package/atenl/install
 	mkdir -p $(1)/usr/sbin
+	mkdir -p $(1)/lib/atenl
 	$(INSTALL_BIN) $(PKG_BUILD_DIR)/atenl $(1)/usr/sbin
 	$(INSTALL_BIN) ./files/ated.sh $(1)/usr/sbin/ated
 	$(INSTALL_BIN) ./files/iwpriv.sh $(1)/usr/sbin/iwpriv
 	$(INSTALL_BIN) ./files/iwpriv.sh $(1)/usr/sbin/mwctl
+	$(INSTALL_DATA) ./files/utils.sh $(1)/lib/atenl/utils.sh
 endef
 
 $(eval $(call BuildPackage,atenl))
