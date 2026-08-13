@@ -15,10 +15,10 @@ Signed-off-by: Rex Lu <rex.lu@mediatek.com>
   */
  
 +&pcie0 {
-+	slot0: pcie@0,0 {
++	pcie@0,0 {
 +		reg = <0x0000 0 0 0 0>;
 +
-+		mt7996@0,0 {
++		wifi@0,0 {
 +			option_type = <2>;
 +		};
 +	};
