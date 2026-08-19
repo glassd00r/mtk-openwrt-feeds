@@ -233,6 +233,42 @@ static int mtk_npu_mcast_network_params_is_exist(struct npu_mcast_grp *grp)
 	return -EINVAL;
 }
 
+static bool mtk_npu_mcast_daddr_map_ip(struct npu_mcast_addr *addr, u8 *mac)
+{
+	u8 expect[ETH_ALEN];
+
+	if (!ipv4_is_multicast(addr->ip_addr))
+		return false;
+
+	ip_eth_mc_map(addr->ip_addr, expect);
+
+	return ether_addr_equal(mac, expect);
+}
+
+static bool mtk_npu_mcast_daddr_map_ipv6(struct npu_mcast_addr *addr, u8 *mac)
+{
+	u8 expect[ETH_ALEN];
+
+	if (!ipv6_addr_is_multicast(&addr->ipv6_addr))
+		return false;
+
+	ipv6_eth_mc_map(&addr->ipv6_addr, expect);
+
+	return ether_addr_equal(mac, expect);
+}
+
+static bool mtk_npu_mcast_daddr_is_mapped_from_ip(struct npu_mcast_addr *dst,
+						  enum npu_mcast_addr_type type,
+						  struct npu_mcast_client_params *cp)
+{
+	if (type == NPU_MCAST_ADDR_TYPE_IP)
+		return mtk_npu_mcast_daddr_map_ip(dst, cp->daddr);
+	else if (type == NPU_MCAST_ADDR_TYPE_IPV6)
+		return mtk_npu_mcast_daddr_map_ipv6(dst, cp->daddr);
+
+	return false;
+}
+
 static void mtk_npu_mcast_network_params_setup(struct npu_mcast_grp *grp,
 					       struct npu_mcast_addr *src,
 					       struct npu_mcast_addr *dst,
@@ -573,6 +609,17 @@ unlock:
 	return ret;
 }
 
+static bool mtk_npu_mcast_client_dest_cmp(const struct npu_mcast_client_params *c1,
+					  const struct npu_mcast_client_params *c2)
+{
+	bool res = !memcmp(c1->daddr, c2->daddr, ETH_ALEN);
+
+	if (c1->dest != c2->dest)
+		return false;
+
+	return res && (c1->dest == NPU_MCAST_DEST_SWITCH ? c1->dsa_port == c2->dsa_port : true);
+}
+
 static struct npu_mcast_client_params *
 mtk_npu_mcast_client_find(struct npu_mcast_grp *grp,
 			  struct npu_mcast_client_params *client_param)
@@ -581,12 +628,12 @@ mtk_npu_mcast_client_find(struct npu_mcast_grp *grp,
 	u32 i;
 
 	for (i = 0; i < grp->params.client_num && i < NPU_MCAST_CLIENT_MAX; i++) {
-		if (!memcmp(grp->params.clients[i].daddr, client_param->daddr, ETH_ALEN))
+		if (mtk_npu_mcast_client_dest_cmp(&grp->params.clients[i], client_param))
 			return &grp->params.clients[i];
 	}
 
 	list_for_each_entry(client, &grp->excess_clients, node) {
-		if (!memcmp(client->params->daddr, client_param->daddr, ETH_ALEN))
+		if (mtk_npu_mcast_client_dest_cmp(client->params, client_param))
 			return client->params;
 	}
 
@@ -699,12 +746,12 @@ int mtk_npu_mcast_client_insert_by_grp_idx(int gidx, struct npu_mcast_client_par
 		goto unlock;
 	}
 
-	if (mtk_npu_mcast_client_find_grp_idx(gidx, client->daddr) != -1) {
+	grp = &mcast.grp.tbls[gidx];
+
+	if (mtk_npu_mcast_client_find(grp, client)) {
 		ret = -EEXIST;
 		goto unlock;
 	}
-
-	grp = &mcast.grp.tbls[gidx];
 
 	ret = __mtk_npu_mcast_client_insert(grp, client);
 
@@ -721,11 +768,11 @@ int mtk_npu_mcast_client_insert(struct npu_mcast_addr *src,
 {
 	struct npu_mcast_grp *grp;
 	unsigned long flags;
-	int cidx;
 	int ret;
 
 	if (!client || is_zero_ether_addr(client->daddr) ||
-	    (client->m2u_en && is_multicast_ether_addr(client->daddr)))
+	    (client->m2u_en && is_multicast_ether_addr(client->daddr)) ||
+	    (!client->m2u_en && !mtk_npu_mcast_daddr_is_mapped_from_ip(dst, type, client)))
 		return -EINVAL;
 
 	if (!mtk_npu_mcast_network_params_is_valid(src, dst, type))
@@ -751,8 +798,7 @@ int mtk_npu_mcast_client_insert(struct npu_mcast_addr *src,
 	}
 	client->grp_idx = grp->id;
 
-	cidx = mtk_npu_mcast_client_find_grp_idx(grp->id, client->daddr);
-	if (cidx != -1) {
+	if (mtk_npu_mcast_client_find(grp, client)) {
 		ret = -EEXIST;
 		goto unlock;
 	}
@@ -947,10 +993,12 @@ static int __mtk_npu_mcast_client_update(struct npu_mcast_grp *grp, int cidx,
 	if (cidx < NPU_MCAST_CLIENT_MAX) {
 		memcpy(&backup, &grp->params.clients[cidx], sizeof(backup));
 		memcpy(&grp->params.clients[cidx], c, sizeof(*c));
+		grp->params.clients[cidx].idx = cidx;
 	} else {
 		list_for_each_entry(client, &grp->excess_clients, node) {
 			if (client->params->idx == cidx) {
 				memcpy(client->params, c, sizeof(*client->params));
+				client->params->idx = cidx;
 				break;
 			}
 		}
@@ -973,6 +1021,7 @@ static int __mtk_npu_mcast_client_update(struct npu_mcast_grp *grp, int cidx,
 int mtk_npu_mcast_client_update_by_idx(int gidx, int cidx,
 				       struct npu_mcast_client_params *client)
 {
+	struct npu_mcast_client_params *cp;
 	struct npu_mcast_grp *grp;
 	unsigned long flags;
 	int ret;
@@ -996,6 +1045,12 @@ int mtk_npu_mcast_client_update_by_idx(int gidx, int cidx,
 		goto unlock;
 	}
 
+	cp = mtk_npu_mcast_client_find(grp, client);
+	if (cp && cp->idx != cidx) {
+		ret = -EEXIST;
+		goto unlock;
+	}
+
 	ret = __mtk_npu_mcast_client_update(grp, cidx, client);
 
 unlock:
@@ -1009,13 +1064,14 @@ int mtk_npu_mcast_client_update(struct npu_mcast_addr *src,
 				enum npu_mcast_addr_type type,
 				struct npu_mcast_client_params *client)
 {
+	struct npu_mcast_client_params *cp;
 	struct npu_mcast_grp *grp;
 	unsigned long flags;
-	int cidx;
 	int ret;
 
 	if (!client || is_zero_ether_addr(client->daddr) ||
-	    (client->m2u_en && is_multicast_ether_addr(client->daddr)))
+	    (client->m2u_en && is_multicast_ether_addr(client->daddr)) ||
+	    (!client->m2u_en && !mtk_npu_mcast_daddr_is_mapped_from_ip(dst, type, client)))
 		return -EINVAL;
 
 	if (!mtk_npu_mcast_network_params_is_valid(src, dst, type))
@@ -1029,13 +1085,13 @@ int mtk_npu_mcast_client_update(struct npu_mcast_addr *src,
 		goto unlock;
 	}
 
-	cidx = mtk_npu_mcast_client_find_grp_idx(grp->id, client->daddr);
-	if (cidx == -1) {
+	cp = mtk_npu_mcast_client_find(grp, client);
+	if (!cp) {
 		ret = -ENOENT;
 		goto unlock;
 	}
 
-	ret = __mtk_npu_mcast_client_update(grp, cidx, client);
+	ret = __mtk_npu_mcast_client_update(grp, cp->idx, client);
 
 unlock:
 	spin_unlock_irqrestore(&mcast.grp.lock, flags);
