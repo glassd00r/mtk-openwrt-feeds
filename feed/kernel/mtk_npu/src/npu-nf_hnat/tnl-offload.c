@@ -394,6 +394,9 @@ static bool mtk_npu_tnl_decap_offloadable(struct sk_buff *skb)
 	u32 cnt;
 	u32 i;
 
+	if (secpath_exists(skb))
+		return false;
+
 	if (unlikely(!mtk_npu_mcu_alive())) {
 		skb_mark_unbind(skb);
 		inc_tnl_hnat_decap_offloadable_statistic_fail();
