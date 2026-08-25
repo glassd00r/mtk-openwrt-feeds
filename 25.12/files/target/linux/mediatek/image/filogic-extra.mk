@@ -46,7 +46,11 @@ define Device/bananapi_bpi-r4-pro-common
   DEVICE_VENDOR := Bananapi
   DEVICE_DTS_DIR := $(DTS_DIR)/
   DEVICE_DTS_LOADADDR := 0x45f00000
-  DEVICE_DTS_OVERLAY:= mt7988a-bananapi-bpi-r4-emmc mt7988a-bananapi-bpi-r4-rtc mt7988a-bananapi-bpi-r4-sd
+  DEVICE_DTS_OVERLAY:= mt7988a-bananapi-bpi-r4-emmc \
+		       mt7988a-bananapi-bpi-r4-rtc \
+		       mt7988a-bananapi-bpi-r4-sd \
+		       mt7988a-bananapi-bpi-r4-pro-spim-nand \
+		       mt7988a-bananapi-bpi-r4-pro-spim-nand-nmbm
   DEVICE_DTC_FLAGS := --pad 4096
   DEVICE_PACKAGES := kmod-hwmon-pwmfan kmod-i2c-mux-pca954x kmod-eeprom-at24 \
             kmod-rtc-pcf8563 kmod-sfp kmod-usb3 e2fsprogs f2fsck mkf2fs mt7988-wo-firmware
