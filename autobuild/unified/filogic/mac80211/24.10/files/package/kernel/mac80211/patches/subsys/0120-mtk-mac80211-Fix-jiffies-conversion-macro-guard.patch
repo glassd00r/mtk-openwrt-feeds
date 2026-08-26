@@ -1,4 +1,4 @@
-From 952587c953a9fb873210b2be7abb0d17dfe95fa9 Mon Sep 17 00:00:00 2001
+From 964ffcfe2e6fa21f699a869174c1817797fcef81 Mon Sep 17 00:00:00 2001
 From: Peter Chiu <chui-hao.chiu@mediatek.com>
 Date: Thu, 13 Aug 2026 10:07:12 +0800
 Subject: [PATCH] mtk: mac80211: Fix jiffies conversion macro guard
@@ -16,14 +16,14 @@ Signed-off-by: Peter Chiu <chui-hao.chiu@mediatek.com>
  1 file changed, 2 insertions(+), 2 deletions(-)
 
 diff --git a/backport-include/linux/jiffies.h b/backport-include/linux/jiffies.h
-index 002a5571..cf8f2527 100644
+index d37f9f01..cf8f2527 100644
 --- a/backport-include/linux/jiffies.h
 +++ b/backport-include/linux/jiffies.h
 @@ -3,7 +3,7 @@
  #include_next <linux/jiffies.h>
  #include <linux/version.h>
  
--#if LINUX_VERSION_IS_LESS(6,12,0)
+-#if LINUX_VERSION_IS_LESS(6,13,0)
 +#ifndef secs_to_jiffies
  
  /**
@@ -32,7 +32,7 @@ index 002a5571..cf8f2527 100644
   */
  #define secs_to_jiffies(_secs) ((_secs) * HZ)
  
--#endif /* < 6.12.0 */
+-#endif /* < 6.13.0 */
 +#endif /* secs_to_jiffies */
  
  #endif /* __BACKPORT_JIFFIES_H */
