@@ -373,6 +373,12 @@ atenl_hqa_eeprom_bulk(struct atenl *an, struct atenl_data *data)
 				*(u16 *)(hdr->data + 2 + i) = val;
 			}
 		} else { /* write eeprom */
+			size_t write_len = DIV_ROUND_UP(len, 2) * 2;
+
+			/* The write loop always copies complete u16 values. */
+			if (write_len > an->eeprom_size - offset)
+				return -EINVAL;
+
 			for (i = 0; i < DIV_ROUND_UP(len, 2); i++) {
 				val = ntohs(v[i + 2]);
 				memcpy(&an->eeprom_data[offset + i * 2], &val, 2);
