@@ -356,7 +356,11 @@ atenl_hqa_eeprom_bulk(struct atenl *an, struct atenl_data *data)
 		u16 val;
 		size_t i;
 
-		if (offset >= an->eeprom_size || (len > sizeof(hdr->data) - 2))
+		/*
+		 * hdr is overlaid on data->buf, which is smaller than hdr->data.
+		 * Leave room for the two-byte response status before bulk data.
+		 */
+		if (offset >= an->eeprom_size || len > RACFG_DATA_MAX_SIZE - 2)
 			return -EINVAL;
 
 		if (cmd == HQA_CMD_READ_EEPROM_BULK) {
