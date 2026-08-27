@@ -1,0 +1,36 @@
+From bd87d76c2373ec2bc9da7ff77ba541d2fa23f47c Mon Sep 17 00:00:00 2001
+From: Michael-CY Lee <michael-cy.lee@mediatek.com>
+Date: Thu, 27 Aug 2026 11:18:02 +0800
+Subject: [PATCH] mtk: ucode: add UHR attributes parsing
+
+Signed-off-by: Michael-CY Lee <michael-cy.lee@mediatek.com>
+
+---
+ lib/nl80211.c | 4 +++-
+ 1 file changed, 3 insertions(+), 1 deletion(-)
+
+diff --git a/lib/nl80211.c b/lib/nl80211.c
+index 05a8ed6..fd51dc9 100644
+--- a/lib/nl80211.c
++++ b/lib/nl80211.c
+@@ -637,7 +637,7 @@ static const uc_nl_nested_spec_t nl80211_wiphy_bands_rates_nla = {
+ 
+ static const uc_nl_nested_spec_t nl80211_wiphy_bands_iftype_data_nla = {
+ 	.headsize = 0,
+-	.nattrs = 9,
++	.nattrs = 11,
+ 	.attrs = {
+ 		{ NL80211_BAND_IFTYPE_ATTR_IFTYPES, "iftypes", DT_NESTED, 0, &nl80211_ifcomb_limit_types_nla },
+ 		{ NL80211_BAND_IFTYPE_ATTR_HE_CAP_MAC, "he_cap_mac", DT_U8, DF_ARRAY, NULL },
+@@ -648,6 +648,8 @@ static const uc_nl_nested_spec_t nl80211_wiphy_bands_iftype_data_nla = {
+ 		{ NL80211_BAND_IFTYPE_ATTR_VENDOR_ELEMS, "vendor_elems", DT_STRING, DF_BINARY, NULL },
+ 		{ NL80211_BAND_IFTYPE_ATTR_EHT_CAP_MAC, "eht_cap_mac", DT_U8, DF_ARRAY, NULL },
+ 		{ NL80211_BAND_IFTYPE_ATTR_EHT_CAP_PHY, "eht_cap_phy", DT_U8, DF_ARRAY, NULL },
++		{ NL80211_BAND_IFTYPE_ATTR_UHR_CAP_MAC, "uhr_cap_mac", DT_U8, DF_ARRAY, NULL },
++		{ NL80211_BAND_IFTYPE_ATTR_UHR_CAP_PHY, "uhr_cap_phy", DT_U8, DF_ARRAY, NULL },
+ 	}
+ };
+ 
+-- 
+2.25.1
+
