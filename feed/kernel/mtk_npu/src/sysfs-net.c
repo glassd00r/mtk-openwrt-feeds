@@ -145,7 +145,7 @@ static ssize_t l4s_alpha_show(struct device *dev, struct device_attribute *attr,
 	if (ret || cmd.return_cnt == 0)
 		return 0;
 
-	return scnprintf(buf, PAGE_SIZE, "L4S EWMA alpha: %u%%\n", cmd.ret[0]);
+	return scnprintf(buf, PAGE_SIZE, "L4S EWMA alpha: %u\n", cmd.ret[0]);
 }
 
 static ssize_t l4s_alpha_store(struct device *dev, struct device_attribute *attr,
@@ -162,7 +162,7 @@ static ssize_t l4s_alpha_store(struct device *dev, struct device_attribute *attr
 		return -EINVAL;
 
 	if (val > 100) {
-		pr_notice("Error: You can only set alpha to 0 ~ 100%%\n");
+		pr_notice("Error: You can only set alpha to 0 ~ 100\n");
 		return -EIO;
 	}
 	cmd.arg[1] = val;
@@ -221,7 +221,7 @@ static ssize_t l4s_interval_show(struct device *dev, struct device_attribute *at
 	if (ret || cmd.return_cnt == 0)
 		return 0;
 
-	return scnprintf(buf, PAGE_SIZE, "L4S mark congestion interval: %u\n", cmd.ret[0]);
+	return scnprintf(buf, PAGE_SIZE, "L4S sampling intervals: %u\n", cmd.ret[0]);
 }
 
 static ssize_t l4s_interval_store(struct device *dev, struct device_attribute *attr,
@@ -237,8 +237,8 @@ static ssize_t l4s_interval_store(struct device *dev, struct device_attribute *a
 	if (kstrtou32(buf, 10, &val))
 		return -EINVAL;
 
-	if (val > 500) {
-		pr_notice("Error: You can only set interval to 0 ~ 500\n");
+	if (val > 5000) {
+		pr_notice("Error: You can only set intervals to 0 ~ 5000\n");
 		return -EIO;
 	}
 	cmd.arg[1] = val;
@@ -345,7 +345,7 @@ static ssize_t l4s_threshold_show(struct device *dev, struct device_attribute *a
 	if (ret || cmd.return_cnt == 0)
 		return 0;
 
-	return scnprintf(buf, PAGE_SIZE, "L4S mark congestion threshold: %u%%\n", cmd.ret[0]);
+	return scnprintf(buf, PAGE_SIZE, "L4S mark congestion threshold: %u\n", cmd.ret[0]);
 }
 
 static ssize_t l4s_threshold_store(struct device *dev, struct device_attribute *attr,
@@ -362,7 +362,7 @@ static ssize_t l4s_threshold_store(struct device *dev, struct device_attribute *
 		return -EINVAL;
 
 	if (val > 100) {
-		pr_notice("Error: You can only set threshold to 0 ~ 100%%\n");
+		pr_notice("Error: You can only set threshold to 0 ~ 100\n");
 		return -EIO;
 	}
 	cmd.arg[1] = val;

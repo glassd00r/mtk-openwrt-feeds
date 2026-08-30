@@ -79,6 +79,9 @@ endef
 define KernelPackage/npu/install
 	$(INSTALL_DIR) $(1)/npu
 	-$(INSTALL_BIN) ./src/scripts/* $(1)/npu/
+
+	$(INSTALL_DIR) $(1)/sbin/
+	$(INSTALL_BIN) ./files/* $(1)/sbin/
 endef
 
 define KernelPackage/npu-autoload
