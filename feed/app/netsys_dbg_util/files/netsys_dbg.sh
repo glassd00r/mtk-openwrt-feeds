@@ -71,7 +71,7 @@ init()
 		OFFSET_GMAC="10000 10100 10200"
 		OFFSET_LRO="b00"
 		OFFSET_RSS="3000"
-		OFFSET_SGMII="0"
+		OFFSET_SGMII="0 100"
 		;;
 	esac
 	echo "============== SoC Info =============="
