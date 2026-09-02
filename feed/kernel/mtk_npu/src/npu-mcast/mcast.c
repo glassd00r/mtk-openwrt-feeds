@@ -57,6 +57,7 @@ static struct npu_mcast_statistic mcast_statistic;
 static const char * const mcast_dest_name[] = {
 	[NPU_MCAST_DEST_SWITCH] = "Switch",
 	[NPU_MCAST_DEST_LAN] = "LAN",
+	[NPU_MCAST_DEST_WAN] = "WAN",
 	[NPU_MCAST_DEST_WIFI] = "WiFi",
 };
 
@@ -612,12 +613,20 @@ unlock:
 static bool mtk_npu_mcast_client_dest_cmp(const struct npu_mcast_client_params *c1,
 					  const struct npu_mcast_client_params *c2)
 {
-	bool res = !memcmp(c1->daddr, c2->daddr, ETH_ALEN);
-
 	if (c1->dest != c2->dest)
 		return false;
 
-	return res && (c1->dest == NPU_MCAST_DEST_SWITCH ? c1->dsa_port == c2->dsa_port : true);
+	switch (c1->dest) {
+	case NPU_MCAST_DEST_LAN:
+	case NPU_MCAST_DEST_WAN:
+		return true;
+	case NPU_MCAST_DEST_SWITCH:
+		return c1->dsa_port == c2->dsa_port;
+	case NPU_MCAST_DEST_WIFI:
+		return !memcmp(c1->daddr, c2->daddr, ETH_ALEN);
+	default:
+		return false;
+	}
 }
 
 static struct npu_mcast_client_params *
@@ -772,7 +781,8 @@ int mtk_npu_mcast_client_insert(struct npu_mcast_addr *src,
 
 	if (!client || is_zero_ether_addr(client->daddr) ||
 	    (client->m2u_en && is_multicast_ether_addr(client->daddr)) ||
-	    (!client->m2u_en && !mtk_npu_mcast_daddr_is_mapped_from_ip(dst, type, client)))
+	    (!client->m2u_en && client->dest != NPU_MCAST_DEST_WIFI &&
+	     !mtk_npu_mcast_daddr_is_mapped_from_ip(dst, type, client)))
 		return -EINVAL;
 
 	if (!mtk_npu_mcast_network_params_is_valid(src, dst, type))
@@ -1071,7 +1081,8 @@ int mtk_npu_mcast_client_update(struct npu_mcast_addr *src,
 
 	if (!client || is_zero_ether_addr(client->daddr) ||
 	    (client->m2u_en && is_multicast_ether_addr(client->daddr)) ||
-	    (!client->m2u_en && !mtk_npu_mcast_daddr_is_mapped_from_ip(dst, type, client)))
+	    (!client->m2u_en && client->dest != NPU_MCAST_DEST_WIFI &&
+	     !mtk_npu_mcast_daddr_is_mapped_from_ip(dst, type, client)))
 		return -EINVAL;
 
 	if (!mtk_npu_mcast_network_params_is_valid(src, dst, type))
@@ -1148,7 +1159,9 @@ static int mtk_npu_mcast_hnat_params_validate(struct mcast_offload_info *minfo)
 			return -EINVAL;
 	}
 
-	return (minfo->dest <= NPU_MCAST_DEST_LAN &&
+	return ((minfo->dest == NPU_MCAST_DEST_SWITCH ||
+		 minfo->dest == NPU_MCAST_DEST_LAN ||
+		 minfo->dest == NPU_MCAST_DEST_WAN) &&
 		minfo->pqid < MTK_NPU_QDMA_QUEUE_MAX &&
 		minfo->dsa_port < NPU_MCAST_DSA_LAN_PORT_MAX) ? 0 : -EINVAL;
 }

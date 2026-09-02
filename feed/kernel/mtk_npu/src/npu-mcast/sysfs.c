@@ -178,6 +178,14 @@ static int mcast_client_dest_fetch_lan(const char *buf, int *ofs,
 	return 0;
 }
 
+static int mcast_client_dest_fetch_wan(const char *buf, int *ofs,
+				       struct npu_mcast_client_params *client)
+{
+	client->dest = NPU_MCAST_DEST_WAN;
+
+	return 0;
+}
+
 static int mcast_client_dest_fetch_switch(const char *buf, int *ofs,
 					  struct npu_mcast_client_params *client)
 {
@@ -229,6 +237,8 @@ static int mcast_client_dest_fetch(const char *buf, int *ofs,
 
 	if (!strncmp(dest, "lan", strlen("lan")))
 		return mcast_client_dest_fetch_lan(buf, ofs, client);
+	else if (!strncmp(dest, "wan", strlen("wan")))
+		return mcast_client_dest_fetch_wan(buf, ofs, client);
 	else if (!strncmp(dest, "switch", strlen("switch")))
 		return mcast_client_dest_fetch_switch(buf, ofs, client);
 	else if (!strncmp(dest, "wifi", strlen("wifi")))

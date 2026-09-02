@@ -91,12 +91,49 @@ static ssize_t adpt_fwd_ul_qid_store(struct device *dev, struct device_attribute
 	return count;
 }
 
+static ssize_t adpt_fwd_dl_port_show(struct device *dev, struct device_attribute *attr, char *buf)
+{
+	struct net_cmd cmd = {
+		.type = NPU_NET_CMD_TYPE_ADPT_FWD,
+		.sub_type = NPU_ADPT_FWD_NET_CMD_GET,
+		.arg[0] = NPU_ADPT_FWD_NET_CMD_GET_DL_PORT,
+	};
+	int ret;
+
+	ret = mtk_npu_net_send_cmd_mgmt(&cmd);
+	if (ret || cmd.return_cnt == 0)
+		return 0;
+
+	return scnprintf(buf, PAGE_SIZE, "adapter forward downlink switch port: %u\n", cmd.ret[0]);
+}
+
+static ssize_t adpt_fwd_dl_port_store(struct device *dev, struct device_attribute *attr,
+				     const char *buf, size_t count)
+{
+	struct net_cmd cmd = {
+		.type = NPU_NET_CMD_TYPE_ADPT_FWD,
+		.sub_type = NPU_ADPT_FWD_NET_CMD_SET,
+		.arg[0] = NPU_ADPT_FWD_NET_CMD_SET_DL_PORT,
+	};
+	u32 val;
+
+	if (kstrtou32(buf, 10, &val))
+		return count;
+	cmd.arg[1] = val;
+
+	mtk_npu_net_send_cmd_all_no_wait(&cmd);
+
+	return count;
+}
+
 static NPU_DEV_ATTR_RW(adpt_fwd, enable);
 static NPU_DEV_ATTR_RW(adpt_fwd, ul_qid);
+static NPU_DEV_ATTR_RW(adpt_fwd, dl_port);
 
 static struct attribute *adpt_fwd_attributes[] = {
 	&dev_attr_adpt_fwd_enable.attr,
 	&dev_attr_adpt_fwd_ul_qid.attr,
+	&dev_attr_adpt_fwd_dl_port.attr,
 	NULL,
 };
 

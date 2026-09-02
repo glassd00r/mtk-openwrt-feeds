@@ -90,9 +90,10 @@ struct npu_mcast_grp {
 };
 
 enum npu_mcast_dest {
-	NPU_MCAST_DEST_SWITCH = 0,
+	NPU_MCAST_DEST_WIFI = 0,
+	NPU_MCAST_DEST_SWITCH,
 	NPU_MCAST_DEST_LAN,
-	NPU_MCAST_DEST_WIFI,
+	NPU_MCAST_DEST_WAN,
 
 	__NPU_MCAST_DEST_MAX,
 };
