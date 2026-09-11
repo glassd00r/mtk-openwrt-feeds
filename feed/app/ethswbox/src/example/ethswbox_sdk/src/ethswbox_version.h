@@ -15,7 +15,7 @@
 /** ETHSWBOX version, major number */
 #define ETHSWBOX_VER_MAJOR 1
 /** ETHSWBOX version, minor number */
-#define ETHSWBOX_VER_MINOR 1
+#define ETHSWBOX_VER_MINOR 4
 /** ETHSWBOX version, build number */
 #define ETHSWBOX_VER_STEP 0
 

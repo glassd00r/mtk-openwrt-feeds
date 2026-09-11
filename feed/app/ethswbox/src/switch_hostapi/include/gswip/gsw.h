@@ -137,6 +137,11 @@ typedef enum {
 	GSW_statusLock_Failed	=  -(GSW_ERROR_BASE + 12),
 	/** Multicast Forwarding table entry not found */
 	GSW_statusEntryNotFound = -(GSW_ERROR_BASE + 13),
+
+	/** \cond INTERNAL */
+	/** \brief force 32-bit enum type */
+	GSW_RETURN_INTERNAL_SIZE = 0x7fffffff,
+	/** \endcond */
 } GSW_return_t;
 
 
@@ -161,7 +166,12 @@ typedef enum {
 	/** Transmit direction is authorized, receive direction is unauthorized.
 	    The port is allowed to transmit all packets. Packet reception on this
 	    port is not allowed. The address learning process is disabled. */
-	GSW_8021X_PORT_STATE_TX_AUTHORIZED = 3
+	GSW_8021X_PORT_STATE_TX_AUTHORIZED = 3,
+
+	/** \cond INTERNAL */
+	/** \brief force 32-bit enum type */
+	GSW_8021X_PORT_STATE_INTERNAL_SIZE = 0x7fffffff,
+	/** \endcond */
 } GSW_8021X_portState_t;
 
 /** @}*/ /* GSW_8021X_GROUP */
@@ -439,6 +449,11 @@ typedef enum {
 	GSW_MAC_CLEAR_PHY_PORT = 0,
 	/** Clear all dynamic entries */
 	GSW_MAC_CLEAR_DYNAMIC = 1,
+
+	/** \cond INTERNAL */
+	/** \brief force 32-bit enum type */
+	GSW_MAC_CLEAR_INTERNAL_SIZE = 0x7fffffff,
+	/** \endcond */
 } GSW_MacClearType_t;
 
 /** \brief MAC Table Clear based on given condition.
@@ -459,7 +474,12 @@ typedef enum {
 	/** Source MAC Address Filter */
 	GSW_MACFILTERTYPE_SRC = 0,
 	/** Destination MAC Address Filter */
-	GSW_MACFILTERTYPE_DEST = 1
+	GSW_MACFILTERTYPE_DEST = 1,
+
+	/** \cond INTERNAL */
+	/** \brief force 32-bit enum type */
+	GSW_MACFILTERTYPE_INTERNAL_SIZE = 0x7fffffff,
+	/** \endcond */
 } GSW_MacFilterType_t;
 
 /** \brief Default MAC Address Filter.
@@ -499,7 +519,12 @@ typedef enum {
 	/** Forward to a port, selected by the parameter 'nForwardPortId'.
 	    Please note that this feature is not supported by all
 	    hardware platforms. */
-	GSW_PORT_FORWARD_PORT = 3
+	GSW_PORT_FORWARD_PORT = 3,
+
+	/** \cond INTERNAL */
+	/** \brief force 32-bit enum type */
+	GSW_PORT_FORWARD_INTERNAL_SIZE = 0x7fffffff,
+	/** \endcond */
 } GSW_portForward_t;
 
 /** \brief Spanning Tree Protocol port states.
@@ -519,7 +544,12 @@ typedef enum {
 	    be received and transmitted. All other packets are discarded by
 	    the port entity. MAC table address learning is disabled in this
 	    state. */
-	GSW_STP_PORT_STATE_BLOCKING = 3
+	GSW_STP_PORT_STATE_BLOCKING = 3,
+
+	/** \cond INTERNAL */
+	/** \brief force 32-bit enum type */
+	GSW_STP_PORT_STATE_INTERNAL_SIZE = 0x7fffffff,
+	/** \endcond */
 } GSW_STP_PortState_t;
 
 /** \brief Configures the Spanning Tree Protocol state of an Ethernet port.
@@ -561,6 +591,11 @@ typedef enum {
 	GSW_10_PORT_MODE = 0,
 	/* GSWIP will be 16 ports mode */
 	GSW_16_PORT_MODE = 1,
+
+	/** \cond INTERNAL */
+	/** \brief force 32-bit enum type */
+	GSW_16_PORT_MODE_INTERNAL_SIZE = 0x7fffffff,
+	/** \endcond */
 } GSW_SSB_Arb_Mode_t;
 
 /** \brief Bridge Port Allocation.
@@ -591,7 +626,12 @@ typedef enum {
 	/** PCP 5P3D mark mode */
 	GSW_REMARKING_PCP_5P3D = 6,
 	/** DSCP AF class */
-	GSW_REMARKING_DSCP_AF = 7
+	GSW_REMARKING_DSCP_AF = 7,
+
+	/** \cond INTERNAL */
+	/** \brief force 32-bit enum type */
+	GSW_REMARKING_INTERNAL_SIZE = 0x7fffffff,
+	/** \endcond */
 } GSW_ColorRemarkingMode_t;
 
 /** \brief Meters for various egress traffic type.
@@ -610,7 +650,12 @@ typedef enum {
 	/** Index of traffic meter for other types */
 	GSW_BRIDGE_PORT_EGRESS_METER_OTHERS = 5,
 	/** Number of index */
-	GSW_BRIDGE_PORT_EGRESS_METER_MAX = 6
+	GSW_BRIDGE_PORT_EGRESS_METER_MAX = 6,
+
+	/** \cond INTERNAL */
+	/** \brief force 32-bit enum type */
+	GSW_BRIDGE_PORT_EGRESS_METER_INTERNAL_SIZE = 0x7fffffff,
+	/** \endcond */
 } GSW_BridgePortEgressMeter_t;
 
 /** \brief P-mapper Mapping Mode
@@ -632,6 +677,11 @@ typedef enum {
 	    \remarks
 	    P-mapper table entry 9-72. */
 	GSW_PMAPPER_MAPPING_DSCP = 2,
+
+	/** \cond INTERNAL */
+	/** \brief force 32-bit enum type */
+	GSW_PMAPPER_MAPPING_INTERNAL_SIZE = 0x7fffffff,
+	/** \endcond */
 } GSW_PmapperMappingMode_t;
 
 /** \brief P-mapper Configuration
@@ -754,7 +804,12 @@ typedef enum {
 	/** PCP 5P3D mark mode */
 	GSW_MARKING_PCP_5P3D = 6,
 	/** DSCP AF class */
-	GSW_MARKING_DSCP_AF = 7
+	GSW_MARKING_DSCP_AF = 7,
+
+	/** \cond INTERNAL */
+	/** \brief force 32-bit enum type */
+	GSW_MARKING_INTERNAL_SIZE = 0x7fffffff,
+	/** \endcond */
 } GSW_ColorMarkingMode_t;
 
 /** \brief Bridge configuration mask.
@@ -790,7 +845,12 @@ typedef enum {
 	/** Packet is dscarded */
 	GSW_BRIDGE_FORWARD_DISCARD = 1,
 	/** Packet is forwarded to logical port 0 CTP port 0 bridge port 0 */
-	GSW_BRIDGE_FORWARD_CPU = 2
+	GSW_BRIDGE_FORWARD_CPU = 2,
+
+	/** \cond INTERNAL */
+	/** \brief force 32-bit enum type */
+	GSW_BRIDGE_FORWARD_INTERNAL_SIZE = 0x7fffffff,
+	/** \endcond */
 } GSW_BridgeForwardMode_t;
 
 
@@ -1066,15 +1126,23 @@ typedef struct {
 	 *    otherwise, this is input as well as output
 	 *    the original value before modification is returned
 	 */
-	unsigned char TPID4: 1;
+	unsigned char TPID4;
 } GSW_MiscPortCfg_t;
 
 /** \brief VLAN Filter TCI Mask.
     Used by \ref GSW_VLANFILTER_config_t */
 typedef enum {
+	/** VLAN filter to compare VID */
 	GSW_VLAN_FILTER_TCI_MASK_VID = 0,
+	/** VLAN filter to compare PCP */
 	GSW_VLAN_FILTER_TCI_MASK_PCP = 1,
-	GSW_VLAN_FILTER_TCI_MASK_TCI = 2
+	/** VLAN filter to compare the VLAN tag */
+	GSW_VLAN_FILTER_TCI_MASK_TCI = 2,
+
+	/** \cond INTERNAL */
+	/** \brief force 32-bit enum type */
+	GSW_VLAN_FILTER_TCI_MASK_INTERNAL_SIZE = 0x7fffffff,
+	/** \endcond */
 } GSW_VlanFilterTciMask_t;
 
 
@@ -1156,6 +1224,11 @@ typedef enum {
 	GSW_PORT_SPEED_10000,
 	/** Auto speed for XGMAC */
 	GSW_PORT_SPEED_AUTO,
+
+	/** \cond INTERNAL */
+	/** \brief force 32-bit enum type */
+	GSW_PORT_SPEED_INTERNAL_SIZE = 0x7fffffff,
+	/** \endcond */
 } GSW_portSpeed_t;
 
 /** \brief Ethernet port duplex status.
@@ -1167,6 +1240,11 @@ typedef enum {
 	GSW_DUPLEX_HALF	= 1,
 	/** Port operates in Auto mode */
 	GSW_DUPLEX_AUTO	= 2,
+
+	/** \cond INTERNAL */
+	/** \brief force 32-bit enum type */
+	GSW_PORT_DUPLEX_INTERNAL_SIZE = 0x7fffffff,
+	/** \endcond */
 } GSW_portDuplex_t;
 
 /** \brief Force the MAC and PHY link modus.
@@ -1179,6 +1257,11 @@ typedef enum {
 	GSW_PORT_LINK_DOWN	= 1,
 	/** Link Auto. */
 	GSW_PORT_LINK_AUTO	= 2,
+
+	/** \cond INTERNAL */
+	/** \brief force 32-bit enum type */
+	GSW_PORT_LINK_INTERNAL_SIZE = 0x7fffffff,
+	/** \endcond */
 } GSW_portLink_t;
 
 /** \brief Ethernet port interface mode.
@@ -1195,6 +1278,11 @@ typedef enum {
 	GSW_PORT_HW_RGMII = 3,
 	/** XGMII mode. */
 	GSW_PORT_HW_XGMII = 4,
+
+	/** \cond INTERNAL */
+	/** \brief force 32-bit enum type */
+	GSW_PORT_HW_MII_INTERNAL_SIZE = 0x7fffffff,
+	/** \endcond */
 } GSW_MII_Mode_t;
 
 /** \brief Ethernet port configuration for PHY or MAC mode.
@@ -1203,7 +1291,12 @@ typedef enum {
 	/** MAC Mode. The Ethernet port is configured to work in MAC mode. */
 	GSW_PORT_MAC	= 0,
 	/** PHY Mode. The Ethernet port is configured to work in PHY mode. */
-	GSW_PORT_PHY	= 1
+	GSW_PORT_PHY	= 1,
+
+	/** \cond INTERNAL */
+	/** \brief force 32-bit enum type */
+	GSW_PORT_MODE_INTERNAL_SIZE = 0x7fffffff,
+	/** \endcond */
 } GSW_MII_Type_t;
 
 /** \brief Ethernet port clock source configuration.
@@ -1214,7 +1307,12 @@ typedef enum {
 	/** Clock Master Mode. The port is configured to provide the clock as output signal. */
 	GSW_PORT_CLK_MASTER	= 1,
 	/** Clock Slave Mode. The port is configured to use the input clock signal. */
-	GSW_PORT_CLK_SLAVE	= 2
+	GSW_PORT_CLK_SLAVE	= 2,
+
+	/** \cond INTERNAL */
+	/** \brief force 32-bit enum type */
+	GSW_PORT_CLK_INTERNAL_SIZE = 0x7fffffff,
+	/** \endcond */
 } GSW_clkMode_t;
 
 
@@ -1275,7 +1373,12 @@ typedef enum {
 	/** The port is enabled in the receive (ingress) direction only. */
 	GSW_PORT_ENABLE_RX	= 2,
 	/** The port is enabled in the transmit (egress) direction only. */
-	GSW_PORT_ENABLE_TX	= 3
+	GSW_PORT_ENABLE_TX	= 3,
+
+	/** \cond INTERNAL */
+	/** \brief force 32-bit enum type */
+	GSW_PORT_ENABLE_INTERNAL_SIZE = 0x7fffffff,
+	/** \endcond */
 } GSW_portEnable_t;
 
 /** \brief Ethernet flow control status.
@@ -1290,7 +1393,12 @@ typedef enum {
 	/** Receive and Transmit flow control */
 	GSW_FLOW_RXTX	= 3,
 	/** No flow control */
-	GSW_FLOW_OFF	= 4
+	GSW_FLOW_OFF	= 4,
+
+	/** \cond INTERNAL */
+	/** \brief force 32-bit enum type */
+	GSW_FLOW_CTRL_INTERNAL_SIZE = 0x7fffffff,
+	/** \endcond */
 } GSW_portFlow_t;
 
 
@@ -1314,7 +1422,12 @@ typedef enum {
 	/** Packet mirroring of 'MAC learning limit violation' frames. */
 	GSW_PORT_MONITOR_LEARNING_LIMIT        = 64,
 	/** Packet mirroring of 'port lock violation' frames. */
-	GSW_PORT_MONITOR_PORT_LOCK	= 128
+	GSW_PORT_MONITOR_PORT_LOCK	= 128,
+
+	/** \cond INTERNAL */
+	/** \brief force 32-bit enum type */
+	GSW_PORT_MONITOR_INTERNAL_SIZE = 0x7fffffff,
+	/** \endcond */
 } GSW_portMonitor_t;
 
 /** \brief Interface RMON Counter Mode - (FID, SUBID or FLOWID) Config - GSWIP-3.0 only.
@@ -1327,7 +1440,12 @@ typedef enum {
 	/** Flow Id (LSB bits 3 to 0) based Interface RMON counters Usage */
 	GSW_IF_RMON_FLOWID_LSB	= 2,
 	/** Flow Id (MSB bits 7 to 4) based Interface RMON counters Usage */
-	GSW_IF_RMON_FLOWID_MSB	= 3
+	GSW_IF_RMON_FLOWID_MSB	= 3,
+
+	/** \cond INTERNAL */
+	/** \brief force 32-bit enum type */
+	GSW_IF_RMON_MODE_INTERNAL_SIZE = 0x7fffffff,
+	/** \endcond */
 } GSW_If_RMON_Mode_t;
 
 /** \brief Port Configuration Parameters.
@@ -1415,21 +1533,30 @@ typedef enum {
 	GSW_QOS_Meter_srTCM	= 0,
 	/** trTCM Meter Type - 2 rate 3 color mode */
 	GSW_QOS_Meter_trTCM	= 1,
+
+	/** \cond INTERNAL */
+	/** \brief force 32-bit enum type */
+	GSW_QOS_METER_TYPE_INTERNAL_SIZE = 0x7fffffff,
+	/** \endcond */
 } GSW_QoS_Meter_Type;
 
 /** \brief DSCP Drop Precedence to color code assignment.
-    Used by \ref GSW_QoS_DSCP_DropPrecedenceCfg_t. */
+    Used by \ref GSW_QoS_colorMarkingEntry_t. */
 typedef enum {
 	/** Critical Packet. Metering never changes the drop precedence of these packets. */
-	GSW_DROP_PRECEDENCE_CRITICAL           = 0,
+	GSW_DROP_PRECEDENCE_CRITICAL	= 0,
 	/** Green Drop Precedence Packet. Packet is marked with a 'low' drop precedence. */
-	GSW_DROP_PRECEDENCE_GREEN = 1,
+	GSW_DROP_PRECEDENCE_GREEN	= 1,
 	/** Yellow Drop Precedence Packet. Packet is marked with a 'middle' drop precedence. */
 	GSW_DROP_PRECEDENCE_YELLOW	= 2,
 	/** Red Drop Precedence Packet. Packet is marked with a 'high' drop precedence. */
-	GSW_DROP_PRECEDENCE_RED = 3
-} GSW_QoS_DropPrecedence_t;
+	GSW_DROP_PRECEDENCE_RED		= 3,
 
+	/** \cond INTERNAL */
+	/** \brief force 32-bit enum type */
+	GSW_DROP_PRECEDENCE_INTERNAL_SIZE = 0x7fffffff,
+	/** \endcond */
+} GSW_QoS_DropPrecedence_t;
 
 /** \brief Selection of the traffic class field.
     Used by \ref GSW_QoS_portCfg_t.
@@ -1437,40 +1564,45 @@ typedef enum {
     configured protocol code points given by the packet. */
 typedef enum {
 	/** No traffic class assignment based on DSCP or PCP */
-	GSW_QOS_CLASS_SELECT_NO = 0,
+	GSW_QOS_CLASS_SELECT_NO		= 0,
 	/** Traffic class assignment based on DSCP. PCP information is ignored.
 	    The Port Class is used in case DSCP is not available in the packet. */
-	GSW_QOS_CLASS_SELECT_DSCP = 1,
+	GSW_QOS_CLASS_SELECT_DSCP	= 1,
 	/** Traffic class assignment based on PCP. DSCP information is ignored.
 	    The Port Class is used in case PCP is not available in the packet. */
 	GSW_QOS_CLASS_SELECT_PCP	= 2,
 	/** Traffic class assignment based on DSCP. Make the assignment based on
 	    PCP in case the DSCP information is not available in the packet header.
 	    The Port Class is used in case both are not available in the packet. */
-	GSW_QOS_CLASS_SELECT_DSCP_PCP          = 3,
+	GSW_QOS_CLASS_SELECT_DSCP_PCP	= 3,
 	/** CTAG VLAN PCP, IP DSCP. Traffic class assignment based
 	    on CTAG VLAN PCP, alternative use DSCP based assignment. */
-	GSW_QOS_CLASS_SELECT_PCP_DSCP          = 4,
+	GSW_QOS_CLASS_SELECT_PCP_DSCP	= 4,
 	/** STAG VLAN PCP. Traffic class assignment based
 	    on STAG VLAN PCP. */
 	GSW_QOS_CLASS_SELECT_SPCP	= 5,
 	/** STAG VLAN PCP, IP DSCP. Traffic class assignment based
 	    on STAG VLAN PCP, alternative use DSCP based assignment. */
-	GSW_QOS_CLASS_SELECT_SPCP_DSCP         = 6,
+	GSW_QOS_CLASS_SELECT_SPCP_DSCP	= 6,
 	/** IP DSCP, STAG VLAN PCP. Traffic class assignment based
 	    on DSCP, alternative use STAG VLAN PCP based assignment. */
-	GSW_QOS_CLASS_SELECT_DSCP_SPCP         = 7,
+	GSW_QOS_CLASS_SELECT_DSCP_SPCP	= 7,
 	/** STAG VLAN PCP, CTAG VLAN PCP. Traffic class assignment based
 	    on STAG VLAN PCP, alternative use CTAG VLAN PCP based assignment. */
-	GSW_QOS_CLASS_SELECT_SPCP_PCP          = 8,
+	GSW_QOS_CLASS_SELECT_SPCP_PCP	= 8,
 	/** STAG VLAN PCP, CTAG VLAN PCP, IP DSCP. Traffic class assignment
 	    based on STAG VLAN PCP, alternative use CTAG VLAN PCP based
 	    assignment, alternative use DSCP based assignment. */
-	GSW_QOS_CLASS_SELECT_SPCP_PCP_DSCP     = 9,
+	GSW_QOS_CLASS_SELECT_SPCP_PCP_DSCP	= 9,
 	/** IP DSCP, STAG VLAN PCP, CTAG VLAN PCP. Traffic class assignment
 	    based on DSCP, alternative use STAG VLAN PCP based
 	    assignment, alternative use CTAG VLAN PCP based assignment. */
-	GSW_QOS_CLASS_SELECT_DSCP_SPCP_PCP     = 10
+	GSW_QOS_CLASS_SELECT_DSCP_SPCP_PCP	= 10,
+
+	/** \cond INTERNAL */
+	/** \brief force 32-bit enum type */
+	GSW_QOS_CLASS_SELECT_INTERNAL_SIZE = 0x7fffffff,
+	/** \endcond */
 } GSW_QoS_ClassSelect_t;
 
 
@@ -1484,12 +1616,17 @@ typedef struct {
 
 	    \remarks
 	    For \ref GSW_QOS_MeterFree, this is the only input and other fields are
-	    ignored. For \ref GSW_QOS_MeterAlloc, this is output when allocation
-	    is successful. For \ref GSW_QoS_MeterCfgSet and
-	    \ref GSW_QoS_MeterCfgGet, this is input to indicate meter to
-	    configure/get-configuration. */
+	    ignored. For \ref GSW_QOS_MeterAlloc, behavior depends on firmware version:
+	    - WSP FW v1.0.61.61 and later: Set to 0 to allocate a new meter, or set to
+	      an existing meter ID to increase reference count. Upon success, this field
+	      contains the allocated meter ID.
+	    - WSP FW before v1.0.61.61: Any value will only increase the reference count
+	      of that specific meter ID. Does NOT allocate new meters.
+	    For \ref GSW_QoS_MeterCfgSet and \ref GSW_QoS_MeterCfgGet, this is input to
+	    indicate meter to configure/get-configuration. */
 	u16	nMeterId;
-	/** Meter Name string for easy reference (Id to Name Mapping) - TBD*/
+	/** Meter Name string for easy reference (Id to Name Mapping).
+	    Currently unused by firmware - reserved for future use. */
 	char	cMeterName[32];
 	/** Meter Algorithm Type */
 	GSW_QoS_Meter_Type eMtrType;
@@ -1500,7 +1637,8 @@ typedef struct {
 	    Value is rounded up to HW boundary.
 	    If value is less than 64, default value 32KB is used. */
 	u32	nCbs;
-	/** reserve for backward compatibility */
+	/** Reserved for backward compatibility with legacy products.
+	    This field is not used by F48X firmware. Must be set to 0. */
 	u32	res1;
 	/** Excess Burst Size (EBS [Bytes]).
 
@@ -1509,7 +1647,8 @@ typedef struct {
 	    Value is rounded up to HW boundary.
 	    If value is less than 64, default value 32KB is used. */
 	u32	nEbs;
-	/** reserve for backward compatibility */
+	/** Reserved for backward compatibility with legacy products.
+	    This field is not used by F48X firmware. Must be set to 0. */
 	u32	res2;
 	/** Committed Information Rate (CIR)
 
@@ -1536,6 +1675,29 @@ typedef struct {
 	u16 nLocaloverhd;
 } GSW_QoS_meterCfg_t;
 
+/** \brief Bulk Meter Configuration.
+    Used by \ref GSW_QOS_MeterAllocBulk to allocate multiple
+    continuous meters for control packet rate limiting or other purposes.
+    This API helps pre-allocate meters for features like per-port
+    storm control or DHCP snooping without dynamic allocation overhead. */
+typedef struct {
+	/** Number of continuous meters to allocate.
+	    \remarks
+	    Range: 1 to remaining available meters.
+	    The function will search for the requested number of
+	    consecutive free meters starting from \ref nMeterBase
+	    (if non-zero) or from the first available position. */
+	u16 num_of_meters;
+	/** Base meter index for allocation.
+	    \remarks
+	    - If 0: Search for 'num_of_meters' consecutive free meters
+	      and return the base index in this field.
+	    - If non-zero: Reserve 'num_of_meters' starting from this
+	      index. Returns error if any meter in the range is already allocated.
+	    This field is updated with the actual base meter index upon success. */
+	u16 nMeterBase;
+} GSW_QoS_meterBulkCfg_t;
+
 /** \brief DSCP mapping table.
     Used by \ref GSW_QoS_DSCP_ClassSet
     and \ref GSW_QoS_DSCP_ClassGet. */
@@ -1546,6 +1708,7 @@ typedef struct {
 	u8	nTrafficClass[64];
 } GSW_QoS_DSCP_ClassCfg_t;
 
+#ifdef SUPPORT_DSCP_DROP_PRECEDENCE
 /** \brief DSCP to Drop Precedence assignment table configuration.
     Used by \ref GSW_QoS_DSCP_DropPrecedenceCfgSet
     and \ref GSW_QoS_DSCP_DropPrecedenceCfgGet. */
@@ -1557,6 +1720,7 @@ typedef struct {
 	    Value refers to \ref GSW_QoS_DropPrecedence_t. */
 	u8 nDSCP_DropPrecedence[64];
 } GSW_QoS_DSCP_DropPrecedenceCfg_t;
+#endif
 
 /** \brief Ingress DSCP remarking attribute. This attribute defines on the
     ingress port packets how these will be remarked on the egress port.
@@ -1581,7 +1745,12 @@ typedef enum {
 	    egress side and the upper 3-Bits of the DSCP field are
 	    remarked based on the traffic class. The traffic class to DSCP value
 	    mapping is given in a device global table. */
-	GSW_DSCP_REMARK_DP3_TC3 = 4
+	GSW_DSCP_REMARK_DP3_TC3 = 4,
+
+	/** \cond INTERNAL */
+	/** \brief force 32-bit enum type */
+	GSW_DSCP_REMARK_INTERNAL_SIZE = 0x7fffffff,
+	/** \endcond */
 } GSW_Qos_ingressRemarking_t;
 
 /** \brief Port Remarking Configuration. Ingress and Egress remarking options for
@@ -1689,7 +1858,12 @@ typedef enum {
 	/** This is new mode in GSWIP-3.1. The QID given in
 	    \ref GSW_QoS_QueuePortSet is base, and bit 0~3 of sub-interface ID
 	    is offset. The final QID is base + SubIfId[0:3]. */
-	GSW_QOS_QMAP_SUBIFID_MODE = 1
+	GSW_QOS_QMAP_SUBIFID_MODE = 1,
+
+	/** \cond INTERNAL */
+	/** \brief force 32-bit enum type */
+	GSW_QOS_QMAP_SUBIFID_INTERNAL_SIZE = 0x7fffffff,
+	/** \endcond */
 } GSW_QoS_qMapMode_t;
 
 /** \brief Sets the Queue ID for one traffic class of one port.
@@ -1747,6 +1921,11 @@ typedef enum {
 	GSW_QOS_SCHEDULER_WFQ = 1,
 	/** Strict Priority Scheduler (strict low). */
 	GSW_QOS_SCHEDULER_STRICT_LOW = 2,
+
+	/** \cond INTERNAL */
+	/** \brief force 32-bit enum type */
+	GSW_QOS_SCHEDULER_INTERNAL_SIZE = 0x7fffffff,
+	/** \endcond */
 } GSW_QoS_Scheduler_t;
 
 /** \brief Configures the egress queues attached to a single port, and that
@@ -1776,7 +1955,15 @@ typedef struct {
 	    algorithm mode is used by the audio/video bridging (AVB)
 	    network (according to 802.1Qav). By default, an token
 	    based shaper algorithm is used. */
-	gsw_bool_t	bAVB;
+	gsw_bool_t	bAVB: 1;
+	/** Enable SW controlled shaper instead of HW auto replenish.
+	 *  HW auto replenish has more accurate rate, but it only works
+	 *  with strict priority queue. SW controlled shaper work with
+	 *  WFQ/WRR queues, but has limitation in rate granularity.
+	 */
+	gsw_bool_t	bSW: 1;
+	/** Reserved field. */
+	u8	res: 6;
 	/** Committed Burst Size (CBS [bytes])
 
 	    \remarks
@@ -1845,7 +2032,12 @@ typedef enum {
 	/**
 	>= 1/16 of green max water mark assert
 	<= 1/16 of green max water mark de assert*/
-	GSW_QOS_WRED_WATERMARK_1_16	= 3
+	GSW_QOS_WRED_WATERMARK_1_16	= 3,
+
+	/** \cond INTERNAL */
+	/** \brief force 32-bit enum type */
+	GSW_QOS_WRED_WATERMARK_INTERNAL_SIZE = 0x7fffffff,
+	/** \endcond */
 } GSW_QoS_WRED_WATERMARK_t;
 
 /** \brief Drop Probability Profile. Defines the drop probability profile.
@@ -1858,7 +2050,12 @@ typedef enum {
 	/** Pmin = 50%, Pmax = 50% */
 	GSW_QOS_WRED_PROFILE_P2	= 2,
 	/** Pmin = 50%, Pmax = 75% */
-	GSW_QOS_WRED_PROFILE_P3	= 3
+	GSW_QOS_WRED_PROFILE_P3	= 3,
+
+	/** \cond INTERNAL */
+	/** \brief force 32-bit enum type */
+	GSW_QOS_WRED_PROFILE_INTERNAL_SIZE = 0x7fffffff,
+	/** \endcond */
 } GSW_QoS_WRED_Profile_t;
 
 /** \brief WRED Cfg Type - Automatic (Adaptive) or Manual.
@@ -1867,7 +2064,12 @@ typedef enum {
 	/** Automatic - Adaptive Watermark Type - GSWIP-3.0/3.1 only*/
 	GSW_QOS_WRED_Adaptive	= 0,
 	/** Manual Threshold Levels Type */
-	GSW_QOS_WRED_Manual	= 1
+	GSW_QOS_WRED_Manual	= 1,
+
+	/** \cond INTERNAL */
+	/** \brief force 32-bit enum type */
+	GSW_QOS_WRED_TYPE_INTERNAL_SIZE = 0x7fffffff,
+	/** \endcond */
 } GSW_QoS_WRED_Mode_t;
 
 /** \brief WRED Thresholds Mode Type. - GSWIP-3.0/3.1 only
@@ -1879,6 +2081,11 @@ typedef enum {
 	GSW_QOS_WRED_Global_Thresh	= 1,
 	/** Port queue and Port WRED Thresholds */
 	GSW_QOS_WRED_Port_Thresh	= 2,
+
+	/** \cond INTERNAL */
+	/** \brief force 32-bit enum type */
+	GSW_QOS_WRED_THRESHOLD_INTERNAL_SIZE = 0x7fffffff,
+	/** \endcond */
 
 } GSW_QoS_WRED_ThreshMode_t;
 
@@ -2143,7 +2350,12 @@ typedef enum {
 	/** 3.2 Revision (A0 or B0)          */
 	GSW_CAP_TYPE_32_VERSION = 27,
 	/** Last Capability Index */
-	GSW_CAP_TYPE_LAST	= 28
+	GSW_CAP_TYPE_LAST	= 28,
+
+	/** \cond INTERNAL */
+	/** \brief force 32-bit enum type */
+	GSW_CAP_INTERNAL_SIZE = 0x7fffffff,
+	/** \endcond */
 } GSW_capType_t;
 
 /** \brief Maximum String Length for the Capability String. */
@@ -2175,7 +2387,12 @@ typedef enum {
 	/** 24 hours aging time */
 	GSW_AGETIMER_1_DAY	= 5,
 	/** Custom aging time in seconds */
-	GSW_AGETIMER_CUSTOM  = 6
+	GSW_AGETIMER_CUSTOM 	= 6,
+
+	/** \cond INTERNAL */
+	/** \brief force 32-bit enum type */
+	GSW_AGETIMER_INTERNAL_SIZE = 0x7fffffff,
+	/** \endcond */
 } GSW_ageTimer_t;
 
 /** @}*/ /* GSW_ETHERNET_BRIDGING */
@@ -2195,7 +2412,12 @@ typedef enum {
 	/** TPID is FDMA_VTETYPE2 (0x9100 by default) */
 	GSW_EXTENDEDVLAN_TPID_VTETYPE_3 = 2,
 	/** TPID is FDMA_VTETYPE3 (0x9200 by default) */
-	GSW_EXTENDEDVLAN_TPID_VTETYPE_4 = 3
+	GSW_EXTENDEDVLAN_TPID_VTETYPE_4 = 3,
+
+	/** \cond INTERNAL */
+	/** \brief force 32-bit enum type */
+	GSW_EXTENDEDVLAN_TPID_VTETYPE_INTERNAL_SIZE = 0x7fffffff,
+	/** \endcond */
 } GSW_ExtendedVlan_4_Tpid_Mode_t;
 
 /** \brief Extended VLAN Filter TPID Field.
@@ -2206,7 +2428,12 @@ typedef enum {
 	/** TPID is 0x8100. */
 	GSW_EXTENDEDVLAN_FILTER_TPID_8021Q = 1,
 	/** TPID is global configured value. */
-	GSW_EXTENDEDVLAN_FILTER_TPID_VTETYPE = 2
+	GSW_EXTENDEDVLAN_FILTER_TPID_VTETYPE = 2,
+
+	/** \cond INTERNAL */
+	/** \brief force 32-bit enum type */
+	GSW_EXTENDEDVLAN_FILTER_TPID_INTERNAL_SIZE = 0x7fffffff,
+	/** \endcond */
 } GSW_ExtendedVlanFilterTpid_t;
 
 /** \brief Extended VLAN Treatment Set TPID.
@@ -2219,7 +2446,12 @@ typedef enum {
 	/** TPID is global configured value. */
 	GSW_EXTENDEDVLAN_TREATMENT_VTETYPE = 2,
 	/** TPID is 0x8100. */
-	GSW_EXTENDEDVLAN_TREATMENT_8021Q = 3
+	GSW_EXTENDEDVLAN_TREATMENT_8021Q = 3,
+
+	/** \cond INTERNAL */
+	/** \brief force 32-bit enum type */
+	GSW_EXTENDEDVLAN_TREATMENT_TPID_INTERNAL_SIZE = 0x7fffffff,
+	/** \endcond */
 } GSW_ExtendedVlanTreatmentTpid_t;
 
 /** \brief Extended VLAN Filter DEI Field.
@@ -2230,7 +2462,12 @@ typedef enum {
 	/** DEI is 0. */
 	GSW_EXTENDEDVLAN_FILTER_DEI_0 = 1,
 	/** DEI is 1. */
-	GSW_EXTENDEDVLAN_FILTER_DEI_1 = 2
+	GSW_EXTENDEDVLAN_FILTER_DEI_1 = 2,
+
+	/** \cond INTERNAL */
+	/** \brief force 32-bit enum type */
+	GSW_EXTENDEDVLAN_FILTER_DEI_INTERNAL_SIZE = 0x7fffffff,
+	/** \endcond */
 } GSW_ExtendedVlanFilterDei_t;
 
 /** \brief Extended VLAN Treatment Set DEI.
@@ -2243,7 +2480,12 @@ typedef enum {
 	/** DEI is 0. */
 	GSW_EXTENDEDVLAN_TREATMENT_DEI_0 = 2,
 	/** DEI is 1. */
-	GSW_EXTENDEDVLAN_TREATMENT_DEI_1 = 3
+	GSW_EXTENDEDVLAN_TREATMENT_DEI_1 = 3,
+
+	/** \cond INTERNAL */
+	/** \brief force 32-bit enum type */
+	GSW_EXTENDEDVLAN_TREATMENT_DEI_INTERNAL_SIZE = 0x7fffffff,
+	/** \endcond */
 } GSW_ExtendedVlanTreatmentDei_t;
 
 /** \brief Extended VLAN Filter Type.
@@ -2258,7 +2500,12 @@ typedef enum {
 	/** There is no tag. */
 	GSW_EXTENDEDVLAN_FILTER_TYPE_NO_TAG = 3,
 	/** Block invalid*/
-	GSW_EXTENDEDVLAN_BLOCK_INVALID = 4
+	GSW_EXTENDEDVLAN_BLOCK_INVALID = 4,
+
+	/** \cond INTERNAL */
+	/** \brief force 32-bit enum type */
+	GSW_EXTENDEDVLAN_FILTER_TYPE_INTERNAL_SIZE = 0x7fffffff,
+	/** \endcond */
 } GSW_ExtendedVlanFilterType_t;
 
 /** \brief Extended VLAN Filter EtherType.
@@ -2279,7 +2526,12 @@ typedef enum {
 	/** DHCPV4 (UDP DESTINATION PORT 67&68). */
 	GSW_EXTENDEDVLAN_FILTER_ETHERTYPE_DHCPV4 = 6,
 	/** DHCPV6 (UDP DESTINATION PORT 546&547). */
-	GSW_EXTENDEDVLAN_FILTER_ETHERTYPE_DHCPV6 = 7
+	GSW_EXTENDEDVLAN_FILTER_ETHERTYPE_DHCPV6 = 7,
+
+	/** \cond INTERNAL */
+	/** \brief force 32-bit enum type */
+	GSW_EXTENDEDVLAN_FILTER_ETYERTYPE_INTERNAL_SIZE = 0x7fffffff,
+	/** \endcond */
 } GSW_ExtendedVlanFilterEthertype_t;
 
 /** \brief Extended VLAN Treatment Set Priority.
@@ -2292,7 +2544,12 @@ typedef enum {
 	/** Prority value is copied from outer VLAN tag of received packet. */
 	GSW_EXTENDEDVLAN_TREATMENT_OUTER_PRORITY = 2,
 	/** Prority value is derived from DSCP field of received packet. */
-	GSW_EXTENDEDVLAN_TREATMENT_DSCP = 3
+	GSW_EXTENDEDVLAN_TREATMENT_DSCP = 3,
+
+	/** \cond INTERNAL */
+	/** \brief force 32-bit enum type */
+	GSW_EXTENDEDVLAN_TREATMENT_PRIO_INTERNAL_SIZE = 0x7fffffff,
+	/** \endcond */
 } GSW_ExtendedVlanTreatmentPriority_t;
 
 /** \brief Extended VLAN Treatment Set VID.
@@ -2304,6 +2561,11 @@ typedef enum {
 	GSW_EXTENDEDVLAN_TREATMENT_INNER_VID = 1,
 	/** VID is copied from outer VLAN tag of received packet. */
 	GSW_EXTENDEDVLAN_TREATMENT_OUTER_VID = 2,
+
+	/** \cond INTERNAL */
+	/** \brief force 32-bit enum type */
+	GSW_EXTENDEDVLAN_TREATMENT_VID_INTERNAL_SIZE = 0x7fffffff,
+	/** \endcond */
 } GSW_ExtendedVlanTreatmentVid_t;
 
 /** \brief Extended VLAN Treatment Remove Tag.
@@ -2319,6 +2581,11 @@ typedef enum {
 	GSW_EXTENDEDVLAN_TREATMENT_DISCARD = 3,
 	/** Discard upstream traffic. */
 	GSW_EXTENDEDVLAN_TREATMENT_DISCARD_UPSTREAM = GSW_EXTENDEDVLAN_TREATMENT_DISCARD,
+
+	/** \cond INTERNAL */
+	/** \brief force 32-bit enum type */
+	GSW_EXTENDEDVLAN_TREATMENT_INTERNAL_SIZE = 0x7fffffff,
+	/** \endcond */
 } GSW_ExtendedVlanTreatmentRemoveTag_t;
 
 /** \brief Extended VLAN Filter VLAN Tag.
@@ -2552,6 +2819,11 @@ typedef enum {
 	GSW_VLAN_RMON_TX = 1,
 	/** VLAN Tx Counters on PCE Bypass Path */
 	GSW_VLAN_RMON_PCE_BYPASS = 2,
+
+	/** \cond INTERNAL */
+	/** \brief force 32-bit enum type */
+	GSW_VLAN_RMON_INTERNAL_SIZE = 0x7fffffff,
+	/** \endcond */
 } GSW_VlanRMON_Type_t;
 
 /**
@@ -2593,7 +2865,12 @@ typedef enum {
 	/** VLAN Mapping for Egress */
 	GSW_VLAN_MAPPING_EGRESS = 1,
 	/** VLAN Mapping for Ingress and Egress */
-	GSW_VLAN_MAPPING_INGRESS_AND_EGRESS = 2
+	GSW_VLAN_MAPPING_INGRESS_AND_EGRESS = 2,
+
+	/** \cond INTERNAL */
+	/** \brief force 32-bit enum type */
+	GSW_VLAN_MAPPING_INTERNAL_SIZE = 0x7fffffff,
+	/** \endcond */
 } GSW_VlanCounterMappingType_t;
 
 /** \brief VLAN Counter Mapping Filter. */
@@ -2608,12 +2885,17 @@ typedef enum {
 	GSW_VLANCOUNTERMAP_FILTER_TYPE_NO_TAG = 3,
 	/** Filter invalid*/
 	GSW_VLANCOUNTERMAP_FILTER_INVALID = 4,
+
+	/** \cond INTERNAL */
+	/** \brief force 32-bit enum type */
+	GSW_VLANCOUNTERMAP_FILTER_INTERNAL_SIZE = 0x7fffffff,
+	/** \endcond */
 } GSW_VlanCounterMapFilterType_t;
 
 /** \brief VLAN Counter Mapping Configuration. */
 typedef struct {
 	/** Counter Index */
-	u8	nCounterIndex;
+	u8 nCounterIndex;
 	/** Ctp Port Id */
 	u16 nCtpPortId;
 	/** Priority Enable */
@@ -2690,7 +2972,12 @@ typedef enum {
 	/** IGMP management packet snooping is enabled and forwarded to the
 	    configured port. No autolearning of the multicast level 3 table. This
 	    table has to be maintained by the management software. */
-	GSW_MULTICAST_SNOOP_MODE_FORWARD = 2
+	GSW_MULTICAST_SNOOP_MODE_FORWARD = 2,
+
+	/** \cond INTERNAL */
+	/** \brief force 32-bit enum type */
+	GSW_MULTICAST_SNOOP_MODE_INTERNAL_SIZE = 0x7fffffff,
+	/** \endcond */
 } GSW_multicastSnoopMode_t;
 
 /** \brief Configure the IGMP report suppression mode.
@@ -2701,7 +2988,12 @@ typedef enum {
 	/** Report Suppression. No Join Aggregation. */
 	GSW_MULTICAST_REPORT	= 1,
 	/** Transparent Mode. No Report Suppression and no Join Aggregation. */
-	GSW_MULTICAST_TRANSPARENT	= 2
+	GSW_MULTICAST_TRANSPARENT	= 2,
+
+	/** \cond INTERNAL */
+	/** \brief force 32-bit enum type */
+	GSW_MULTICAST_REPORT_INTERNAL_SIZE = 0x7fffffff,
+	/** \endcond */
 } GSW_multicastReportSuppression_t;
 
 /** \brief Configure the switch multicast configuration.
@@ -2746,9 +3038,14 @@ typedef enum {
 	/** Group source IP address is 'don't care'. This means all source IP
 	    addresses (*) are included for the multicast group membership.
 	    This is the default mode for IGMPv1 and IGMPv2. */
-	GSW_IGMP_MEMBER_DONT_CARE	= 2,
+	GSW_IGMP_MEMBER_DONT_CARE = 2,
 
 	GSW_IGMP_MEMBER_INVALID,
+
+	/** \cond INTERNAL */
+	/** \brief force 32-bit enum type */
+	GSW_IGMP_MEMBER_INTERNAL_SIZE = 0x7fffffff,
+	/** \endcond */
 } GSW_IGMP_MemberMode_t;
 
 /** \brief Add a host as a member to a multicast group.
@@ -2942,12 +3239,17 @@ typedef enum {
 	/** The EtherType field of the Special Tag of egress packets is always set
 	    to a prefined value. This same defined value applies for all
 	    switch ports. */
-	GSW_CPU_ETHTYPE_PREDEFINED	= 0,
+	GSW_CPU_ETHTYPE_PREDEFINED = 0,
 	/** The Ethertype field of the Special Tag of egress packets is set to
 	    the FlowID parameter, which is a results of the switch flow
 	    classification result. The switch flow table rule provides this
 	    FlowID as action parameter. */
-	GSW_CPU_ETHTYPE_FLOWID	= 1
+	GSW_CPU_ETHTYPE_FLOWID = 1,
+
+	/** \cond INTERNAL */
+	/** \brief force 32-bit enum type */
+	GSW_CPU_ETHTYPE_INTERNAL_SIZE = 0x7fffffff,
+	/** \endcond */
 } GSW_CPU_SpecialTagEthType_t;
 
 
@@ -2961,7 +3263,12 @@ typedef enum {
 	/** 40-Bytes Offsets (Offset-0 to -39) + 8-Bytes Parsing Flags (Bit 63:0) accompanying to CPU Port for this combination */
 	GSW_CPU_PARSER_OFFSETS_FLAGS	= 2,
 	/** Reserved - for future use */
-	GSW_CPU_PARSER_RESERVED = 3
+	GSW_CPU_PARSER_RESERVED = 3,
+
+	/** \cond INTERNAL */
+	/** \brief force 32-bit enum type */
+	GSW_CPU_PARSER_INTERNAL_SIZE = 0x7fffffff,
+	/** \endcond */
 } GSW_CPU_ParserHeaderCfg_t;
 
 /** \brief FCS and Pad Insertion operations for GSWIP 3.1
@@ -2972,7 +3279,12 @@ typedef enum {
 	/** CRC Insertion Enable Pad Insertion Disable */
 	GSW_CRC_EN_PAD_DIS	= 1,
 	/** CRC Pad Insertion Disable */
-	GSW_CRC_PAD_INS_DIS	= 2
+	GSW_CRC_PAD_INS_DIS	= 2,
+
+	/** \cond INTERNAL */
+	/** \brief force 32-bit enum type */
+	GSW_CRC_PAD_INTERNAL_SIZE = 0x7fffffff,
+	/** \endcond */
 } GSW_FCS_TxOps_t;
 
 /** \brief Defines one port that is directly connected to CPU.
@@ -3216,5 +3528,6 @@ typedef struct {
 #include "gsw_flow.h"
 #include "gsw_pmac.h"
 #include "gsw_tbl_rw.h"
+#include "gsw_defconf.h"
 
 #endif /* _MXL_GSW_H_ */

@@ -68,7 +68,12 @@ typedef enum {
 	/** IPv4 Type */
 	GSW_IP_SELECT_IPV4	= 0,
 	/** IPv6 Type */
-	GSW_IP_SELECT_IPV6	= 1
+	GSW_IP_SELECT_IPV6	= 1,
+
+	/** \cond INTERNAL */
+	/** \brief force 32-bit enum type */
+	GSW_IP_SELECT_INTERNAL_SIZE = 0x7fffffff,
+	/** \endcond */
 } GSW_IP_Select_t;
 
 #endif /* _GSW_TYPES_H_ */

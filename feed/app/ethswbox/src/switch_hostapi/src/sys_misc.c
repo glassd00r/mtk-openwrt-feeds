@@ -150,6 +150,46 @@ int sys_misc_sfp_set(const GSW_Device_t *dev, struct sys_sfp_cfg *cfg)
 			    sizeof(*cfg));
 }
 
+int sys_misc_lldp_get(const GSW_Device_t *dev, struct sys_lldp_get *lldp_sts)
+{
+	return gsw_api_wrap(dev,
+			    SYS_MISC_LLDP_GET,
+			    lldp_sts,
+			    sizeof(*lldp_sts),
+			    0,
+			    sizeof(*lldp_sts));
+}
+
+int sys_misc_lldp_set(const GSW_Device_t *dev, struct sys_lldp_set *lldp_op)
+{
+	return gsw_api_wrap(dev,
+			    SYS_MISC_LLDP_SET,
+			    lldp_op,
+			    sizeof(*lldp_op),
+			    0,
+			    0);
+}
+
+int sys_misc_igmp_get(const GSW_Device_t *dev, struct sys_igmp_cfg *cfg)
+{
+	return gsw_api_wrap(dev,
+			    SYS_MISC_IGMP_GET,
+			    cfg,
+			    sizeof(*cfg),
+			    0,
+			    sizeof(*cfg));
+}
+
+int sys_misc_igmp_set(const GSW_Device_t *dev, struct sys_igmp_cfg *cfg)
+{
+	return gsw_api_wrap(dev,
+			    SYS_MISC_IGMP_SET,
+			    cfg,
+			    sizeof(*cfg),
+			    0,
+			    0);
+}
+
 int loop_detect_passive_start(const GSW_Device_t *dev,
 			      struct loop_detect_passive_cfg *cfg)
 {
@@ -192,6 +232,17 @@ int loop_detect_active_stop(const GSW_Device_t *dev)
 			    0);
 }
 
+int loop_detect_active_cfg_get(const GSW_Device_t *dev,
+			       struct loop_detect_active_cfg *cfg)
+{
+	return gsw_api_wrap(dev,
+			    SYS_MISC_LOOP_ACTIVE_CFG_GET,
+			    cfg,
+			    sizeof(*cfg),
+			    0,
+			    sizeof(*cfg));
+}
+
 int loop_prevention_start(const GSW_Device_t *dev,
 			  struct loop_prevention_cfg *cfg)
 {
@@ -213,13 +264,230 @@ int loop_prevention_stop(const GSW_Device_t *dev)
 			    0);
 }
 
-
-int mxl_led_sys_cfg(const GSW_Device_t *dev, struct mxl_led_sys_cfg *cfg)
+int mxl_led_sys_cfg_get(const GSW_Device_t *dev, struct mxl_led_sys_cfg *cfg)
 {
 	return gsw_api_wrap(dev,
-			    SYS_MISC_SYS_LED_CFG,
+			    SYS_MISC_SYS_LED_CFG_GET,
 			    cfg,
 			    sizeof(*cfg),
 			    0,
+			    sizeof(*cfg));
+}
+
+int mxl_led_sys_cfg_set(const GSW_Device_t *dev, struct mxl_led_sys_cfg *cfg)
+{
+	return gsw_api_wrap(dev,
+			    SYS_MISC_SYS_LED_CFG_SET,
+			    cfg,
+			    sizeof(*cfg),
+			    0,
+			    0);
+}
+
+int sys_misc_igmp_report_flood_get(const GSW_Device_t *dev,
+				   struct sys_igmp_cfg *cfg)
+{
+	return gsw_api_wrap(dev,
+			    SYS_MISC_IGMP_REPORT_FLOOD_GET,
+			    cfg,
+			    sizeof(*cfg),
+			    0,
+			    sizeof(*cfg));
+}
+
+int sys_misc_igmp_report_flood_set(const GSW_Device_t *dev,
+				   struct sys_igmp_cfg *cfg)
+{
+	return gsw_api_wrap(dev,
+			    SYS_MISC_IGMP_REPORT_FLOOD_SET,
+			    cfg,
+			    sizeof(*cfg),
+			    SYS_MISC_IGMP_REPORT_FLOOD_GET,
+			    0);
+}
+
+int sys_misc_daemon_get(const GSW_Device_t *dev,
+			struct sys_daemon_cfg *pcfg)
+{
+	return gsw_api_wrap(dev,
+			    SYS_MISC_DAEMON_GET,
+			    pcfg,
+			    sizeof(*pcfg),
+			    0,
+			    sizeof(*pcfg));
+}
+
+int sys_misc_daemon_set(const GSW_Device_t *dev,
+			struct sys_daemon_cfg *pcfg)
+{
+	return gsw_api_wrap(dev,
+			    SYS_MISC_DAEMON_SET,
+			    pcfg,
+			    sizeof(*pcfg),
+			    SYS_MISC_DAEMON_GET,
+			    0);
+}
+
+int sys_misc_host_ip_get(const GSW_Device_t *dev, struct sys_host_ip_cfg *cfg)
+{
+	return gsw_api_wrap(dev,
+			    SYS_MISC_HOST_IP_GET,
+			    cfg,
+			    sizeof(*cfg),
+			    0,
+			    sizeof(*cfg));
+}
+
+int sys_misc_host_ip_set(const GSW_Device_t *dev, struct sys_host_ip_cfg *cfg)
+{
+	return gsw_api_wrap(dev,
+			    SYS_MISC_HOST_IP_SET,
+			    cfg,
+			    sizeof(*cfg),
+			    SYS_MISC_HOST_IP_GET,
+			    0);
+}
+
+int sys_misc_prg_mac(const GSW_Device_t *dev, struct sys_prg_mac *cfg)
+{
+	return gsw_api_wrap(dev,
+			    SYS_MISC_PRG_MAC,
+			    cfg,
+			    sizeof(*cfg),
+			    0,
+			    0);
+}
+
+int sys_misc_ptp_ts_corr_cal_get(const GSW_Device_t *dev, struct sys_ptp_ts_corr_cal *cfg)
+{
+	return gsw_api_wrap(dev,
+			    SYS_MISC_PTP_TS_CORR_CAL_GET,
+			    cfg,
+			    sizeof(*cfg),
+			    0,
+			    0);
+}
+
+int sys_misc_ptp_ts_corr_cal_set(const GSW_Device_t *dev, struct sys_ptp_ts_corr_cal *cfg)
+{
+	return gsw_api_wrap(dev,
+			    SYS_MISC_PTP_TS_CORR_CAL_SET,
+			    cfg,
+			    sizeof(*cfg),
+			    SYS_MISC_PTP_TS_CORR_CAL_GET,
+			    0);
+}
+
+int sys_misc_data_led_set(const GSW_Device_t *dev, struct sys_data_led_cfg *cfg)
+{
+	return gsw_api_wrap(dev,
+			    SYS_MISC_DATA_LED_SET,
+			    cfg,
+			    sizeof(*cfg),
+			    0,
+			    0);
+}
+
+int sys_misc_port_map_get(const GSW_Device_t *dev, struct sys_port_map *cfg)
+{
+	return gsw_api_wrap(dev,
+			    SYS_MISC_PORT_MAP_GET,
+			    cfg,
+			    sizeof(*cfg),
+			    0,
+			    sizeof(*cfg));
+}
+
+int sys_misc_port_map_set(const GSW_Device_t *dev, struct sys_port_map *cfg)
+{
+	return gsw_api_wrap(dev,
+			    SYS_MISC_PORT_MAP_SET,
+			    cfg,
+			    sizeof(*cfg),
+			    0,
+			    0);
+}
+
+int loop_detect_active_mac_get(const GSW_Device_t *dev, uint8_t cfg[6])
+{
+	return gsw_api_wrap(dev,
+			    SYS_MISC_LOOP_ACTIVE_MAC_GET,
+			    cfg,
+			    6,
+			    0,
+			    6);
+}
+
+int loop_detect_active_mac_set(const GSW_Device_t *dev, uint8_t cfg[6])
+{
+	return gsw_api_wrap(dev,
+			    SYS_MISC_LOOP_ACTIVE_MAC_SET,
+			    cfg,
+			    6,
+			    SYS_MISC_LOOP_ACTIVE_MAC_GET,
+			    0);
+}
+
+int sys_misc_xg_fc_thr_ratio_get(const GSW_Device_t *dev,
+				 struct sys_xg_fc_thr_ratio *pcfg)
+{
+	return gsw_api_wrap(dev,
+			    SYS_MISC_XG_FC_THR_RATIO_GET,
+			    pcfg,
+			    sizeof(*pcfg),
+			    0,
+			    sizeof(*pcfg));
+}
+
+int sys_misc_xg_fc_thr_ratio_set(const GSW_Device_t *dev,
+				 struct sys_xg_fc_thr_ratio *pcfg)
+{
+	return gsw_api_wrap(dev,
+			    SYS_MISC_XG_FC_THR_RATIO_SET,
+			    pcfg,
+			    sizeof(*pcfg),
+			    SYS_MISC_XG_FC_THR_RATIO_GET,
+			    0);
+}
+
+int sys_misc_pce_svc_get(const GSW_Device_t *dev, struct sys_pce_svc_cfg *pcfg)
+{
+	return gsw_api_wrap(dev,
+			    SYS_MISC_PCE_SVC_GET,
+			    pcfg,
+			    sizeof(*pcfg),
+			    0,
+			    sizeof(*pcfg));
+}
+
+int sys_misc_pce_svc_set(const GSW_Device_t *dev, struct sys_pce_svc_cfg *pcfg)
+{
+	return gsw_api_wrap(dev,
+			    SYS_MISC_PCE_SVC_SET,
+			    pcfg,
+			    sizeof(*pcfg),
+			    SYS_MISC_PCE_SVC_GET,
+			    0);
+}
+
+int loop_detect_cascade_cfg_get(const GSW_Device_t *dev,
+				struct loop_detect_cascade_cfg *pcfg)
+{
+	return gsw_api_wrap(dev,
+			    SYS_MISC_LOOP_CASCADE_CFG_GET,
+			    pcfg,
+			    sizeof(*pcfg),
+			    0,
+			    sizeof(*pcfg));
+}
+
+int loop_detect_cascade_cfg_set(const GSW_Device_t *dev,
+				struct loop_detect_cascade_cfg *pcfg)
+{
+	return gsw_api_wrap(dev,
+			    SYS_MISC_LOOP_CASCADE_CFG_SET,
+			    pcfg,
+			    sizeof(*pcfg),
+			    SYS_MISC_LOOP_CASCADE_CFG_GET,
 			    0);
 }

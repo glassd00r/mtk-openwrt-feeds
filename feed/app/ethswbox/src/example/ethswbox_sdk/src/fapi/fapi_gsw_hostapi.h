@@ -1,4 +1,5 @@
-#ifndef _FAPI_GSW_HOST_H_
+#ifndef _FAPI_GSW_HOSTAPI_H_
+#define _FAPI_GSW_HOSTAPI_H_
 
 /******************************************************************************
 
@@ -42,6 +43,12 @@ GSW_return_t fapi_GSW_QoS_WredPortCfgSet(int prmc, char *prmv[]);
 GSW_return_t fapi_GSW_QoS_WredPortCfgGet(int prmc, char *prmv[]);
 GSW_return_t fapi_GSW_TrunkingCfgSet(int prmc, char *prmv[]);
 GSW_return_t fapi_GSW_TrunkingCfgGet(int prmc, char *prmv[]);
+GSW_return_t fapi_GSW_TrunkingLAGCfgGet(int prmc, char *prmv[]);
+GSW_return_t fapi_GSW_TrunkingLAGCfgSet(int prmc, char *prmv[]);
+GSW_return_t fapi_GSW_Poe_GlobalCfgSet(int prmc, char *prmv[]);
+GSW_return_t fapi_GSW_Poe_GlobalStatusGet(int prmc, char *prmv[]);
+GSW_return_t fapi_GSW_Poe_PortCfgGet(int prmc, char *prmv[]);
+GSW_return_t fapi_GSW_Poe_PortCfgSet(int prmc, char *prmv[]);
 GSW_return_t fapi_GSW_MAC_TableClear(int prmc, char *prmv[]);
 GSW_return_t fapi_GSW_CfgGet(int prmc, char *prmv[]);
 GSW_return_t fapi_GSW_CfgSet(int prmc, char *prmv[]);
@@ -110,6 +117,14 @@ GSW_return_t fapi_GSW_PceRuleAlloc(int prmc, char *prmv[]);
 GSW_return_t fapi_GSW_PceRuleFree(int prmc, char *prmv[]);
 GSW_return_t fapi_GSW_PceRuleEnable(int prmc, char *prmv[]);
 GSW_return_t fapi_GSW_PceRuleDisable(int prmc, char *prmv[]);
+GSW_return_t fapi_GSW_PceRuleMove(int prmc, char *prmv[]);
+GSW_return_t fapi_GSW_PceRuleBlockSize(int prmc, char *prmv[]);
+GSW_return_t fapi_GSW_PceRuleLogicRead(int prmc, char *prmv[]);
+GSW_return_t fapi_GSW_PceRuleLogicWrite(int prmc, char *prmv[]);
+GSW_return_t fapi_GSW_PceRuleLogicDelete(int prmc, char *prmv[]);
+GSW_return_t fapi_GSW_PceRuleLogicEnable(int prmc, char *prmv[]);
+GSW_return_t fapi_GSW_PceRuleLogicDisable(int prmc, char *prmv[]);
+GSW_return_t fapi_GSW_PceRuleLogicMove(int prmc, char *prmv[]);
 
 GSW_return_t fapi_GSW_MulticastRouterPortAdd(int prmc, char *prmv[]);
 GSW_return_t fapi_GSW_MulticastRouterPortRemove(int prmc, char *prmv[]);
@@ -168,9 +183,10 @@ GSW_return_t fapi_GSW_Debug_PMAC_RMON_Get_All(int prmc, char *prmv[]);
 
 GSW_return_t fapi_GSW_SS_Sptag_Get(int prmc, char *prmv[]);
 GSW_return_t fapi_GSW_SS_Sptag_Set(int prmc, char *prmv[]);
+#ifdef SUPPORT_DSCP_DROP_PRECEDENCE
 GSW_return_t fapi_GSW_QoS_DSCP_DropPrecedenceCfgGet(int prmc, char *prmv[]);
 GSW_return_t fapi_GSW_QoS_DSCP_DropPrecedenceCfgSet(int prmc, char *prmv[]);
-
+#endif
 GSW_return_t fapi_GSW_QoS_ColorMarkingTableGet(int prmc, char *prmv[]);
 GSW_return_t fapi_GSW_QoS_ColorMarkingTableSet(int prmc, char *prmv[]);
 GSW_return_t fapi_GSW_QoS_ColorReMarkingTableGet(int prmc, char *prmv[]);
@@ -184,14 +200,17 @@ GSW_return_t fapi_GSW_QoS_StormCfgSet(int prmc, char *prmv[]);
 GSW_return_t fapi_GSW_QoS_PmapperTableGet(int prmc, char *prmv[]);
 GSW_return_t fapi_GSW_QoS_PmapperTableSet(int prmc, char *prmv[]);
 
-GSW_return_t fapi_GSW_Pce_RuleBlockSize(int prmc, char *prmv[]);
 GSW_return_t fapi_GSW_BridgePort_LoopRead(int prmc, char *prmv[]);
 
 GSW_return_t fapi_GSW_TflowCountModeGet(int prmc, char *prmv[]);
 GSW_return_t fapi_GSW_TflowCountModeSet(int prmc, char *prmv[]);
 
 GSW_return_t fapi_GSW_Mac_TableLoopDetect(int prmc, char *prmv[]);
-GSW_return_t fapi_GSW_PCE_RuleMove(int prmc, char *prmv[]);
 
-
-#endif /* _FAPI_GSW_HOST_H_ */
+GSW_return_t fapi_Mac_RmonGet(int prmc, char *prmv[]);
+GSW_return_t fapi_Mac_RmonClear(int prmc, char *prmv[]);
+GSW_return_t fapi_Mac_RegisterGet(int prmc, char *prmv[]);
+GSW_return_t fapi_Mac_RegisterSet(int prmc, char *prmv[]);
+GSW_return_t fapi_Sys_DaemonList(int prmc, char *prmv[]);
+GSW_return_t fapi_Sys_DaemonSet(int prmc, char *prmv[]);
+#endif /* _FAPI_GSW_HOSTAPI_H_ */

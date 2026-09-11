@@ -12,13 +12,74 @@
 #include <lif_api.h>
 #include <unistd.h>
 
+uint8_t lif_id = 0;
+static GSW_Device_t gsw_dev;
+
+/* =========================================================================
+ * GPIO pin scan result cache
+ *
+ * Each fapi-* command is a separate process, so the auto-scan result is
+ * persisted to a file in the current working directory (package-local)
+ * so that all commands share one cache file regardless of the working directory.
+ *
+ * Cache lifetime: persistent, cleared only by 'fapi-lif-scan'.
+ * Format: "CLK=<n> DATA=<n>\n"
+ * ========================================================================= */
+#define LIF_CACHE_FILENAME "ethswbox_lif_cache"
+
+const char *get_lif_cache_path(void)
+{
+	static char path[32] = {0};
+	if (path[0] == '\0')
+		snprintf(path, sizeof(path), "./%s", LIF_CACHE_FILENAME);
+	return path;
+}
+
+static int read_lif_cache(uint8_t *clk, uint8_t *data)
+{
+	FILE *f = fopen(get_lif_cache_path(), "r");
+	if (!f)
+		return 0;
+	int c = 0, d = 0;
+	int n = fscanf(f, "CLK=%d DATA=%d", &c, &d);
+	fclose(f);
+	if (n == 2 && c > 1 && d > 1 && c != d && c < 32 && d < 32) {
+		*clk  = (uint8_t)c;
+		*data = (uint8_t)d;
+		return 1;
+	}
+	return 0;
+}
+
+static void write_lif_cache(uint8_t clk, uint8_t data)
+{
+	const char *path = get_lif_cache_path();
+	FILE *f = fopen(path, "w");
+	if (!f) {
+		printf("api_gsw_get_links: cannot write cache %s\n", path);
+		return;
+	}
+	fprintf(f, "CLK=%d DATA=%d\n", (int)clk, (int)data);
+	fclose(f);
+}
+
+/* Public wrappers used by fapi-lif-set-pins to update / clear the cache
+   without running a full GPIO scan. */
+void write_lif_cache_pins(uint8_t clk, uint8_t data)
+{
+	write_lif_cache(clk, data);
+}
+
+void clear_lif_cache(void)
+{
+	remove(get_lif_cache_path());
+}
 
 static void __usleep(unsigned long usec)
 {
 	/* TO be replaced with OS dependent implementation */
 	usleep(usec);
 }
-
 
 static pthread_mutex_t lock;
 
@@ -73,6 +134,8 @@ static int mdiobus_read(void *mdiobus_data, uint8_t phyaddr, uint8_t mmd,
 {
 	int ret;
 
+	(void)mdiobus_data;
+
 	if (phyaddr > 31 || reg > GSW_MMD_REG_DATA_LAST)
 		return -EINVAL;
 
@@ -89,6 +152,8 @@ static int mdiobus_read(void *mdiobus_data, uint8_t phyaddr, uint8_t mmd,
 static int mdiobus_write(void *mdiobus_data, uint8_t phyaddr, uint8_t mmd,
 			 uint16_t reg, uint16_t val)
 {
+	(void)mdiobus_data;
+
 	if (phyaddr > 31 || reg > GSW_MMD_REG_DATA_LAST)
 		return -EINVAL;
 
@@ -99,10 +164,6 @@ static int mdiobus_write(void *mdiobus_data, uint8_t phyaddr, uint8_t mmd,
 	else
 		return -EINVAL;
 }
-
-
-static GSW_Device_t gsw_dev;
-
 
 /* TO be adapted  with target dependent implementation */
 GSW_Device_t* gsw_adapt_init(uint8_t lif_id, uint8_t phy_id)
@@ -123,7 +184,6 @@ GSW_Device_t* gsw_adapt_init(uint8_t lif_id, uint8_t phy_id)
 	return &gsw_dev;
 }
 
-
 /**
    Implements the MDIO library (PyRPIO only) Scan procedure.
 
@@ -137,10 +197,36 @@ GSW_Device_t* gsw_adapt_init(uint8_t lif_id, uint8_t phy_id)
 int32_t api_gsw_get_links(char* lib)
 {
 	int32_t nr_lif = 0;
-	uint8_t lif_id,phy,max_phy;
-	lif_mdio_init(lib);
-	nr_lif = lif_scan(lib);
+	uint8_t lif_id, phy, max_phy;
+	uint8_t cached_clk = 0, cached_data = 0;
 
+	lif_mdio_init(lib);
+
+	if (read_lif_cache(&cached_clk, &cached_data)) {
+		/* Fast path: use cached pins — skip the full 272-pair GPIO scan */
+		nr_lif = lif_scan_with_pins(lib, cached_clk, cached_data);
+		if (nr_lif == 0) {
+			/* Device not detected by fingerprint scan (non-standard SMDIO
+			   device with no MDIO PHY-ID registers).  Open the bus directly
+			   so raw lif_mdio_c22_read / smdio_read calls still work. */
+			nr_lif = lif_open_forced(lib, cached_clk, cached_data);
+		}
+	} else {
+		/* Slow path: full auto-scan, then cache result for next time */
+		nr_lif = lif_scan(lib);
+		if (nr_lif > 0) {
+			write_lif_cache((uint8_t)lif_get_cpin(0),
+					(uint8_t)lif_get_dpin(0));
+			printf("api_gsw_get_links: cached CLK=%d DATA=%d to %s\n",
+				lif_get_cpin(0), lif_get_dpin(0), get_lif_cache_path());
+		}
+	}
+
+	if (nr_lif == 0) {
+		printf("api_gsw_get_links: no MDIO link found."
+			" Verify GPIO wiring and pin configuration.\n");
+		return 0;
+	}
 
 	for (lif_id = 0; lif_id < nr_lif; lif_id++){
 		max_phy = (uint8_t)lif_get_nr_phys(lif_id);
@@ -158,10 +244,9 @@ int32_t api_gsw_get_links(char* lib)
 	return nr_lif;
 }
 
-
-int32_t gsw_get_cpin (uint8_t lif_id) {
-
-   return  scanned_links[lif_id].cpin;
+int32_t gsw_get_cpin (uint8_t lif_id)
+{
+	return  scanned_links[lif_id].cpin;
 }
 
 /**
@@ -175,15 +260,14 @@ int32_t gsw_get_cpin (uint8_t lif_id) {
    \return
       int32_t data pin
 */
-int32_t gsw_get_dpin(uint8_t lif_id){
-
-   return  scanned_links[lif_id].dpin;
+int32_t gsw_get_dpin(uint8_t lif_id)
+{
+	return  scanned_links[lif_id].dpin;
 }
-int32_t gsw_update_lif_id(uint8_t lif_id){
-
-
-   phyif.lif_id  = lif_id;  
-
+int32_t gsw_update_lif_id(uint8_t lif_id)
+{
+	phyif.lif_id  = lif_id;  
+	return 0;
 }
 
 /**
@@ -197,9 +281,9 @@ int32_t gsw_update_lif_id(uint8_t lif_id){
    \return
       int32_t  Number of Phys
 */
-int32_t gsw_get_nr_phys (uint8_t lif_id){
-
-   return  scanned_links[lif_id].nr_phys;
+int32_t gsw_get_nr_phys (uint8_t lif_id)
+{
+	return  scanned_links[lif_id].nr_phys;
 }
 
 /**
@@ -213,9 +297,9 @@ int32_t gsw_get_nr_phys (uint8_t lif_id){
       int32_t   PHY ADDR
 */
 
-int32_t gsw_get_phy_addr(uint8_t lif_id, uint8_t phy) {
-
-   return  scanned_links[lif_id].phy_info[phy][0];
+int32_t gsw_get_phy_addr(uint8_t lif_id, uint8_t phy)
+{
+	return  scanned_links[lif_id].phy_info[phy][0];
 }
 
 /**
@@ -228,9 +312,9 @@ int32_t gsw_get_phy_addr(uint8_t lif_id, uint8_t phy) {
    \return
       int32_t   PHY ID
 */
-int32_t gsw_get_phy_id(uint8_t lif_id, uint8_t phy) {
-
-    return  scanned_links[lif_id].phy_info[phy][1];
+int32_t gsw_get_phy_id(uint8_t lif_id, uint8_t phy)
+{
+	return  scanned_links[lif_id].phy_info[phy][1];
 }
 
 /**
@@ -245,20 +329,30 @@ int32_t gsw_get_phy_id(uint8_t lif_id, uint8_t phy) {
       void*   gsw_211 struc
 */
 
-GSW_Device_t* gsw_get_struc(uint8_t lif_id,uint8_t phy_id){
-
-   gsw_update_lif_id(lif_id);
-   return &scanned_links[lif_id].gsw_struct[phy_id];
+GSW_Device_t* gsw_get_struc(uint8_t lif_id,uint8_t phy_id)
+{
+	gsw_update_lif_id(lif_id);
+	return &scanned_links[lif_id].gsw_struct[phy_id];
 }
 
 int gsw_read(const GSW_Device_t *dev, uint32_t regaddr)
 {
+	if (!dev || !dev->mdiobus_read) {
+		printf("gsw_read: device not initialised (NULL function pointer).\n"
+			"Run lif_scan first and verify GPIO pin configuration.\n");
+		return -EINVAL;
+	}
 	return dev->mdiobus_read(dev->mdiobus_data, dev->phy_addr, GSW_MMD_DEV,
 				 regaddr);
 }
 
 int gsw_write(const GSW_Device_t *dev, uint32_t regaddr, uint16_t data)
 {
+	if (!dev || !dev->mdiobus_write) {
+		printf("gsw_write: device not initialised (NULL function pointer).\n"
+			"Run lif_scan first and verify GPIO pin configuration.\n");
+		return -EINVAL;
+	}
 	return dev->mdiobus_write(dev->mdiobus_data, dev->phy_addr, GSW_MMD_DEV,
 				  regaddr, data);
 }

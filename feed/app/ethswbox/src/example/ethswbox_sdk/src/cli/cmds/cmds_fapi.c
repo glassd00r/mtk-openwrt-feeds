@@ -19,19 +19,269 @@
 
 #include "os_types.h"
 #include "os_linux.h"
-
 #include "cmds.h"
 #include "cmds_fapi.h"
 #include "host_adapt.h"
 #include "fapi_gsw_hostapi.h"
 #include "fapi_gsw_hostapi_mdio_relay.h"
 
+#ifndef slif_lib
+#ifdef ETHSWBOX_RPI4EVK
+#define slif_lib "bcm2835"
+#else
 #define slif_lib ""
+#endif
+#endif
 
 /* ========================================================================== */
 /*                           Function prototypes                              */
 /* ========================================================================== */
 static void cmds_fapi_help(void);
+
+static const char *const gsw_pce_rule_write_tmpl[] = {
+	"nLogicalPortId",
+	"nSubIfIdGroup",
+	"region",
+	"pattern.nIndex",
+	"pattern.bEnable",
+	"pattern.bPortIdEnable",
+	"pattern.nPortId",
+	"pattern.bPortId_Exclude",
+	"pattern.bSubIfIdEnable",
+	"pattern.nSubIfId",
+	"pattern.eSubIfIdType",
+	"pattern.bSubIfId_Exclude",
+	"pattern.bInsertionFlag_Enable",
+	"pattern.nInsertionFlag",
+	"pattern.bDSCP_Enable",
+	"pattern.nDSCP",
+	"pattern.bDSCP_Exclude",
+	"pattern.bInner_DSCP_Enable",
+	"pattern.nInnerDSCP",
+	"pattern.bInnerDSCP_Exclude",
+	"pattern.bPCP_Enable",
+	"pattern.nPCP",
+	"pattern.bCTAG_PCP_DEI_Exclude",
+	"pattern.bSTAG_PCP_DEI_Enable",
+	"pattern.nSTAG_PCP_DEI",
+	"pattern.bSTAG_PCP_DEI_Exclude",
+	"pattern.bPktLngEnable",
+	"pattern.nPktLng",
+	"pattern.nPktLngRange",
+	"pattern.bPktLng_Exclude",
+	"pattern.bMAC_DstEnable",
+	"pattern.nMAC_Dst",
+	"pattern.nMAC_DstMask",
+	"pattern.bDstMAC_Exclude",
+	"pattern.bMAC_SrcEnable",
+	"pattern.nMAC_Src",
+	"pattern.nMAC_SrcMask",
+	"pattern.bSrcMAC_Exclude",
+	"pattern.bAppDataMSB_Enable",
+	"pattern.nAppDataMSB",
+	"pattern.bAppMaskRangeMSB_Select",
+	"pattern.nAppMaskRangeMSB",
+	"pattern.bAppMSB_Exclude",
+	"pattern.bAppDataLSB_Enable",
+	"pattern.nAppDataLSB",
+	"pattern.bAppMaskRangeLSB_Select",
+	"pattern.nAppMaskRangeLSB",
+	"pattern.bAppLSB_Exclude",
+	"pattern.eDstIP_Select",
+	"pattern.nDstIP",
+	"pattern.nDstIP",
+	"pattern.nDstIP_Mask",
+	"pattern.bDstIP_Exclude",
+	"pattern.eInnerDstIP_Select",
+	"pattern.nInnerDstIP",
+	"pattern.nInnerDstIP",
+	"pattern.nInnerDstIP_Mask",
+	"pattern.bInnerDstIP_Exclude",
+	"pattern.eSrcIP_Select",
+	"pattern.nSrcIP",
+	"pattern.nSrcIP",
+	"pattern.nSrcIP_Mask",
+	"pattern.bSrcIP_Exclude",
+	"pattern.eInnerSrcIP_Select",
+	"pattern.nInnerSrcIP",
+	"pattern.nInnerSrcIP",
+	"pattern.nInnerSrcIP_Mask",
+	"pattern.bInnerSrcIP_Exclude",
+	"pattern.bEtherTypeEnable",
+	"pattern.nEtherType",
+	"pattern.nEtherTypeMask",
+	"pattern.bEtherType_Exclude",
+	"pattern.bProtocolEnable",
+	"pattern.nProtocol",
+	"pattern.nProtocolMask",
+	"pattern.bProtocol_Exclude",
+	"pattern.bInnerProtocolEnable",
+	"pattern.nInnerProtocol",
+	"pattern.nInnerProtocolMask",
+	"pattern.bInnerProtocol_Exclude",
+	"pattern.bSessionIdEnable",
+	"pattern.nSessionId",
+	"pattern.bSessionId_Exclude",
+	"pattern.bPPP_ProtocolEnable",
+	"pattern.nPPP_Protocol",
+	"pattern.nPPP_ProtocolMask",
+	"pattern.bPPP_Protocol_Exclude",
+	"pattern.bVid",
+	"pattern.nVid",
+	"pattern.bVidRange_Select",
+	"pattern.nVidRange",
+	"pattern.bVid_Exclude",
+	"pattern.bSLAN_Vid",
+	"pattern.nSLAN_Vid",
+	"pattern.bSLANVid_Exclude",
+	"pattern.bPayload1_SrcEnable",
+	"pattern.nPayload1",
+	"pattern.bPayload1MaskRange_Select",
+	"pattern.nPayload1_Mask",
+	"pattern.bPayload1_Exclude",
+	"pattern.bPayload2_SrcEnable",
+	"pattern.nPayload2",
+	"pattern.bPayload2MaskRange_Select",
+	"pattern.nPayload2_Mask",
+	"pattern.bPayload2_Exclude",
+	"pattern.bParserFlagLSB_Enable",
+	"pattern.nParserFlagLSB",
+	"pattern.nParserFlagLSB_Mask",
+	"pattern.bParserFlagLSB_Exclude",
+	"pattern.bParserFlagMSB_Enable",
+	"pattern.nParserFlagMSB",
+	"pattern.nParserFlagMSB_Mask",
+	"pattern.bParserFlagMSB_Exclude",
+	"pattern.bParserFlag1LSB_Enable",
+	"pattern.nParserFlag1LSB",
+	"pattern.nParserFlag1LSB_Mask",
+	"pattern.bParserFlag1LSB_Exclude",
+	"pattern.bParserFlag1MSB_Enable",
+	"pattern.nParserFlag1MSB",
+	"pattern.nParserFlag1MSB_Mask",
+	"pattern.bParserFlag1MSB_Exclude",
+	"pattern.bVid_Original",
+	"pattern.nOuterVidRange",
+	"pattern.bSVidRange_Select",
+	"pattern.bOuterVid_Original",
+	"action.eTrafficClassAction",
+	"action.nTrafficClassAlternate",
+	"action.eSnoopingTypeAction",
+	"action.eLearningAction",
+	"action.eIrqAction",
+	"action.eCrossStateAction",
+	"action.eCritFrameAction",
+	"action.eTimestampAction",
+	"action.ePortMapAction",
+	"action.nForwardPortMap",
+	"action.nForwardPortMap[1~7]",
+	"action.bRemarkAction",
+	"action.bRemarkPCP",
+	"action.bRemarkSTAG_PCP",
+	"action.bRemarkSTAG_DEI",
+	"action.bRemarkDSCP",
+	"action.bRemarkClass",
+	"action.eMeterAction",
+	"action.nMeterId",
+	"action.bRMON_Action",
+	"action.nRMON_Id",
+	"action.eVLAN_Action",
+	"action.nVLAN_Id",
+	"action.nFId",
+	"action.bFidEnable",
+	"action.eSVLAN_Action",
+	"action.nSVLAN_Id",
+	"action.eVLAN_CrossAction",
+	"action.bPortBitMapMuxControl",
+	"action.bCVLAN_Ignore_Control",
+	"action.bPortLinkSelection",
+	"action.bPortTrunkAction",
+	"action.bFlowID_Action",
+	"action.nFlowID",
+	"action.bRoutExtId_Action",
+	"action.nRoutExtId",
+	"action.bRtDstPortMaskCmp_Action",
+	"action.bRtSrcPortMaskCmp_Action",
+	"action.bRtDstIpMaskCmp_Action",
+	"action.bRtSrcIpMaskCmp_Action",
+	"action.bRtInnerIPasKey_Action",
+	"action.bRtAccelEna_Action",
+	"action.bRtCtrlEna_Action",
+	"action.eProcessPath_Action",
+	"action.ePortFilterType_Action",
+	"action.bOamEnable",
+	"action.nRecordId",
+	"action.bExtractEnable",
+	"action.bPceBypassPath",
+	"action.bTxFlowCnt",
+	"action.eTimeFormat",
+	"action.bNoPktUpdate",
+	"action.bAppendToPkt",
+	"action.nTimeComp",
+	"action.nInsExtPoint",
+	"action.nPtpSeqId",
+	"action.nPktUpdateOffset",
+	"action.nOamFlowId",
+	"action.eColorFrameAction",
+	"action.bExtendedVlanEnable",
+	"action.nExtendedVlanBlockId",
+	"pattern.bFlexibleField4Enable",
+	"pattern.bFlexibleField4_ExcludeEnable",
+	"pattern.bFlexibleField4_RangeEnable",
+	"pattern.nFlexibleField4_ParserIndex",
+	"pattern.nFlexibleField4_Value",
+	"pattern.nFlexibleField4_MaskOrRange",
+	"pattern.bFlexibleField3Enable",
+	"pattern.bFlexibleField3_ExcludeEnable",
+	"pattern.bFlexibleField3_RangeEnable",
+	"pattern.nFlexibleField3_ParserIndex",
+	"pattern.nFlexibleField3_Value",
+	"pattern.nFlexibleField3_MaskOrRange",
+	"pattern.bFlexibleField2Enable",
+	"pattern.bFlexibleField2_ExcludeEnable",
+	"pattern.bFlexibleField2_RangeEnable",
+	"pattern.nFlexibleField2_ParserIndex",
+	"pattern.nFlexibleField2_Value",
+	"pattern.nFlexibleField2_MaskOrRange",
+	"pattern.bFlexibleField1Enable",
+	"pattern.bFlexibleField1_ExcludeEnable",
+	"pattern.bFlexibleField1_RangeEnable",
+	"pattern.nFlexibleField1_ParserIndex",
+	"pattern.nFlexibleField1_Value",
+	"pattern.nFlexibleField1_MaskOrRange",
+	"action.bPBB_Action_Enable",
+	"action.sPBB_Action.bIheaderActionEnable",
+	"action.sPBB_Action.eIheaderOpMode",
+	"action.sPBB_Action.bTunnelIdKnownTrafficEnable",
+	"action.sPBB_Action.nTunnelIdKnownTraffic",
+	"action.sPBB_Action.bTunnelIdUnKnownTrafficEnable",
+	"action.sPBB_Action.nTunnelIdUnKnownTraffic",
+	"action.sPBB_Action.bB_DstMac_FromMacTableEnable",
+	"action.sPBB_Action.bReplace_B_SrcMacEnable",
+	"action.sPBB_Action.bReplace_B_DstMacEnable",
+	"action.sPBB_Action.bReplace_I_TAG_ResEnable",
+	"action.sPBB_Action.bReplace_I_TAG_UacEnable",
+	"action.sPBB_Action.bReplace_I_TAG_DeiEnable",
+	"action.sPBB_Action.bReplace_I_TAG_PcpEnable",
+	"action.sPBB_Action.bReplace_I_TAG_SidEnable",
+	"action.sPBB_Action.bReplace_I_TAG_TpidEnable",
+	"action.sPBB_Action.bBtagActionEnable",
+	"action.sPBB_Action.eBtagOpMode",
+	"action.sPBB_Action.bProcessIdKnownTrafficEnable",
+	"action.sPBB_Action.nProcessIdKnownTraffic",
+	"action.sPBB_Action.bProcessIdUnKnownTrafficEnable",
+	"action.sPBB_Action.nProcessIdUnKnownTraffic",
+	"action.sPBB_Action.bReplace_B_TAG_DeiEnable",
+	"action.sPBB_Action.bReplace_B_TAG_PcpEnable",
+	"action.sPBB_Action.bReplace_B_TAG_VidEnable",
+	"action.sPBB_Action.bReplace_B_TAG_TpidEnable",
+	"action.sPBB_Action.bMacTableMacinMacActionEnable",
+	"action.sPBB_Action.eMacTableMacinMacSelect",
+	"action.bDestSubIf_Action_Enable",
+	"action.sDestSubIF_Action.bDestSubIFIDActionEnable",
+	"action.sDestSubIF_Action.bDestSubIFIDAssignmentEnable",
+	"action.sDestSubIF_Action.nDestSubIFGrp_Field",
+};
 
 OS_boolean_t cmds_fapi(CmdArgs_t *pArgs, int *err)
 {
@@ -56,6 +306,140 @@ OS_boolean_t cmds_fapi(CmdArgs_t *pArgs, int *err)
         cmds_fapi_help();
     }
 
+#ifdef ETHSWBOX_RPI4EVK
+    /****************************************
+     * LIF pin configuration               *
+     *   - fapi-lif-set-pins               *
+     * *************************************/
+
+    else if (strcmp(pArgs->name, "fapi-lif-set-pins") == 0)
+    {
+        if (pArgs->prmc < 2)
+        {
+            printf("Usage: fapi-lif-set-pins clk=<gpio> data=<gpio>\n");
+            printf("  clk  : BCM GPIO number for MDIO clock  (e.g. 5)\n");
+            printf("  data : BCM GPIO number for MDIO data   (e.g. 6)\n");
+            printf("  Pass clk=0 data=0 to clear override and revert to defaults.\n");
+            printf("  Valid GPIO pins: 4,5,6,12,13,16,17,18,19,20,21,22,23,24,25,26,27\n");
+            goto goto_end_help;
+        }
+        ret = fapi_lif_pin_set(pArgs->prmc, pArgs->prmvs);
+    }
+
+    /****************************************
+     * GPIO scan with cache                *
+     *   - fapi-lif-scan                   *
+     * *************************************/
+
+    else if (strcmp(pArgs->name, "fapi-lif-scan") == 0)
+    {
+        ret = fapi_lif_scan(pArgs->prmc, pArgs->prmvs);
+    }
+#endif /* ETHSWBOX_RPI4EVK */
+
+    /****************************************
+     * Direct GPIO MDIO access             *
+     *   - fapi-c22-mdio-read              *
+     *   - fapi-c22-mdio-write             *
+     *   - fapi-c45-mdio-read              *
+     *   - fapi-c45-mdio-write             *
+     *   - fapi-smdio-read                 *
+     *   - fapi-smdio-write                *
+     *   - fapi-rescue-enhwuart            *
+     * *************************************/
+
+    else if (strcmp(pArgs->name, "fapi-c22-mdio-read") == 0)
+    {
+        char *slib = "";
+        if (pArgs->prmc < 2)
+        {
+            printf("Usage: fapi-c22-mdio-read phy=<addr> reg=<offset>\n");
+            printf("  phy : Clause-22 PHY address (0-31)\n");
+            printf("  reg : register offset (0-31)\n");
+            goto goto_end_help;
+        }
+        slib = slif_lib;
+        api_gsw_get_links(slib);
+        ret = fapi_c22_mdio_read(pArgs->prmc, pArgs->prmvs);
+    }
+
+    else if (strcmp(pArgs->name, "fapi-c22-mdio-write") == 0)
+    {
+        char *slib = "";
+        if (pArgs->prmc < 3)
+        {
+            printf("Usage: fapi-c22-mdio-write phy=<addr> reg=<offset> data=<value>\n");
+            printf("  phy : Clause-22 PHY address (0-31)\n");
+            printf("  reg : register offset (0-31)\n");
+            printf("  data: 16-bit value to write\n");
+            goto goto_end_help;
+        }
+        slib = slif_lib;
+        api_gsw_get_links(slib);
+        ret = fapi_c22_mdio_write(pArgs->prmc, pArgs->prmvs);
+    }
+
+    else if (strcmp(pArgs->name, "fapi-c45-mdio-read") == 0)
+    {
+        char *slib = "";
+        if (pArgs->prmc < 3)
+        {
+            printf("Usage: fapi-c45-mdio-read phy=<addr> mmd=<devad> reg=<offset>\n");
+            printf("  phy : Clause-45 PHY address (0-31)\n");
+            printf("  mmd : MMD device address (0-31)\n");
+            printf("  reg : 16-bit register offset\n");
+            goto goto_end_help;
+        }
+        slib = slif_lib;
+        api_gsw_get_links(slib);
+        ret = fapi_c45_mdio_read(pArgs->prmc, pArgs->prmvs);
+    }
+
+    else if (strcmp(pArgs->name, "fapi-c45-mdio-write") == 0)
+    {
+        char *slib = "";
+        if (pArgs->prmc < 4)
+        {
+            printf("Usage: fapi-c45-mdio-write phy=<addr> mmd=<devad> reg=<offset> data=<value>\n");
+            printf("  phy : Clause-45 PHY address (0-31)\n");
+            printf("  mmd : MMD device address (0-31)\n");
+            printf("  reg : 16-bit register offset\n");
+            printf("  data: 16-bit value to write\n");
+            goto goto_end_help;
+        }
+        slib = slif_lib;
+        api_gsw_get_links(slib);
+        ret = fapi_c45_mdio_write(pArgs->prmc, pArgs->prmvs);
+    }
+
+    else if (strcmp(pArgs->name, "fapi-smdio-read") == 0)
+    {
+        if (pArgs->prmc < 1)
+        {
+            printf("Usage: fapi-smdio-read reg=<offset>\n");
+            printf("  reg : 16-bit register offset inside the SMDIO device\n");
+            goto goto_end_help;
+        }
+        ret = fapi_smdio_read(pArgs->prmc, pArgs->prmvs);
+    }
+
+    else if (strcmp(pArgs->name, "fapi-smdio-write") == 0)
+    {
+        if (pArgs->prmc < 2)
+        {
+            printf("Usage: fapi-smdio-write reg=<offset> data=<value>\n");
+            printf("  reg : 16-bit register offset inside the SMDIO device\n");
+            printf("  data: 16-bit value to write\n");
+            goto goto_end_help;
+        }
+        ret = fapi_smdio_write(pArgs->prmc, pArgs->prmvs);
+    }
+
+    else if (strcmp(pArgs->name, "fapi-rescue-enhwuart") == 0)
+    {
+        ret = fapi_rescue_enhwuart(pArgs->prmc, pArgs->prmvs);
+    }
+
     /****************************************
      * gsw_API:                             *
      *   - api-gsw-internal-read            *
@@ -69,9 +453,6 @@ OS_boolean_t cmds_fapi(CmdArgs_t *pArgs, int *err)
     {
 
         char *slib = "";
-        uint16_t reg = 0;
-        GSW_Device_t *gsw_dev;
-        uint16_t myval;
         if (pArgs->prmc < 4)
         {
             printf("Usage: fapi-int-gphy-write phy=<> mmd=<> reg=<reg> data=<>\n");
@@ -92,9 +473,6 @@ OS_boolean_t cmds_fapi(CmdArgs_t *pArgs, int *err)
     {
 
         char *slib = "";
-        uint16_t reg = 0;
-        GSW_Device_t *gsw_dev;
-        uint16_t myval;
         if (pArgs->prmc < 3)
         {
             printf("Usage: fapi-int-gphy-read phy=<> mmd=<> reg=<reg>\n");
@@ -114,9 +492,6 @@ OS_boolean_t cmds_fapi(CmdArgs_t *pArgs, int *err)
     {
 
         char *slib = "";
-        uint16_t reg = 0;
-        GSW_Device_t *gsw_dev;
-        uint16_t myval;
         if (pArgs->prmc < 4)
         {
             printf("Usage: fapi-ext-mdio-write phy=<> mmd=<> reg=<reg> data=<>\n");
@@ -137,9 +512,6 @@ OS_boolean_t cmds_fapi(CmdArgs_t *pArgs, int *err)
     {
 
         char *slib = "";
-        uint16_t reg = 0;
-        GSW_Device_t *gsw_dev;
-        uint16_t myval;
         if (pArgs->prmc < 3)
         {
             printf("Usage: fapi-ext-mdio-read phy=<> mmd=<> reg=<reg>\n");
@@ -159,9 +531,6 @@ OS_boolean_t cmds_fapi(CmdArgs_t *pArgs, int *err)
     {
 
         char *slib = "";
-        uint16_t reg = 0;
-        GSW_Device_t *gsw_dev;
-        uint16_t myval;
         if (pArgs->prmc < 4)
         {
             printf("Usage: fapi-ext-mdio-mod phy=<> mmd=<> reg=<reg> mask=<> data=<>\n");
@@ -183,9 +552,6 @@ OS_boolean_t cmds_fapi(CmdArgs_t *pArgs, int *err)
     {
 
         char *slib = "";
-        uint16_t reg = 0;
-        GSW_Device_t *gsw_dev;
-        uint16_t myval;
         if (pArgs->prmc < 3)
         {
             printf("Usage: fapi-int-gphy-mod phy=<> mmd=<> reg=<reg> mask=<> data=<>\n");
@@ -208,9 +574,6 @@ OS_boolean_t cmds_fapi(CmdArgs_t *pArgs, int *err)
     {
 
         char *slib = "";
-        uint16_t reg = 0;
-        GSW_Device_t *gsw_dev;
-        uint16_t myval;
         if (pArgs->prmc < 1)
         {
             printf("Usage: fapi-GSW-RegisterGet nRegAddr=<reg>\n");
@@ -228,10 +591,7 @@ OS_boolean_t cmds_fapi(CmdArgs_t *pArgs, int *err)
     {
 
         char *slib = "";
-        uint16_t reg = 0;
-        GSW_Device_t *gsw_dev;
-        uint16_t myval;
-        if (pArgs->prmc < 1)
+        if (pArgs->prmc < 2)
         {
             printf("Usage: fapi-GSW-RegisterSet nRegAddr=<reg> nData=<data>\n");
             printf("reg: register\n");
@@ -248,9 +608,6 @@ OS_boolean_t cmds_fapi(CmdArgs_t *pArgs, int *err)
     {
 
         char *slib = "";
-        uint16_t reg = 0;
-        GSW_Device_t *gsw_dev;
-        uint16_t myval;
         if (pArgs->prmc < 1)
         {
             printf("Usage: fapi-GSW-RegisterMod nRegAddr=<reg> nData=<data> nMask=<mask>\n");
@@ -269,9 +626,6 @@ OS_boolean_t cmds_fapi(CmdArgs_t *pArgs, int *err)
     {
 
         char *slib = "";
-        uint16_t phy = 0;
-        GSW_Device_t *gsw_dev;
-        uint16_t myval;
         if (pArgs->prmc < 1)
         {
             printf("Usage: fapi-GSW-PortLinkCfgGet nPortId=<port>\n");
@@ -287,9 +641,6 @@ OS_boolean_t cmds_fapi(CmdArgs_t *pArgs, int *err)
     {
 
         char *slib = "";
-        uint16_t phy = 0;
-        GSW_Device_t *gsw_dev;
-        uint16_t myval;
         if (pArgs->prmc < 1)
         {
             printf("Usage: fapi-GSW-PortLinkCfgSet nPortId=<port> [bDuplexForce=<> eDuplex=<> bSpeedForce=<> eSpeed=<> bLinkForce=<> eLink=<> eMII_Mode=<> eMII_Type=<> eClkMode=<> bLPI=<>]\n");
@@ -306,9 +657,6 @@ OS_boolean_t cmds_fapi(CmdArgs_t *pArgs, int *err)
     {
 
         char *slib = "";
-        uint16_t phy = 0;
-        GSW_Device_t *gsw_dev;
-        uint16_t myval;
         if (pArgs->prmc < 1)
         {
             printf("Usage: fapi-GSW-RMON-Clear nRmonId=<ID> eRmonType=<TYPE>\n");
@@ -326,9 +674,6 @@ OS_boolean_t cmds_fapi(CmdArgs_t *pArgs, int *err)
     {
 
         char *slib = "";
-        uint16_t phy = 0;
-        GSW_Device_t *gsw_dev;
-        uint16_t myval;
 
         slib = slif_lib;
         api_gsw_get_links(slib);
@@ -338,9 +683,6 @@ OS_boolean_t cmds_fapi(CmdArgs_t *pArgs, int *err)
     {
 
         char *slib = "";
-        uint16_t phy = 0;
-        GSW_Device_t *gsw_dev;
-        uint16_t myval;
         if (pArgs->prmc < 1)
         {
             printf("Usage: fapi-GSW-MonitorPortCfgSet nPortId=<port> nSubIfId=<ID>\n");
@@ -358,9 +700,6 @@ OS_boolean_t cmds_fapi(CmdArgs_t *pArgs, int *err)
     {
 
         char *slib = "";
-        uint16_t phy = 0;
-        GSW_Device_t *gsw_dev;
-        uint16_t myval;
         if (pArgs->prmc < 1)
         {
             printf("Usage: fapi-GSW-QoS-PortCfgGet nPortId=<port>\n");
@@ -376,9 +715,6 @@ OS_boolean_t cmds_fapi(CmdArgs_t *pArgs, int *err)
     {
 
         char *slib = "";
-        uint16_t phy = 0;
-        GSW_Device_t *gsw_dev;
-        uint16_t myval;
         if (pArgs->prmc < 1)
         {
             printf("Usage: fapi-GSW-QoS-PortCfgSet nPortId=<port> eClassMode=<CLASS> nTrafficClass=<TR>\n");
@@ -396,7 +732,6 @@ OS_boolean_t cmds_fapi(CmdArgs_t *pArgs, int *err)
     else if (strcmp(pArgs->name, "fapi-GSW-CPU-PortGet") == 0)
     {
         char *slib = "";
-        GSW_Device_t *gsw_dev;
 
         if (pArgs->prmc != 0)
         {
@@ -412,7 +747,6 @@ OS_boolean_t cmds_fapi(CmdArgs_t *pArgs, int *err)
     else if (strcmp(pArgs->name, "fapi-GSW-CPU-PortSet") == 0)
     {
         char *slib = "";
-        GSW_Device_t *gsw_dev;
 
         if (pArgs->prmc != 1)
         {
@@ -430,9 +764,6 @@ OS_boolean_t cmds_fapi(CmdArgs_t *pArgs, int *err)
     {
 
         char *slib = "";
-        uint16_t phy = 0;
-        GSW_Device_t *gsw_dev;
-        uint16_t myval;
         slib = slif_lib;
         api_gsw_get_links(slib);
         ret = fapi_GSW_QoS_DSCP_ClassGet(pArgs->prmc, pArgs->prmvs);
@@ -441,9 +772,6 @@ OS_boolean_t cmds_fapi(CmdArgs_t *pArgs, int *err)
     {
 
         char *slib = "";
-        uint16_t phy = 0;
-        GSW_Device_t *gsw_dev;
-        uint16_t myval;
         if (pArgs->prmc < 1)
         {
             printf("Usage: fapi-GSW-QoS-DSCP-ClassSet nTrafficClass=<TC> nDSCP=<DSCP>\n");
@@ -461,9 +789,6 @@ OS_boolean_t cmds_fapi(CmdArgs_t *pArgs, int *err)
     {
 
         char *slib = "";
-        uint16_t phy = 0;
-        GSW_Device_t *gsw_dev;
-        uint16_t myval;
         slib = slif_lib;
         api_gsw_get_links(slib);
         ret = fapi_GSW_QoS_PCP_ClassGet(pArgs->prmc, pArgs->prmvs);
@@ -472,9 +797,6 @@ OS_boolean_t cmds_fapi(CmdArgs_t *pArgs, int *err)
     {
 
         char *slib = "";
-        uint16_t phy = 0;
-        GSW_Device_t *gsw_dev;
-        uint16_t myval;
         if (pArgs->prmc < 1)
         {
             printf("Usage: fapi-GSW-QoS-PCP-ClassSet nTrafficClass=<TC> nPCP=<priority>\n");
@@ -492,9 +814,6 @@ OS_boolean_t cmds_fapi(CmdArgs_t *pArgs, int *err)
     {
 
         char *slib = "";
-        uint16_t phy = 0;
-        GSW_Device_t *gsw_dev;
-        uint16_t myval;
         slib = slif_lib;
         api_gsw_get_links(slib);
         ret = fapi_GSW_QoS_SVLAN_PCP_ClassGet(pArgs->prmc, pArgs->prmvs);
@@ -503,9 +822,6 @@ OS_boolean_t cmds_fapi(CmdArgs_t *pArgs, int *err)
     {
 
         char *slib = "";
-        uint16_t phy = 0;
-        GSW_Device_t *gsw_dev;
-        uint16_t myval;
         if (pArgs->prmc < 1)
         {
             printf("Usage: fapi-GSW-QoS-SVLAN-PCP-ClassSet nTrafficClass=<TC> nPCP=<priority>\n");
@@ -523,9 +839,6 @@ OS_boolean_t cmds_fapi(CmdArgs_t *pArgs, int *err)
     {
 
         char *slib = "";
-        uint16_t phy = 0;
-        GSW_Device_t *gsw_dev;
-        uint16_t myval;
 
         if (pArgs->prmc < 1)
         {
@@ -541,16 +854,14 @@ OS_boolean_t cmds_fapi(CmdArgs_t *pArgs, int *err)
     {
 
         char *slib = "";
-        uint16_t phy = 0;
-        GSW_Device_t *gsw_dev;
-        uint16_t myval;
         if (pArgs->prmc < 1)
         {
-            printf("Usage: fapi-GSW-QoS-ShaperCfgSet nRateShaperId=<Id> bEnable=<En> nCbs=<CB> nRate=<Rt>\n");
+            printf("Usage: fapi-GSW-QoS-ShaperCfgSet nRateShaperId=<Id> bEnable=<En> nCbs=<CB> nRate=<Rt> bSW=<bSW>\n");
             printf("id:  Rate shaper index\n");
             printf("En:  Enable/Disable the rate shaper\n");
             printf("CB:  Committed Burst Size\n");
             printf("Rt:  Rate [kbit/s]\n");
+            printf("bSW: Enable SW controlled shaper instead of HW auto replenish.\n");
             goto goto_end_help;
         }
 
@@ -563,9 +874,6 @@ OS_boolean_t cmds_fapi(CmdArgs_t *pArgs, int *err)
     {
 
         char *slib = "";
-        uint16_t phy = 0;
-        GSW_Device_t *gsw_dev;
-        uint16_t myval;
 
         if (pArgs->prmc < 1)
         {
@@ -581,9 +889,6 @@ OS_boolean_t cmds_fapi(CmdArgs_t *pArgs, int *err)
     {
 
         char *slib = "";
-        uint16_t phy = 0;
-        GSW_Device_t *gsw_dev;
-        uint16_t myval;
 
         if (pArgs->prmc < 1)
         {
@@ -601,9 +906,6 @@ OS_boolean_t cmds_fapi(CmdArgs_t *pArgs, int *err)
     {
 
         char *slib = "";
-        uint16_t phy = 0;
-        GSW_Device_t *gsw_dev;
-        uint16_t myval;
 
         if (pArgs->prmc < 1)
         {
@@ -621,9 +923,6 @@ OS_boolean_t cmds_fapi(CmdArgs_t *pArgs, int *err)
     {
 
         char *slib = "";
-        uint16_t phy = 0;
-        GSW_Device_t *gsw_dev;
-        uint16_t myval;
 
         if (pArgs->prmc < 1)
         {
@@ -640,9 +939,6 @@ OS_boolean_t cmds_fapi(CmdArgs_t *pArgs, int *err)
     {
 
         char *slib = "";
-        uint16_t phy = 0;
-        GSW_Device_t *gsw_dev;
-        uint16_t myval;
 
         if (pArgs->prmc < 1)
         {
@@ -661,9 +957,6 @@ OS_boolean_t cmds_fapi(CmdArgs_t *pArgs, int *err)
     {
 
         char *slib = "";
-        uint16_t phy = 0;
-        GSW_Device_t *gsw_dev;
-        uint16_t myval;
 
         slib = slif_lib;
         api_gsw_get_links(slib);
@@ -674,9 +967,6 @@ OS_boolean_t cmds_fapi(CmdArgs_t *pArgs, int *err)
     {
 
         char *slib = "";
-        uint16_t phy = 0;
-        GSW_Device_t *gsw_dev;
-        uint16_t myval;
 
         if (pArgs->prmc < 1)
         {
@@ -701,9 +991,6 @@ OS_boolean_t cmds_fapi(CmdArgs_t *pArgs, int *err)
     {
 
         char *slib = "";
-        uint16_t phy = 0;
-        GSW_Device_t *gsw_dev;
-        uint16_t myval;
         if (pArgs->prmc < 1)
         {
             printf("Usage: fapi-GSW-QoS-WredQueueCfgSet nQueueId=<QId>\n");
@@ -720,9 +1007,6 @@ OS_boolean_t cmds_fapi(CmdArgs_t *pArgs, int *err)
     {
 
         char *slib = "";
-        uint16_t phy = 0;
-        GSW_Device_t *gsw_dev;
-        uint16_t myval;
 
         if (pArgs->prmc < 1)
         {
@@ -745,9 +1029,6 @@ OS_boolean_t cmds_fapi(CmdArgs_t *pArgs, int *err)
     {
 
         char *slib = "";
-        uint16_t phy = 0;
-        GSW_Device_t *gsw_dev;
-        uint16_t myval;
         if (pArgs->prmc < 1)
         {
             printf("Usage: fapi-GSW-QoS-WredPortCfgGet nPortId=<port>\n");
@@ -764,9 +1045,6 @@ OS_boolean_t cmds_fapi(CmdArgs_t *pArgs, int *err)
     {
 
         char *slib = "";
-        uint16_t phy = 0;
-        GSW_Device_t *gsw_dev;
-        uint16_t myval;
 
         if (pArgs->prmc < 1)
         {
@@ -789,9 +1067,6 @@ OS_boolean_t cmds_fapi(CmdArgs_t *pArgs, int *err)
     {
 
         char *slib = "";
-        uint16_t phy = 0;
-        GSW_Device_t *gsw_dev;
-        uint16_t myval;
         slib = slif_lib;
         api_gsw_get_links(slib);
         ret = fapi_GSW_TrunkingCfgGet(pArgs->prmc, pArgs->prmvs);
@@ -801,9 +1076,6 @@ OS_boolean_t cmds_fapi(CmdArgs_t *pArgs, int *err)
     {
 
         char *slib = "";
-        uint16_t phy = 0;
-        GSW_Device_t *gsw_dev;
-        uint16_t myval;
 
         if (pArgs->prmc < 1)
         {
@@ -820,13 +1092,103 @@ OS_boolean_t cmds_fapi(CmdArgs_t *pArgs, int *err)
         api_gsw_get_links(slib);
         ret = fapi_GSW_TrunkingCfgSet(pArgs->prmc, pArgs->prmvs);
     }
+
+    else if (strcmp(pArgs->name, "fapi-GSW-Trunking-LAGCfgGet") == 0)
+    {
+
+        char *slib = "";
+
+        if (pArgs->prmc < 1)
+        {
+            printf("Usage: fapi-GSW-Trunking-LAGCfgGet nGrpId=<group_id>\\n");
+            printf("nGrpId:    LAG Group ID (0-15)\\n");
+            goto goto_end_help;
+        }
+        slib = slif_lib;
+        api_gsw_get_links(slib);
+        ret = fapi_GSW_TrunkingLAGCfgGet(pArgs->prmc, pArgs->prmvs);
+    }
+
+    else if (strcmp(pArgs->name, "fapi-GSW-Trunking-LAGCfgSet") == 0)
+    {
+
+        char *slib = "";
+
+        if (pArgs->prmc < 1)
+        {
+            printf("Usage: fapi-GSW-Trunking-LAGCfgSet nGrpId=<group_id> nPortMap=<port_bitmap>\n");
+            printf("nGrpId:    LAG Group ID (0-15)\n");
+            printf("nPortMap:  Bitmap of ports in this LAG group (e.g., 0x0006 for ports 1,2)\n");
+            goto goto_end_help;
+        }
+        slib = slif_lib;
+        api_gsw_get_links(slib);
+        ret = fapi_GSW_TrunkingLAGCfgSet(pArgs->prmc, pArgs->prmvs);
+    }
+
+#if 0
+    else if (strcmp(pArgs->name, "fapi-GSW-Poe-GlobalCfgSet") == 0)
+    {
+        char *slib = "";
+
+        if (pArgs->prmc < 1)
+        {
+            printf("Usage: fapi-GSW-Poe-GlobalCfgSet enable=<0|1> [total_pwr=<watts>]\n");
+            printf("enable:    0=disable, 1=enable POE globally\n");
+            printf("total_pwr: Trunk power budget in watts (optional)\n");
+            goto goto_end_help;
+        }
+        slib = slif_lib;
+        api_gsw_get_links(slib);
+        ret = fapi_GSW_Poe_GlobalCfgSet(pArgs->prmc, pArgs->prmvs);
+    }
+
+    else if (strcmp(pArgs->name, "fapi-GSW-Poe-PortCfgGet") == 0)
+    {
+        char *slib = "";
+
+        if (pArgs->prmc < 1)
+        {
+            printf("Usage: fapi-GSW-Poe-PortCfgGet nPortId=<port_id>\n");
+            printf("nPortId:  Port index (0-7)\n");
+            goto goto_end_help;
+        }
+        slib = slif_lib;
+        api_gsw_get_links(slib);
+        ret = fapi_GSW_Poe_PortCfgGet(pArgs->prmc, pArgs->prmvs);
+    }
+
+    else if (strcmp(pArgs->name, "fapi-GSW-Poe-PortCfgSet") == 0)
+    {
+        char *slib = "";
+
+        if (pArgs->prmc < 1)
+        {
+            printf("Usage: fapi-GSW-Poe-PortCfgSet nPortId=<port_id> enable=<0|1> mode=<mode>\n");
+            printf("nPortId:  Port index (0-7)\n");
+            printf("enable:   0=disable, 1=enable\n");
+            printf("mode:     0=AF (802.3af, max 15.4W), 1=AT (802.3at, max 30W)\n");
+            goto goto_end_help;
+        }
+        slib = slif_lib;
+        api_gsw_get_links(slib);
+        ret = fapi_GSW_Poe_PortCfgSet(pArgs->prmc, pArgs->prmvs);
+    }
+
+    else if (strcmp(pArgs->name, "fapi-GSW-Poe-GlobalStatusGet") == 0)
+    {
+        char *slib = "";
+
+        slib = slif_lib;
+        api_gsw_get_links(slib);
+        ret = fapi_GSW_Poe_GlobalStatusGet(pArgs->prmc, pArgs->prmvs);
+    }
+#endif
+
     else if (strcmp(pArgs->name, "fapi-GSW-MAC-TableClear") == 0)
     {
 
         char *slib = "";
-        uint16_t phy = 0;
-        GSW_Device_t *gsw_dev;
-        uint16_t myval;
 
         slib = slif_lib;
         api_gsw_get_links(slib);
@@ -837,9 +1199,6 @@ OS_boolean_t cmds_fapi(CmdArgs_t *pArgs, int *err)
     {
 
         char *slib = "";
-        uint16_t phy = 0;
-        GSW_Device_t *gsw_dev;
-        uint16_t myval;
 
         if (pArgs->prmc < 1)
         {
@@ -858,9 +1217,6 @@ OS_boolean_t cmds_fapi(CmdArgs_t *pArgs, int *err)
     {
 
         char *slib = "";
-        uint16_t phy = 0;
-        GSW_Device_t *gsw_dev;
-        uint16_t myval;
 
         slib = slif_lib;
         api_gsw_get_links(slib);
@@ -870,9 +1226,6 @@ OS_boolean_t cmds_fapi(CmdArgs_t *pArgs, int *err)
     {
 
         char *slib = "";
-        uint16_t phy = 0;
-        GSW_Device_t *gsw_dev;
-        uint16_t myval;
 
         if (pArgs->prmc < 1)
         {
@@ -895,9 +1248,6 @@ OS_boolean_t cmds_fapi(CmdArgs_t *pArgs, int *err)
     {
 
         char *slib = "";
-        uint16_t phy = 0;
-        GSW_Device_t *gsw_dev;
-        uint16_t myval;
 
         if (pArgs->prmc < 1)
         {
@@ -915,9 +1265,6 @@ OS_boolean_t cmds_fapi(CmdArgs_t *pArgs, int *err)
     {
 
         char *slib = "";
-        uint16_t phy = 0;
-        GSW_Device_t *gsw_dev;
-        uint16_t myval;
 
         if (pArgs->prmc < 2)
         {
@@ -937,9 +1284,6 @@ OS_boolean_t cmds_fapi(CmdArgs_t *pArgs, int *err)
     {
 
         char *slib = "";
-        uint16_t phy = 0;
-        GSW_Device_t *gsw_dev;
-        uint16_t myval;
 
         slib = slif_lib;
         api_gsw_get_links(slib);
@@ -949,9 +1293,6 @@ OS_boolean_t cmds_fapi(CmdArgs_t *pArgs, int *err)
     {
 
         char *slib = "";
-        uint16_t phy = 0;
-        GSW_Device_t *gsw_dev;
-        uint16_t myval;
 
         if (pArgs->prmc < 1)
         {
@@ -971,9 +1312,6 @@ OS_boolean_t cmds_fapi(CmdArgs_t *pArgs, int *err)
     {
 
         char *slib = "";
-        uint16_t phy = 0;
-        GSW_Device_t *gsw_dev;
-        uint16_t myval;
         if (pArgs->prmc < 1)
         {
             printf("Usage: fapi-GSW-QoS-FlowctrlPortCfgGet nPortId=<port>\n");
@@ -988,9 +1326,6 @@ OS_boolean_t cmds_fapi(CmdArgs_t *pArgs, int *err)
     {
 
         char *slib = "";
-        uint16_t phy = 0;
-        GSW_Device_t *gsw_dev;
-        uint16_t myval;
 
         if (pArgs->prmc < 1)
         {
@@ -1009,9 +1344,6 @@ OS_boolean_t cmds_fapi(CmdArgs_t *pArgs, int *err)
     {
 
         char *slib = "";
-        uint16_t phy = 0;
-        GSW_Device_t *gsw_dev;
-        uint16_t myval;
 
         if (pArgs->prmc < 1)
         {
@@ -1046,9 +1378,6 @@ OS_boolean_t cmds_fapi(CmdArgs_t *pArgs, int *err)
     {
 
         char *slib = "";
-        uint16_t phy = 0;
-        GSW_Device_t *gsw_dev;
-        uint16_t myval;
 
         slib = slif_lib;
         api_gsw_get_links(slib);
@@ -1059,9 +1388,6 @@ OS_boolean_t cmds_fapi(CmdArgs_t *pArgs, int *err)
     {
 
         char *slib = "";
-        uint16_t phy = 0;
-        GSW_Device_t *gsw_dev;
-        uint16_t myval;
 
         if (pArgs->prmc < 1)
         {
@@ -1080,9 +1406,6 @@ OS_boolean_t cmds_fapi(CmdArgs_t *pArgs, int *err)
     {
 
         char *slib = "";
-        uint16_t phy = 0;
-        GSW_Device_t *gsw_dev;
-        uint16_t myval;
 
         if (pArgs->prmc < 1)
         {
@@ -1107,7 +1430,6 @@ OS_boolean_t cmds_fapi(CmdArgs_t *pArgs, int *err)
     else if (strcmp(pArgs->name, "fapi-GSW-QoS-QueueCfgSet") == 0)
     {
         char *slib = "";
-        GSW_Device_t *gsw_dev;
 
         if (pArgs->prmc < 3)
         {
@@ -1124,7 +1446,6 @@ OS_boolean_t cmds_fapi(CmdArgs_t *pArgs, int *err)
     else if (strcmp(pArgs->name, "fapi-GSW-QoS-QueueCfgGet") == 0)
     {
         char *slib = "";
-        GSW_Device_t *gsw_dev;
 
         if (pArgs->prmc < 1)
         {
@@ -1142,9 +1463,6 @@ OS_boolean_t cmds_fapi(CmdArgs_t *pArgs, int *err)
     {
 
         char *slib = "";
-        uint16_t phy = 0;
-        GSW_Device_t *gsw_dev;
-        uint16_t myval;
 
         if (pArgs->prmc < 1)
         {
@@ -1161,9 +1479,6 @@ OS_boolean_t cmds_fapi(CmdArgs_t *pArgs, int *err)
     {
 
         char *slib = "";
-        uint16_t phy = 0;
-        GSW_Device_t *gsw_dev;
-        uint16_t myval;
 
         if (pArgs->prmc < 1)
         {
@@ -1198,6 +1513,7 @@ OS_boolean_t cmds_fapi(CmdArgs_t *pArgs, int *err)
             printf("bBridgePortMapEnable=<>\n");
             printf("Index=<>\n");
             printf("MapValue=<>\n");
+            printf("nBridgePortMapIndex[0~7]=<>\n");
             printf("bMcDestIpLookupDisable=<>\n");
             printf("bMcSrcIpLookupEnable=<>\n");
             printf("bDestMacLookupDisable=<>\n");
@@ -1236,9 +1552,6 @@ OS_boolean_t cmds_fapi(CmdArgs_t *pArgs, int *err)
     {
 
         char *slib = "";
-        uint16_t phy = 0;
-        GSW_Device_t *gsw_dev;
-        uint16_t myval;
 
         if (pArgs->prmc < 1)
         {
@@ -1257,9 +1570,6 @@ OS_boolean_t cmds_fapi(CmdArgs_t *pArgs, int *err)
     {
 
         char *slib = "";
-        uint16_t phy = 0;
-        GSW_Device_t *gsw_dev;
-        uint16_t myval;
 
         if (pArgs->prmc < 1)
         {
@@ -1312,9 +1622,6 @@ OS_boolean_t cmds_fapi(CmdArgs_t *pArgs, int *err)
     {
 
         char *slib = "";
-        uint16_t phy = 0;
-        GSW_Device_t *gsw_dev;
-        uint16_t myval;
 
         slib = slif_lib;
         api_gsw_get_links(slib);
@@ -1325,9 +1632,6 @@ OS_boolean_t cmds_fapi(CmdArgs_t *pArgs, int *err)
     {
 
         char *slib = "";
-        uint16_t phy = 0;
-        GSW_Device_t *gsw_dev;
-        uint16_t myval;
 
         if (pArgs->prmc < 1)
         {
@@ -1345,9 +1649,6 @@ OS_boolean_t cmds_fapi(CmdArgs_t *pArgs, int *err)
     {
 
         char *slib = "";
-        uint16_t phy = 0;
-        GSW_Device_t *gsw_dev;
-        uint16_t myval;
 
         if (pArgs->prmc < 1)
         {
@@ -1365,9 +1666,6 @@ OS_boolean_t cmds_fapi(CmdArgs_t *pArgs, int *err)
     {
 
         char *slib = "";
-        uint16_t phy = 0;
-        GSW_Device_t *gsw_dev;
-        uint16_t myval;
 
         if (pArgs->prmc < 1)
         {
@@ -1402,9 +1700,6 @@ OS_boolean_t cmds_fapi(CmdArgs_t *pArgs, int *err)
     {
 
         char *slib = "";
-        uint16_t phy = 0;
-        GSW_Device_t *gsw_dev;
-        uint16_t myval;
         if (pArgs->prmc < 1)
         {
             printf("Usage: fapi-GSW-ExtendedVlanAlloc nNumberOfEntries=<>\n");
@@ -1421,9 +1716,6 @@ OS_boolean_t cmds_fapi(CmdArgs_t *pArgs, int *err)
     {
 
         char *slib = "";
-        uint16_t phy = 0;
-        GSW_Device_t *gsw_dev;
-        uint16_t myval;
 
         if (pArgs->prmc < 1)
         {
@@ -1441,9 +1733,6 @@ OS_boolean_t cmds_fapi(CmdArgs_t *pArgs, int *err)
     {
 
         char *slib = "";
-        uint16_t phy = 0;
-        GSW_Device_t *gsw_dev;
-        uint16_t myval;
 
         if (pArgs->prmc < 1)
         {
@@ -1464,9 +1753,6 @@ OS_boolean_t cmds_fapi(CmdArgs_t *pArgs, int *err)
     {
 
         char *slib = "";
-        uint16_t phy = 0;
-        GSW_Device_t *gsw_dev;
-        uint16_t myval;
 
         if (pArgs->prmc < 1)
         {
@@ -1530,9 +1816,6 @@ OS_boolean_t cmds_fapi(CmdArgs_t *pArgs, int *err)
     {
 
         char *slib = "";
-        uint16_t phy = 0;
-        GSW_Device_t *gsw_dev;
-        uint16_t myval;
         if (pArgs->prmc < 3)
         {
             printf("Usage: fapi-GSW-VlanFilterAlloc nNumberOfEntries=<> bDiscardUntagged=<> bDiscardUnmatchedTagged=<>\n");
@@ -1550,9 +1833,6 @@ OS_boolean_t cmds_fapi(CmdArgs_t *pArgs, int *err)
     {
 
         char *slib = "";
-        uint16_t phy = 0;
-        GSW_Device_t *gsw_dev;
-        uint16_t myval;
 
         if (pArgs->prmc < 1)
         {
@@ -1570,9 +1850,6 @@ OS_boolean_t cmds_fapi(CmdArgs_t *pArgs, int *err)
     {
 
         char *slib = "";
-        uint16_t phy = 0;
-        GSW_Device_t *gsw_dev;
-        uint16_t myval;
 
         if (pArgs->prmc < 1)
         {
@@ -1591,9 +1868,6 @@ OS_boolean_t cmds_fapi(CmdArgs_t *pArgs, int *err)
     {
 
         char *slib = "";
-        uint16_t phy = 0;
-        GSW_Device_t *gsw_dev;
-        uint16_t myval;
 
         if (pArgs->prmc < 1)
         {
@@ -1615,9 +1889,6 @@ OS_boolean_t cmds_fapi(CmdArgs_t *pArgs, int *err)
     {
 
         char *slib = "";
-        uint16_t phy = 0;
-        GSW_Device_t *gsw_dev;
-        uint16_t myval;
 
         if (pArgs->prmc < 1)
         {
@@ -1635,9 +1906,6 @@ OS_boolean_t cmds_fapi(CmdArgs_t *pArgs, int *err)
     {
 
         char *slib = "";
-        uint16_t phy = 0;
-        GSW_Device_t *gsw_dev;
-        uint16_t myval;
 
         if (pArgs->prmc < 2)
         {
@@ -1656,9 +1924,6 @@ OS_boolean_t cmds_fapi(CmdArgs_t *pArgs, int *err)
     {
 
         char *slib = "";
-        uint16_t phy = 0;
-        GSW_Device_t *gsw_dev;
-        uint16_t myval;
         slib = slif_lib;
         api_gsw_get_links(slib);
         ret = fapi_GSW_STP_BPDU_RuleGet(pArgs->prmc, pArgs->prmvs);
@@ -1668,9 +1933,6 @@ OS_boolean_t cmds_fapi(CmdArgs_t *pArgs, int *err)
     {
 
         char *slib = "";
-        uint16_t phy = 0;
-        GSW_Device_t *gsw_dev;
-        uint16_t myval;
 
         if (pArgs->prmc < 1)
         {
@@ -1688,9 +1950,6 @@ OS_boolean_t cmds_fapi(CmdArgs_t *pArgs, int *err)
     {
 
         char *slib = "";
-        uint16_t phy = 0;
-        GSW_Device_t *gsw_dev;
-        uint16_t myval;
 
         if (pArgs->prmc < 2)
         {
@@ -1709,9 +1968,6 @@ OS_boolean_t cmds_fapi(CmdArgs_t *pArgs, int *err)
     {
 
         char *slib = "";
-        uint16_t phy = 0;
-        GSW_Device_t *gsw_dev;
-        uint16_t myval;
 
         if (pArgs->prmc < 1)
         {
@@ -1729,9 +1985,6 @@ OS_boolean_t cmds_fapi(CmdArgs_t *pArgs, int *err)
     {
 
         char *slib = "";
-        uint16_t phy = 0;
-        GSW_Device_t *gsw_dev;
-        uint16_t myval;
 
         if (pArgs->prmc < 1)
         {
@@ -1760,9 +2013,6 @@ OS_boolean_t cmds_fapi(CmdArgs_t *pArgs, int *err)
     {
 
         char *slib = "";
-        uint16_t phy = 0;
-        GSW_Device_t *gsw_dev;
-        uint16_t myval;
 
         if (pArgs->prmc < 1)
         {
@@ -1779,9 +2029,6 @@ OS_boolean_t cmds_fapi(CmdArgs_t *pArgs, int *err)
     {
 
         char *slib = "";
-        uint16_t phy = 0;
-        GSW_Device_t *gsw_dev;
-        uint16_t myval;
 
         if (pArgs->prmc < 1)
         {
@@ -1798,9 +2045,6 @@ OS_boolean_t cmds_fapi(CmdArgs_t *pArgs, int *err)
     {
 
         char *slib = "";
-        uint16_t phy = 0;
-        GSW_Device_t *gsw_dev;
-        uint16_t myval;
 
         if (pArgs->prmc < 1)
         {
@@ -1816,9 +2060,6 @@ OS_boolean_t cmds_fapi(CmdArgs_t *pArgs, int *err)
     {
 
         char *slib = "";
-        uint16_t phy = 0;
-        GSW_Device_t *gsw_dev;
-        uint16_t myval;
 
         if (pArgs->prmc < 1)
         {
@@ -1838,9 +2079,6 @@ OS_boolean_t cmds_fapi(CmdArgs_t *pArgs, int *err)
     {
 
         char *slib = "";
-        uint16_t phy = 0;
-        GSW_Device_t *gsw_dev;
-        uint16_t myval;
 
         if (pArgs->prmc < 1)
         {
@@ -1875,9 +2113,6 @@ OS_boolean_t cmds_fapi(CmdArgs_t *pArgs, int *err)
     {
 
         char *slib = "";
-        uint16_t phy = 0;
-        GSW_Device_t *gsw_dev;
-        uint16_t myval;
 
         if (pArgs->prmc < 1)
         {
@@ -1894,9 +2129,6 @@ OS_boolean_t cmds_fapi(CmdArgs_t *pArgs, int *err)
     {
 
         char *slib = "";
-        uint16_t phy = 0;
-        GSW_Device_t *gsw_dev;
-        uint16_t myval;
 
         if (pArgs->prmc < 2)
         {
@@ -1916,9 +2148,6 @@ OS_boolean_t cmds_fapi(CmdArgs_t *pArgs, int *err)
     {
 
         char *slib = "";
-        uint16_t phy = 0;
-        GSW_Device_t *gsw_dev;
-        uint16_t myval;
 
         if (pArgs->prmc < 2)
         {
@@ -1936,9 +2165,6 @@ OS_boolean_t cmds_fapi(CmdArgs_t *pArgs, int *err)
     {
 
         char *slib = "";
-        uint16_t phy = 0;
-        GSW_Device_t *gsw_dev;
-        uint16_t myval;
 
         if (pArgs->prmc < 1)
         {
@@ -1979,9 +2205,6 @@ OS_boolean_t cmds_fapi(CmdArgs_t *pArgs, int *err)
     {
 
         char *slib = "";
-        uint16_t phy = 0;
-        GSW_Device_t *gsw_dev;
-        uint16_t myval;
 
         if (pArgs->prmc < 1)
         {
@@ -2006,9 +2229,6 @@ OS_boolean_t cmds_fapi(CmdArgs_t *pArgs, int *err)
     {
 
         char *slib = "";
-        uint16_t phy = 0;
-        GSW_Device_t *gsw_dev;
-        uint16_t myval;
 
         if (pArgs->prmc < 1)
         {
@@ -2026,9 +2246,6 @@ OS_boolean_t cmds_fapi(CmdArgs_t *pArgs, int *err)
     {
 
         char *slib = "";
-        uint16_t phy = 0;
-        GSW_Device_t *gsw_dev;
-        uint16_t myval;
 
         if (pArgs->prmc < 1)
         {
@@ -2053,11 +2270,7 @@ OS_boolean_t cmds_fapi(CmdArgs_t *pArgs, int *err)
 
     else if (strcmp(pArgs->name, "fapi-GSW-PceRuleRead") == 0)
     {
-
         char *slib = "";
-        uint16_t phy = 0;
-        GSW_Device_t *gsw_dev;
-        uint16_t myval;
 
         if (pArgs->prmc < 1)
         {
@@ -2074,248 +2287,13 @@ OS_boolean_t cmds_fapi(CmdArgs_t *pArgs, int *err)
     }
     else if (strcmp(pArgs->name, "fapi-GSW-PceRuleWrite") == 0)
     {
-
         char *slib = "";
-        uint16_t phy = 0;
-        GSW_Device_t *gsw_dev;
-        uint16_t myval;
 
         if (pArgs->prmc < 2)
         {
-            printf("Usage: fapi-GSW-PceRuleWrite nLogicalPortId=<> pattern.nIndex=<>\n");
-            printf("nLogicalPortId=<>\n");
-            printf("nSubIfIdGroup=<>\n");
-            printf("region=<>\n");
-            printf("pattern.nIndex=<>\n");
-            printf("pattern.bEnable=<>\n");
-            printf("pattern.bPortIdEnable=<>\n");
-            printf("pattern.nPortId=<>\n");
-            printf("pattern.bPortId_Exclude=<>\n");
-            printf("pattern.bSubIfIdEnable=<>\n");
-            printf("pattern.nSubIfId=<>\n");
-            printf("pattern.eSubIfIdType=<>\n");
-            printf("pattern.bSubIfId_Exclude=<>\n");
-            printf("pattern.bInsertionFlag_Enable=<>\n");
-            printf("pattern.nInsertionFlag=<>\n");
-            printf("pattern.bDSCP_Enable=<>\n");
-            printf("pattern.nDSCP=<>\n");
-            printf("pattern.bDSCP_Exclude=<>\n");
-            printf("pattern.bInner_DSCP_Enable=<>\n");
-            printf("pattern.nInnerDSCP=<>\n");
-            printf("pattern.bInnerDSCP_Exclude=<>\n");
-            printf("pattern.bPCP_Enable=<>\n");
-            printf("pattern.nPCP=<>\n");
-            printf("pattern.bCTAG_PCP_DEI_Exclude=<>\n");
-            printf("pattern.bSTAG_PCP_DEI_Enable=<>\n");
-            printf("pattern.nSTAG_PCP_DEI=<>\n");
-            printf("pattern.bSTAG_PCP_DEI_Exclude=<>\n");
-            printf("pattern.bPktLngEnable=<>\n");
-            printf("pattern.nPktLng=<>\n");
-            printf("pattern.nPktLngRange=<>\n");
-            printf("pattern.bPktLng_Exclude=<>\n");
-            printf("pattern.bMAC_DstEnable=<>\n");
-            printf("pattern.nMAC_Dst=<>\n");
-            printf("pattern.nMAC_DstMask=<>\n");
-            printf("pattern.bDstMAC_Exclude=<>\n");
-            printf("pattern.bMAC_SrcEnable=<>\n");
-            printf("pattern.nMAC_Src=<>\n");
-            printf("pattern.nMAC_SrcMask=<>\n");
-            printf("pattern.bSrcMAC_Exclude=<>\n");
-            printf("pattern.bAppDataMSB_Enable=<>\n");
-            printf("pattern.nAppDataMSB=<>\n");
-            printf("pattern.bAppMaskRangeMSB_Select=<>\n");
-            printf("pattern.nAppMaskRangeMSB=<>\n");
-            printf("pattern.bAppMSB_Exclude=<>\n");
-            printf("pattern.bAppDataLSB_Enable=<>\n");
-            printf("pattern.nAppDataLSB=<>\n");
-            printf("pattern.bAppMaskRangeLSB_Select=<>\n");
-            printf("pattern.nAppMaskRangeLSB=<>\n");
-            printf("pattern.bAppLSB_Exclude=<>\n");
-            printf("pattern.eDstIP_Select=<>\n");
-            printf("pattern.nDstIP=<>\n");
-            printf("pattern.nDstIP=<>\n");
-            printf("pattern.nDstIP_Mask=<>\n");
-            printf("pattern.bDstIP_Exclude=<>\n");
-            printf("pattern.eInnerDstIP_Select=<>\n");
-            printf("pattern.nInnerDstIP=<>\n");
-            printf("pattern.nInnerDstIP=<>\n");
-            printf("pattern.nInnerDstIP_Mask=<>\n");
-            printf("pattern.bInnerDstIP_Exclude=<>\n");
-            printf("pattern.eSrcIP_Select=<>\n");
-            printf("pattern.nSrcIP=<>\n");
-            printf("pattern.nSrcIP=<>\n");
-            printf("pattern.nSrcIP_Mask=<>\n");
-            printf("pattern.bSrcIP_Exclude=<>\n");
-            printf("pattern.eInnerSrcIP_Select=<>\n");
-            printf("pattern.nInnerSrcIP=<>\n");
-            printf("pattern.nInnerSrcIP=<>\n");
-            printf("pattern.nInnerSrcIP_Mask=<>\n");
-            printf("pattern.bInnerSrcIP_Exclude=<>\n");
-            printf("pattern.bEtherTypeEnable=<>\n");
-            printf("pattern.nEtherType=<>\n");
-            printf("pattern.nEtherTypeMask=<>\n");
-            printf("pattern.bEtherType_Exclude=<>\n");
-            printf("pattern.bProtocolEnable=<>\n");
-            printf("pattern.nProtocol=<>\n");
-            printf("pattern.nProtocolMask=<>\n");
-            printf("pattern.bProtocol_Exclude=<>\n");
-            printf("pattern.bInnerProtocolEnable=<>\n");
-            printf("pattern.nInnerProtocol=<>\n");
-            printf("pattern.nInnerProtocolMask=<>\n");
-            printf("pattern.bInnerProtocol_Exclude=<>\n");
-            printf("pattern.bSessionIdEnable=<>\n");
-            printf("pattern.nSessionId=<>\n");
-            printf("pattern.bSessionId_Exclude=<>\n");
-            printf("pattern.bPPP_ProtocolEnable=<>\n");
-            printf("pattern.nPPP_Protocol=<>\n");
-            printf("pattern.nPPP_ProtocolMask=<>\n");
-            printf("pattern.bPPP_Protocol_Exclude=<>\n");
-            printf("pattern.bVid=<>\n");
-            printf("pattern.nVid=<>\n");
-            printf("pattern.bVidRange_Select=<>\n");
-            printf("pattern.nVidRange=<>\n");
-            printf("pattern.bVid_Exclude=<>\n");
-            printf("pattern.bSLAN_Vid=<>\n");
-            printf("pattern.nSLAN_Vid=<>\n");
-            printf("pattern.bSLANVid_Exclude=<>\n");
-            printf("pattern.bPayload1_SrcEnable=<>\n");
-            printf("pattern.nPayload1=<>\n");
-            printf("pattern.bPayload1MaskRange_Select=<>\n");
-            printf("pattern.nPayload1_Mask=<>\n");
-            printf("pattern.bPayload1_Exclude=<>\n");
-            printf("pattern.bPayload2_SrcEnable=<>\n");
-            printf("pattern.nPayload2=<>\n");
-            printf("pattern.bPayload2MaskRange_Select=<>\n");
-            printf("pattern.nPayload2_Mask=<>\n");
-            printf("pattern.bPayload2_Exclude=<>\n");
-            printf("pattern.bParserFlagLSB_Enable=<>\n");
-            printf("pattern.nParserFlagLSB=<>\n");
-            printf("pattern.nParserFlagLSB_Mask=<>\n");
-            printf("pattern.bParserFlagLSB_Exclude=<>\n");
-            printf("pattern.bParserFlagMSB_Enable=<>\n");
-            printf("pattern.nParserFlagMSB=<>\n");
-            printf("pattern.nParserFlagMSB_Mask=<>\n");
-            printf("pattern.bParserFlagMSB_Exclude=<>\n");
-            printf("pattern.bParserFlag1LSB_Enable=<>\n");
-            printf("pattern.nParserFlag1LSB=<>\n");
-            printf("pattern.nParserFlag1LSB_Mask=<>\n");
-            printf("pattern.bParserFlag1LSB_Exclude=<>\n");
-            printf("pattern.bParserFlag1MSB_Enable=<>\n");
-            printf("pattern.nParserFlag1MSB=<>\n");
-            printf("pattern.nParserFlag1MSB_Mask=<>\n");
-            printf("pattern.bParserFlag1MSB_Exclude=<>\n");
-            printf("pattern.bVid_Original=<>\n");
-            printf("pattern.nOuterVidRange=<>\n");
-            printf("pattern.bSVidRange_Select=<>\n");
-            printf("pattern.bOuterVid_Original=<>\n");
-            printf("action.eTrafficClassAction=<>\n");
-            printf("action.nTrafficClassAlternate=<>\n");
-            printf("action.eSnoopingTypeAction=<>\n");
-            printf("action.eLearningAction=<>\n");
-            printf("action.eIrqAction=<>\n");
-            printf("action.eCrossStateAction=<>\n");
-            printf("action.eCritFrameAction=<>\n");
-            printf("action.eTimestampAction=<>\n");
-            printf("action.ePortMapAction=<>\n");
-            printf("action.nForwardPortMap=<>\n");
-            printf("action.nForwardPortMap[1~7]=<>\n");
-            printf("action.bRemarkAction=<>\n");
-            printf("action.bRemarkPCP=<>\n");
-            printf("action.bRemarkSTAG_PCP=<>\n");
-            printf("action.bRemarkSTAG_DEI=<>\n");
-            printf("action.bRemarkDSCP=<>\n");
-            printf("action.bRemarkClass=<>\n");
-            printf("action.eMeterAction=<>\n");
-            printf("action.nMeterId=<>\n");
-            printf("action.bRMON_Action=<>\n");
-            printf("action.nRMON_Id=<>\n");
-            printf("action.eVLAN_Action=<>\n");
-            printf("action.nVLAN_Id=<>\n");
-            printf("action.nFId=<>\n");
-            printf("action.bFidEnable=<>\n");
-            printf("action.eSVLAN_Action=<>\n");
-            printf("action.nSVLAN_Id=<>\n");
-            printf("action.eVLAN_CrossAction=<>\n");
-            printf("action.bPortBitMapMuxControl=<>\n");
-            printf("action.bCVLAN_Ignore_Control=<>\n");
-            printf("action.bPortLinkSelection=<>\n");
-            printf("action.bPortTrunkAction=<>\n");
-            printf("action.bFlowID_Action=<>\n");
-            printf("action.nFlowID=<>\n");
-            printf("action.bRoutExtId_Action=<>\n");
-            printf("action.nRoutExtId=<>\n");
-            printf("action.bRtDstPortMaskCmp_Action=<>\n");
-            printf("action.bRtSrcPortMaskCmp_Action=<>\n");
-            printf("action.bRtDstIpMaskCmp_Action=<>\n");
-            printf("action.bRtSrcIpMaskCmp_Action=<>\n");
-            printf("action.bRtInnerIPasKey_Action=<>\n");
-            printf("action.bRtAccelEna_Action=<>\n");
-            printf("action.bRtCtrlEna_Action=<>\n");
-            printf("action.eProcessPath_Action=<>\n");
-            printf("action.ePortFilterType_Action=<>\n");
-            printf("action.bOamEnable=<>\n");
-            printf("action.nRecordId=<>\n");
-            printf("action.bExtractEnable=<>\n");
-            printf("action.eColorFrameAction=<>\n");
-            printf("action.bExtendedVlanEnable=<>\n");
-            printf("action.nExtendedVlanBlockId=<>\n");
-            printf("pattern.bFlexibleField4Enable=<>\n");
-            printf("pattern.bFlexibleField4_ExcludeEnable=<>\n");
-            printf("pattern.bFlexibleField4_RangeEnable=<>\n");
-            printf("pattern.nFlexibleField4_ParserIndex=<>\n");
-            printf("pattern.nFlexibleField4_Value=<>\n");
-            printf("pattern.nFlexibleField4_MaskOrRange=<>\n");
-            printf("pattern.bFlexibleField3Enable=<>\n");
-            printf("pattern.bFlexibleField3_ExcludeEnable=<>\n");
-            printf("pattern.bFlexibleField3_RangeEnable=<>\n");
-            printf("pattern.nFlexibleField3_ParserIndex=<>\n");
-            printf("pattern.nFlexibleField3_Value=<>\n");
-            printf("pattern.nFlexibleField3_MaskOrRange=<>\n");
-            printf("pattern.bFlexibleField2Enable=<>\n");
-            printf("pattern.bFlexibleField2_ExcludeEnable=<>\n");
-            printf("pattern.bFlexibleField2_RangeEnable=<>\n");
-            printf("pattern.nFlexibleField2_ParserIndex=<>\n");
-            printf("pattern.nFlexibleField2_Value=<>\n");
-            printf("pattern.nFlexibleField2_MaskOrRange=<>\n");
-            printf("pattern.bFlexibleField1Enable=<>\n");
-            printf("pattern.bFlexibleField1_ExcludeEnable=<>\n");
-            printf("pattern.bFlexibleField1_RangeEnable=<>\n");
-            printf("pattern.nFlexibleField1_ParserIndex=<>\n");
-            printf("pattern.nFlexibleField1_Value=<>\n");
-            printf("pattern.nFlexibleField1_MaskOrRange=<>\n");
-            printf("action.bPBB_Action_Enable=<>\n");
-            printf("action.sPBB_Action.bIheaderActionEnable=<>\n");
-            printf("action.sPBB_Action.eIheaderOpMode=<>\n");
-            printf("action.sPBB_Action.bTunnelIdKnownTrafficEnable=<>\n");
-            printf("action.sPBB_Action.nTunnelIdKnownTraffic=<>\n");
-            printf("action.sPBB_Action.bTunnelIdUnKnownTrafficEnable=<>\n");
-            printf("action.sPBB_Action.nTunnelIdUnKnownTraffic=<>\n");
-            printf("action.sPBB_Action.bB_DstMac_FromMacTableEnable=<>\n");
-            printf("action.sPBB_Action.bReplace_B_SrcMacEnable=<>\n");
-            printf("action.sPBB_Action.bReplace_B_DstMacEnable=<>\n");
-            printf("action.sPBB_Action.bReplace_I_TAG_ResEnable=<>\n");
-            printf("action.sPBB_Action.bReplace_I_TAG_UacEnable=<>\n");
-            printf("action.sPBB_Action.bReplace_I_TAG_DeiEnable=<>\n");
-            printf("action.sPBB_Action.bReplace_I_TAG_PcpEnable=<>\n");
-            printf("action.sPBB_Action.bReplace_I_TAG_SidEnable=<>\n");
-            printf("action.sPBB_Action.bReplace_I_TAG_TpidEnable=<>\n");
-            printf("action.sPBB_Action.bBtagActionEnable=<>\n");
-            printf("action.sPBB_Action.eBtagOpMode=<>\n");
-            printf("action.sPBB_Action.bProcessIdKnownTrafficEnable=<>\n");
-            printf("action.sPBB_Action.nProcessIdKnownTraffic=<>\n");
-            printf("action.sPBB_Action.bProcessIdUnKnownTrafficEnable=<>\n");
-            printf("action.sPBB_Action.nProcessIdUnKnownTraffic=<>\n");
-            printf("action.sPBB_Action.bReplace_B_TAG_DeiEnable=<>\n");
-            printf("action.sPBB_Action.bReplace_B_TAG_PcpEnable=<>\n");
-            printf("action.sPBB_Action.bReplace_B_TAG_VidEnable=<>\n");
-            printf("action.sPBB_Action.bReplace_B_TAG_TpidEnable=<>\n");
-            printf("action.sPBB_Action.bMacTableMacinMacActionEnable=<>\n");
-            printf("action.sPBB_Action.eMacTableMacinMacSelect=<>\n");
-            printf("action.bDestSubIf_Action_Enable=<>\n");
-            printf("action.sDestSubIF_Action.bDestSubIFIDActionEnable=<>\n");
-            printf("action.sDestSubIF_Action.bDestSubIFIDAssignmentEnable=<>\n");
-            printf("action.sDestSubIF_Action.nDestSubIFGrp_Field=<>\n");
-
+            printf("Usage: fapi-GSW-PceRuleWrite\n");
+            for (size_t i = 0; i < ARRAY_SIZE(gsw_pce_rule_write_tmpl); i++)
+                printf("%s\n", gsw_pce_rule_write_tmpl[i]);
             goto goto_end_help;
         }
         slib = slif_lib;
@@ -2324,13 +2302,9 @@ OS_boolean_t cmds_fapi(CmdArgs_t *pArgs, int *err)
     }
     else if (strcmp(pArgs->name, "fapi-GSW-PceRuleDelete") == 0)
     {
-
         char *slib = "";
-        uint16_t phy = 0;
-        GSW_Device_t *gsw_dev;
-        uint16_t myval;
 
-        if (pArgs->prmc < 2)
+        if (pArgs->prmc < 1)
         {
             printf("Usage: fapi-GSW-PceRuleDelete\n");
             printf("nLogicalPortId=<>\n");
@@ -2345,11 +2319,7 @@ OS_boolean_t cmds_fapi(CmdArgs_t *pArgs, int *err)
     }
     else if (strcmp(pArgs->name, "fapi-GSW-PceRuleAlloc") == 0)
     {
-
         char *slib = "";
-        uint16_t phy = 0;
-        GSW_Device_t *gsw_dev;
-        uint16_t myval;
 
         if (pArgs->prmc < 1)
         {
@@ -2363,11 +2333,7 @@ OS_boolean_t cmds_fapi(CmdArgs_t *pArgs, int *err)
     }
     else if (strcmp(pArgs->name, "fapi-GSW-PceRuleFree") == 0)
     {
-
         char *slib = "";
-        uint16_t phy = 0;
-        GSW_Device_t *gsw_dev;
-        uint16_t myval;
 
         if (pArgs->prmc < 1)
         {
@@ -2381,11 +2347,7 @@ OS_boolean_t cmds_fapi(CmdArgs_t *pArgs, int *err)
     }
     else if (strcmp(pArgs->name, "fapi-GSW-PceRuleEnable") == 0)
     {
-
         char *slib = "";
-        uint16_t phy = 0;
-        GSW_Device_t *gsw_dev;
-        uint16_t myval;
 
         if (pArgs->prmc < 1)
         {
@@ -2402,11 +2364,7 @@ OS_boolean_t cmds_fapi(CmdArgs_t *pArgs, int *err)
     }
     else if (strcmp(pArgs->name, "fapi-GSW-PceRuleDisable") == 0)
     {
-
         char *slib = "";
-        uint16_t phy = 0;
-        GSW_Device_t *gsw_dev;
-        uint16_t myval;
 
         if (pArgs->prmc < 1)
         {
@@ -2420,6 +2378,139 @@ OS_boolean_t cmds_fapi(CmdArgs_t *pArgs, int *err)
         slib = slif_lib;
         api_gsw_get_links(slib);
         ret = fapi_GSW_PceRuleDisable(pArgs->prmc, pArgs->prmvs);
+    }
+    else if (strcmp(pArgs->name, "fapi-GSW-PceRuleMove") == 0)
+    {
+        char *slib = "";
+
+        if (pArgs->prmc < 2)
+        {
+            printf("Usage: fapi-GSW-PceRuleMove\n");
+            printf("cur.nLogicalPortId=x1 cur.pattern.nIndex=y1 cur.nSubIfIdGroup=z1 cur.region=s1\n");
+            printf("new.nLogicalPortId=x2 new.pattern.nIndex=y2 new.nSubIfIdGroup=z2 new.region=s2\n");
+            goto goto_end_help;
+        }
+
+        slib = slif_lib;
+
+        api_gsw_get_links(slib);
+        ret = fapi_GSW_PceRuleMove(pArgs->prmc, pArgs->prmvs);
+    }
+    else if (strcmp(pArgs->name, "fapi-GSW-PceRuleBlockSize") == 0)
+    {
+        char *slib = "";
+
+        if (pArgs->prmc < 1)
+        {
+            printf("Usage: fapi-GSW-PceRuleBlockSize blockid=0\n");
+            goto goto_end_help;
+        }
+
+        slib = slif_lib;
+
+        api_gsw_get_links(slib);
+        ret = fapi_GSW_PceRuleBlockSize(pArgs->prmc, pArgs->prmvs);
+    }
+
+    else if (strcmp(pArgs->name, "fapi-GSW-PceRuleLogicRead") == 0)
+    {
+        char *slib = "";
+
+        if (pArgs->prmc < 1)
+        {
+            printf("Usage: fapi-GSW-PceRuleLogicRead\n");
+            printf("pattern.nIndex=<>\n");
+            printf("nLogicalPortId=<>\n");
+            printf("nSubIfIdGroup=<>\n");
+            printf("region=<>\n");
+            goto goto_end_help;
+        }
+        slib = slif_lib;
+        api_gsw_get_links(slib);
+        ret = fapi_GSW_PceRuleLogicRead(pArgs->prmc, pArgs->prmvs);
+    }
+    else if (strcmp(pArgs->name, "fapi-GSW-PceRuleLogicWrite") == 0)
+    {
+        char *slib = "";
+
+        if (pArgs->prmc < 2)
+        {
+            printf("Usage: fapi-GSW-PceRuleLogicWrite\n");
+            for (size_t i = 0; i < ARRAY_SIZE(gsw_pce_rule_write_tmpl); i++)
+                printf("%s\n", gsw_pce_rule_write_tmpl[i]);
+            goto goto_end_help;
+        }
+        slib = slif_lib;
+        api_gsw_get_links(slib);
+        ret = fapi_GSW_PceRuleLogicWrite(pArgs->prmc, pArgs->prmvs);
+    }
+    else if (strcmp(pArgs->name, "fapi-GSW-PceRuleLogicDelete") == 0)
+    {
+        char *slib = "";
+
+        if (pArgs->prmc < 1)
+        {
+            printf("Usage: fapi-GSW-PceRuleLogicDelete\n");
+            printf("nLogicalPortId=<>\n");
+            printf("nSubIfIdGroup=<>\n");
+            printf("region=<>\n");
+            printf("pattern.nIndex=<>\n");
+            goto goto_end_help;
+        }
+        slib = slif_lib;
+        api_gsw_get_links(slib);
+        ret = fapi_GSW_PceRuleLogicDelete(pArgs->prmc, pArgs->prmvs);
+    }
+    else if (strcmp(pArgs->name, "fapi-GSW-PceRuleLogicEnable") == 0)
+    {
+        char *slib = "";
+
+        if (pArgs->prmc < 1)
+        {
+            printf("Usage: fapi-GSW-PceRuleLogicEnable\n");
+            printf("nLogicalPortId=<>\n");
+            printf("nSubIfIdGroup=<>\n");
+            printf("region=<>\n");
+            printf("pattern.nIndex=<>\n");
+            goto goto_end_help;
+        }
+        slib = slif_lib;
+        api_gsw_get_links(slib);
+        ret = fapi_GSW_PceRuleLogicEnable(pArgs->prmc, pArgs->prmvs);
+    }
+    else if (strcmp(pArgs->name, "fapi-GSW-PceRuleLogicDisable") == 0)
+    {
+        char *slib = "";
+
+        if (pArgs->prmc < 1)
+        {
+            printf("Usage: fapi-GSW-PceRuleLogicDisable\n");
+            printf("nLogicalPortId=<>\n");
+            printf("nSubIfIdGroup=<>\n");
+            printf("region=<>\n");
+            printf("pattern.nIndex=<>\n");
+            goto goto_end_help;
+        }
+        slib = slif_lib;
+        api_gsw_get_links(slib);
+        ret = fapi_GSW_PceRuleLogicDisable(pArgs->prmc, pArgs->prmvs);
+    }
+    else if (strcmp(pArgs->name, "fapi-GSW-PceRuleLogicMove") == 0)
+    {
+        char *slib = "";
+
+        if (pArgs->prmc < 2)
+        {
+            printf("Usage: fapi-GSW-PceRuleLogicMove\n");
+            printf("cur.nLogicalPortId=x1 cur.pattern.nIndex=y1 cur.nSubIfIdGroup=z1 cur.region=s1\n");
+            printf("new.nLogicalPortId=x2 new.pattern.nIndex=y2 new.nSubIfIdGroup=z2 new.region=s2\n");
+            goto goto_end_help;
+        }
+
+        slib = slif_lib;
+
+        api_gsw_get_links(slib);
+        ret = fapi_GSW_PceRuleLogicMove(pArgs->prmc, pArgs->prmvs);
     }
 
     else if (strcmp(pArgs->name, "fapi-GSW-MulticastRouterPortAdd") == 0)
@@ -2548,9 +2639,6 @@ OS_boolean_t cmds_fapi(CmdArgs_t *pArgs, int *err)
     {
 
         char *slib = "";
-        uint16_t phy = 0;
-        GSW_Device_t *gsw_dev;
-        uint16_t myval;
 
         if (pArgs->prmc < 1)
         {
@@ -2575,9 +2663,6 @@ OS_boolean_t cmds_fapi(CmdArgs_t *pArgs, int *err)
     {
 
         char *slib = "";
-        uint16_t phy = 0;
-        GSW_Device_t *gsw_dev;
-        uint16_t myval;
 
         slib = slif_lib;
         api_gsw_get_links(slib);
@@ -2587,9 +2672,6 @@ OS_boolean_t cmds_fapi(CmdArgs_t *pArgs, int *err)
     {
 
         char *slib = "";
-        uint16_t phy = 0;
-        GSW_Device_t *gsw_dev;
-        uint16_t myval;
 
         slib = slif_lib;
         api_gsw_get_links(slib);
@@ -2598,9 +2680,6 @@ OS_boolean_t cmds_fapi(CmdArgs_t *pArgs, int *err)
     else if (strcmp(pArgs->name, "fapi-GSW-PVT-Meas") == 0)
     {
         char *slib = "";
-        uint16_t phy = 0;
-        GSW_Device_t *gsw_dev;
-        uint16_t myval;
 
         slib = slif_lib;
         api_gsw_get_links(slib);
@@ -2609,9 +2688,6 @@ OS_boolean_t cmds_fapi(CmdArgs_t *pArgs, int *err)
     else if (strcmp(pArgs->name, "fapi-GSW-Delay") == 0)
     {
         char *slib = "";
-        uint16_t phy = 0;
-        GSW_Device_t *gsw_dev;
-        uint16_t myval;
 
         if (pArgs->prmc < 1)
         {
@@ -2627,9 +2703,6 @@ OS_boolean_t cmds_fapi(CmdArgs_t *pArgs, int *err)
     else if (strcmp(pArgs->name, "fapi-GSW-GPIO-Configure") == 0)
     {
         char *slib = "";
-        uint16_t phy = 0;
-        GSW_Device_t *gsw_dev;
-        uint16_t myval;
 
         if (pArgs->prmc < 1)
         {
@@ -2660,8 +2733,6 @@ OS_boolean_t cmds_fapi(CmdArgs_t *pArgs, int *err)
     else if (strcmp(pArgs->name, "fapi-GSW-Reboot") == 0)
     {
         char *slib = "";
-        uint16_t phy = 0;
-        GSW_Device_t *gsw_dev;
 
         slib = slif_lib;
         api_gsw_get_links(slib);
@@ -2670,8 +2741,6 @@ OS_boolean_t cmds_fapi(CmdArgs_t *pArgs, int *err)
     else if (strcmp(pArgs->name, "fapi-GSW-SysReg-Rd") == 0)
     {
         char *slib = "";
-        uint16_t reg = 0;
-        GSW_Device_t *gsw_dev;
 
         if (pArgs->prmc < 1)
         {
@@ -2688,8 +2757,6 @@ OS_boolean_t cmds_fapi(CmdArgs_t *pArgs, int *err)
     else if (strcmp(pArgs->name, "fapi-GSW-SysReg-Wr") == 0)
     {
         char *slib = "";
-        uint16_t reg = 0;
-        GSW_Device_t *gsw_dev;
 
         if (pArgs->prmc < 1)
         {
@@ -2707,8 +2774,6 @@ OS_boolean_t cmds_fapi(CmdArgs_t *pArgs, int *err)
     else if (strcmp(pArgs->name, "fapi-GSW-SysReg-Mod") == 0)
     {
         char *slib = "";
-        uint16_t reg = 0;
-        GSW_Device_t *gsw_dev;
 
         if (pArgs->prmc < 1)
         {
@@ -2727,8 +2792,6 @@ OS_boolean_t cmds_fapi(CmdArgs_t *pArgs, int *err)
     else if (strcmp(pArgs->name, "fapi-GSW-Cml-Clk-Get") == 0)
     {
         char *slib = "";
-        uint16_t reg = 0;
-        GSW_Device_t *gsw_dev;
 
         if (pArgs->prmc < 1)
         {
@@ -2745,8 +2808,6 @@ OS_boolean_t cmds_fapi(CmdArgs_t *pArgs, int *err)
     else if (strcmp(pArgs->name, "fapi-GSW-Cml-Clk-Set") == 0)
     {
         char *slib = "";
-        uint16_t reg = 0;
-        GSW_Device_t *gsw_dev;
 
         if (pArgs->prmc < 1)
         {
@@ -2767,8 +2828,6 @@ OS_boolean_t cmds_fapi(CmdArgs_t *pArgs, int *err)
     else if (strcmp(pArgs->name, "fapi-GSW-Sfp-Get") == 0)
     {
         char *slib = "";
-        uint16_t reg = 0;
-        GSW_Device_t *gsw_dev;
 
         if (pArgs->prmc < 2)
         {
@@ -2786,8 +2845,6 @@ OS_boolean_t cmds_fapi(CmdArgs_t *pArgs, int *err)
     else if (strcmp(pArgs->name, "fapi-GSW-Sfp-Set") == 0)
     {
         char *slib = "";
-        uint16_t reg = 0;
-        GSW_Device_t *gsw_dev;
 
         if (pArgs->prmc < 2)
         {
@@ -2812,9 +2869,6 @@ OS_boolean_t cmds_fapi(CmdArgs_t *pArgs, int *err)
     else if (strcmp(pArgs->name, "fapi-GSW-VlanCounterMapSet") == 0)
     {
         char *slib = "";
-        uint16_t phy = 0;
-        GSW_Device_t *gsw_dev;
-        uint16_t myval;
 
         if (pArgs->prmc < 1)
         {
@@ -2837,9 +2891,6 @@ OS_boolean_t cmds_fapi(CmdArgs_t *pArgs, int *err)
     else if (strcmp(pArgs->name, "fapi-GSW-VlanCounterMapGet") == 0)
     {
         char *slib = "";
-        uint16_t phy = 0;
-        GSW_Device_t *gsw_dev;
-        uint16_t myval;
 
         if (pArgs->prmc < 1)
         {
@@ -2855,9 +2906,6 @@ OS_boolean_t cmds_fapi(CmdArgs_t *pArgs, int *err)
     else if (strcmp(pArgs->name, "fapi-GSW-Vlan-RMON-Get") == 0)
     {
         char *slib = "";
-        uint16_t phy = 0;
-        GSW_Device_t *gsw_dev;
-        uint16_t myval;
 
         if (pArgs->prmc < 1)
         {
@@ -2873,9 +2921,6 @@ OS_boolean_t cmds_fapi(CmdArgs_t *pArgs, int *err)
     else if (strcmp(pArgs->name, "fapi-GSW-Vlan-RMON-Clear") == 0)
     {
         char *slib = "";
-        uint16_t phy = 0;
-        GSW_Device_t *gsw_dev;
-        uint16_t myval;
 
         if (pArgs->prmc < 1)
         {
@@ -2892,9 +2937,6 @@ OS_boolean_t cmds_fapi(CmdArgs_t *pArgs, int *err)
     else if (strcmp(pArgs->name, "fapi-GSW-Vlan-RMONControl-Set") == 0)
     {
         char *slib = "";
-        uint16_t phy = 0;
-        GSW_Device_t *gsw_dev;
-        uint16_t myval;
 
         if (pArgs->prmc < 1)
         {
@@ -2911,9 +2953,6 @@ OS_boolean_t cmds_fapi(CmdArgs_t *pArgs, int *err)
     else if (strcmp(pArgs->name, "fapi-GSW-Vlan-RMONControl-Get") == 0)
     {
         char *slib = "";
-        uint16_t phy = 0;
-        GSW_Device_t *gsw_dev;
-        uint16_t myval;
 
         slib = slif_lib;
         api_gsw_get_links(slib);
@@ -2923,9 +2962,6 @@ OS_boolean_t cmds_fapi(CmdArgs_t *pArgs, int *err)
     else if (strcmp(pArgs->name, "fapi-GSW-PBB-TunnelTempate-Config-Get") == 0)
     {
         char *slib = "";
-        uint16_t phy = 0;
-        GSW_Device_t *gsw_dev;
-        uint16_t myval;
 
         if (pArgs->prmc < 1)
         {
@@ -2940,9 +2976,6 @@ OS_boolean_t cmds_fapi(CmdArgs_t *pArgs, int *err)
     else if (strcmp(pArgs->name, "fapi-GSW-PBB-TunnelTempate-Config-Set") == 0)
     {
         char *slib = "";
-        uint16_t phy = 0;
-        GSW_Device_t *gsw_dev;
-        uint16_t myval;
 
         if (pArgs->prmc < 1)
         {
@@ -2957,9 +2990,6 @@ OS_boolean_t cmds_fapi(CmdArgs_t *pArgs, int *err)
     else if (strcmp(pArgs->name, "fapi-GSW-PBB-TunnelTempate-Alloc") == 0)
     {
         char *slib = "";
-        uint16_t phy = 0;
-        GSW_Device_t *gsw_dev;
-        uint16_t myval;
 
         slib = slif_lib;
         api_gsw_get_links(slib);
@@ -2968,9 +2998,6 @@ OS_boolean_t cmds_fapi(CmdArgs_t *pArgs, int *err)
     else if (strcmp(pArgs->name, "fapi-GSW-PBB-TunnelTempate-Free") == 0)
     {
         char *slib = "";
-        uint16_t phy = 0;
-        GSW_Device_t *gsw_dev;
-        uint16_t myval;
 
         if (pArgs->prmc < 1)
         {
@@ -2986,9 +3013,6 @@ OS_boolean_t cmds_fapi(CmdArgs_t *pArgs, int *err)
     else if (strcmp(pArgs->name, "fapi-GSW-CPU-PortCfgGet") == 0)
     {
         char *slib = "";
-        uint16_t phy = 0;
-        GSW_Device_t *gsw_dev;
-        uint16_t myval;
 
         if (pArgs->prmc < 1)
         {
@@ -3003,9 +3027,6 @@ OS_boolean_t cmds_fapi(CmdArgs_t *pArgs, int *err)
     else if (strcmp(pArgs->name, "fapi-GSW-CPU-PortCfgSet") == 0)
     {
         char *slib = "";
-        uint16_t phy = 0;
-        GSW_Device_t *gsw_dev;
-        uint16_t myval;
 
         if (pArgs->prmc < 1)
         {
@@ -3020,7 +3041,6 @@ OS_boolean_t cmds_fapi(CmdArgs_t *pArgs, int *err)
     else if (strcmp(pArgs->name, "fapi-GSW-RMON-PortGet") == 0)
     {
         char *slib = "";
-        GSW_Device_t *gsw_dev;
 
         if (pArgs->prmc < 1)
         {
@@ -3038,7 +3058,6 @@ OS_boolean_t cmds_fapi(CmdArgs_t *pArgs, int *err)
     else if (strcmp(pArgs->name, "fapi-GSW-RMON-ModeSet") == 0)
     {
         char *slib = "";
-        GSW_Device_t *gsw_dev;
 
         if (pArgs->prmc < 1)
         {
@@ -3054,9 +3073,6 @@ OS_boolean_t cmds_fapi(CmdArgs_t *pArgs, int *err)
     else if (strcmp(pArgs->name, "fapi-GSW-RMON-MeterGet") == 0)
     {
         char *slib = "";
-        uint16_t phy = 0;
-        GSW_Device_t *gsw_dev;
-        uint16_t myval;
 
         if (pArgs->prmc < 1)
         {
@@ -3071,9 +3087,6 @@ OS_boolean_t cmds_fapi(CmdArgs_t *pArgs, int *err)
     else if (strcmp(pArgs->name, "fapi-GSW-RMON-FlowGet") == 0)
     {
         char *slib = "";
-        uint16_t phy = 0;
-        GSW_Device_t *gsw_dev;
-        uint16_t myval;
 
         if (pArgs->prmc < 1)
         {
@@ -3092,9 +3105,6 @@ OS_boolean_t cmds_fapi(CmdArgs_t *pArgs, int *err)
     else if (strcmp(pArgs->name, "fapi-GSW-RMON-TFlowClear") == 0)
     {
         char *slib = "";
-        uint16_t phy = 0;
-        GSW_Device_t *gsw_dev;
-        uint16_t myval;
 
         if (pArgs->prmc < 1)
         {
@@ -3112,9 +3122,6 @@ OS_boolean_t cmds_fapi(CmdArgs_t *pArgs, int *err)
     else if (strcmp(pArgs->name, "fapi-GSW-BridgePortAlloc") == 0)
     {
         char *slib = "";
-        uint16_t phy = 0;
-        GSW_Device_t *gsw_dev;
-        uint16_t myval;
 
         slib = slif_lib;
         api_gsw_get_links(slib);
@@ -3123,9 +3130,6 @@ OS_boolean_t cmds_fapi(CmdArgs_t *pArgs, int *err)
     else if (strcmp(pArgs->name, "fapi-GSW-BridgePortFree") == 0)
     {
         char *slib = "";
-        uint16_t phy = 0;
-        GSW_Device_t *gsw_dev;
-        uint16_t myval;
 
         if (pArgs->prmc < 1)
         {
@@ -3141,9 +3145,6 @@ OS_boolean_t cmds_fapi(CmdArgs_t *pArgs, int *err)
     else if (strcmp(pArgs->name, "fapi-GSW-UnFreeze") == 0)
     {
         char *slib = "";
-        uint16_t phy = 0;
-        GSW_Device_t *gsw_dev;
-        uint16_t myval;
 
         slib = slif_lib;
         api_gsw_get_links(slib);
@@ -3152,9 +3153,6 @@ OS_boolean_t cmds_fapi(CmdArgs_t *pArgs, int *err)
     else if (strcmp(pArgs->name, "fapi-GSW-Freeze") == 0)
     {
         char *slib = "";
-        uint16_t phy = 0;
-        GSW_Device_t *gsw_dev;
-        uint16_t myval;
 
         slib = slif_lib;
         api_gsw_get_links(slib);
@@ -3165,9 +3163,6 @@ OS_boolean_t cmds_fapi(CmdArgs_t *pArgs, int *err)
     {
 
         char *slib = "";
-        uint16_t phy = 0;
-        GSW_Device_t *gsw_dev;
-        uint16_t myval;
 
         if (pArgs->prmc < 1)
         {
@@ -3183,9 +3178,6 @@ OS_boolean_t cmds_fapi(CmdArgs_t *pArgs, int *err)
     {
 
         char *slib = "";
-        uint16_t phy = 0;
-        GSW_Device_t *gsw_dev;
-        uint16_t myval;
 
         slib = slif_lib;
         api_gsw_get_links(slib);
@@ -3196,9 +3188,6 @@ OS_boolean_t cmds_fapi(CmdArgs_t *pArgs, int *err)
     {
 
         char *slib = "";
-        uint16_t phy = 0;
-        GSW_Device_t *gsw_dev;
-        uint16_t myval;
 
         if (pArgs->prmc < 1)
         {
@@ -3215,9 +3204,6 @@ OS_boolean_t cmds_fapi(CmdArgs_t *pArgs, int *err)
     {
 
         char *slib = "";
-        uint16_t phy = 0;
-        GSW_Device_t *gsw_dev;
-        uint16_t myval;
 
         if (pArgs->prmc < 1)
         {
@@ -3235,9 +3221,6 @@ OS_boolean_t cmds_fapi(CmdArgs_t *pArgs, int *err)
     else if (strcmp(pArgs->name, "fapi-GSW-Debug-RMON-Port-GetAll") == 0)
     {
         char* slib ="";
-        uint16_t phy = 0;
-        GSW_Device_t*   gsw_dev;
-        uint16_t myval;
 
         if (pArgs->prmc < 1)
         {
@@ -3255,8 +3238,6 @@ OS_boolean_t cmds_fapi(CmdArgs_t *pArgs, int *err)
     else if (strcmp(pArgs->name, "fapi-GSW-SS-Sptag-Get") == 0)
     {
         char *slib = "";
-        uint16_t reg = 0;
-        GSW_Device_t *gsw_dev;
 
         if (pArgs->prmc < 1)
         {
@@ -3273,8 +3254,6 @@ OS_boolean_t cmds_fapi(CmdArgs_t *pArgs, int *err)
     else if (strcmp(pArgs->name, "fapi-GSW-SS-Sptag-Set") == 0)
     {
         char *slib = "";
-        uint16_t reg = 0;
-        GSW_Device_t *gsw_dev;
 
         if (pArgs->prmc < 1)
         {
@@ -3293,10 +3272,10 @@ OS_boolean_t cmds_fapi(CmdArgs_t *pArgs, int *err)
         api_gsw_get_links(slib);
         ret = fapi_GSW_SS_Sptag_Set(pArgs->prmc, pArgs->prmvs);
     }
+#ifdef SUPPORT_DSCP_DROP_PRECEDENCE
     else if (strcmp(pArgs->name, "fapi-GSW-QoS-DSCP-DropPrecedenceCfgGet") == 0)
     {
         char *slib = "";
-        GSW_Device_t *gsw_dev;
 
         if (pArgs->prmc > 0)
         {
@@ -3313,8 +3292,6 @@ OS_boolean_t cmds_fapi(CmdArgs_t *pArgs, int *err)
     else if (strcmp(pArgs->name, "fapi-GSW-QoS-DSCP-DropPrecedenceCfgSet") == 0)
     {
         char *slib = "";
-        GSW_Device_t *gsw_dev;
-
 
         if (pArgs->prmc < 2)
         {
@@ -3327,11 +3304,10 @@ OS_boolean_t cmds_fapi(CmdArgs_t *pArgs, int *err)
         api_gsw_get_links(slib);
         ret = fapi_GSW_QoS_DSCP_DropPrecedenceCfgSet(pArgs->prmc, pArgs->prmvs);
     }
-
+#endif /* SUPPORT_DSCP_DROP_PRECEDENCE */
     else if (strcmp(pArgs->name, "fapi-GSW-QoS-ColorMarkingTableGet") == 0)
     {
         char *slib = "";
-        GSW_Device_t *gsw_dev;
 
         if (pArgs->prmc < 1)
         {
@@ -3348,7 +3324,6 @@ OS_boolean_t cmds_fapi(CmdArgs_t *pArgs, int *err)
     else if (strcmp(pArgs->name, "fapi-GSW-QoS-ColorMarkingTableSet") == 0)
     {
         char *slib = "";
-        GSW_Device_t *gsw_dev;
 
         if (pArgs->prmc < 1)
         {
@@ -3365,7 +3340,6 @@ OS_boolean_t cmds_fapi(CmdArgs_t *pArgs, int *err)
     else if (strcmp(pArgs->name, "fapi-GSW-QoS-ColorReMarkingTableGet") == 0)
     {
         char *slib = "";
-        GSW_Device_t *gsw_dev;
 
         if (pArgs->prmc < 1)
         {
@@ -3382,7 +3356,6 @@ OS_boolean_t cmds_fapi(CmdArgs_t *pArgs, int *err)
     else if (strcmp(pArgs->name, "fapi-GSW-QoS-ColorReMarkingTableSet") == 0)
     {
         char *slib = "";
-        GSW_Device_t *gsw_dev;
 
         if (pArgs->prmc < 3)
         {
@@ -3400,7 +3373,6 @@ OS_boolean_t cmds_fapi(CmdArgs_t *pArgs, int *err)
     else if (strcmp(pArgs->name, "fapi-GSW-QoS-DSCP2-PCPTableGet") == 0)
     {
         char *slib = "";
-        GSW_Device_t *gsw_dev;
 
         if (pArgs->prmc < 1)
         {
@@ -3417,7 +3389,6 @@ OS_boolean_t cmds_fapi(CmdArgs_t *pArgs, int *err)
     else if (strcmp(pArgs->name, "fapi-GSW-QoS-DSCP2-PCPTableSet") == 0)
     {
         char *slib = "";
-        GSW_Device_t *gsw_dev;
 
         if (pArgs->prmc < 3)
         {
@@ -3434,7 +3405,6 @@ OS_boolean_t cmds_fapi(CmdArgs_t *pArgs, int *err)
     else if (strcmp(pArgs->name, "fapi-GSW-QoS-PortReMarkingCfgGet") == 0)
     {
         char *slib = "";
-        GSW_Device_t *gsw_dev;
 
         if (pArgs->prmc < 1)
         {
@@ -3451,7 +3421,6 @@ OS_boolean_t cmds_fapi(CmdArgs_t *pArgs, int *err)
     else if (strcmp(pArgs->name, "fapi-GSW-QoS-PortReMarkingCfgSet") == 0)
     {
         char *slib = "";
-        GSW_Device_t *gsw_dev;
 
         if (pArgs->prmc < 4)
         {
@@ -3468,7 +3437,6 @@ OS_boolean_t cmds_fapi(CmdArgs_t *pArgs, int *err)
     else if (strcmp(pArgs->name, "fapi-GSW-QoS-StormCfgGet") == 0)
     {
         char *slib = "";
-        GSW_Device_t *gsw_dev;
 
         if (pArgs->prmc > 0)
         {
@@ -3485,7 +3453,6 @@ OS_boolean_t cmds_fapi(CmdArgs_t *pArgs, int *err)
     else if (strcmp(pArgs->name, "fapi-GSW-QoS-StormCfgSet") == 0)
     {
         char *slib = "";
-        GSW_Device_t *gsw_dev;
 
         if (pArgs->prmc < 1)
         {
@@ -3502,7 +3469,6 @@ OS_boolean_t cmds_fapi(CmdArgs_t *pArgs, int *err)
     else if (strcmp(pArgs->name, "fapi-GSW-QoS-StormCfgGet") == 0)
     {
         char *slib = "";
-        GSW_Device_t *gsw_dev;
 
         if (pArgs->prmc > 0)
         {
@@ -3519,7 +3485,6 @@ OS_boolean_t cmds_fapi(CmdArgs_t *pArgs, int *err)
     else if (strcmp(pArgs->name, "fapi-GSW-QoS-PmapperTableGet") == 0)
     {
         char *slib = "";
-        GSW_Device_t *gsw_dev;
 
         if (pArgs->prmc < 1)
         {
@@ -3536,7 +3501,6 @@ OS_boolean_t cmds_fapi(CmdArgs_t *pArgs, int *err)
     else if (strcmp(pArgs->name, "fapi-GSW-QoS-PmapperTableSet") == 0)
     {
         char *slib = "";
-        GSW_Device_t *gsw_dev;
 
         if (pArgs->prmc < 3)
         {
@@ -3550,26 +3514,9 @@ OS_boolean_t cmds_fapi(CmdArgs_t *pArgs, int *err)
         ret = fapi_GSW_QoS_PmapperTableSet(pArgs->prmc, pArgs->prmvs);
     }
 
-    else if (strcmp(pArgs->name, "fapi-GSW-PceRuleBlockSize") == 0)
-    {
-        char *slib = "";
-        GSW_Device_t *gsw_dev;
-
-        if (pArgs->prmc < 1)
-        {
-            printf("Usage: fapi-GSW-PceRuleBlockSize blockid=0\n");
-            goto goto_end_help;
-        }
-
-        slib = slif_lib;
-
-        api_gsw_get_links(slib);
-        ret = fapi_GSW_Pce_RuleBlockSize(pArgs->prmc, pArgs->prmvs);
-    }
     else if (strcmp(pArgs->name, "fapi-GSW-BridgePortLoopRead") == 0)
     {
         char *slib = "";
-        GSW_Device_t *gsw_dev;
 
         if (pArgs->prmc < 1)
         {
@@ -3585,7 +3532,6 @@ OS_boolean_t cmds_fapi(CmdArgs_t *pArgs, int *err)
     else if (strcmp(pArgs->name, "fapi-GSW-TflowCountModeGet") == 0)
     {
         char *slib = "";
-        GSW_Device_t *gsw_dev;
 
         if (pArgs->prmc < 1)
         {
@@ -3602,7 +3548,6 @@ OS_boolean_t cmds_fapi(CmdArgs_t *pArgs, int *err)
     else if (strcmp(pArgs->name, "fapi-GSW-TflowCountModeSet") == 0)
     {
         char *slib = "";
-        GSW_Device_t *gsw_dev;
 
         if (pArgs->prmc < 5)
         {
@@ -3619,7 +3564,6 @@ OS_boolean_t cmds_fapi(CmdArgs_t *pArgs, int *err)
     else if (strcmp(pArgs->name, "fapi-GSW-Mac-TableLoopDetect") == 0)
     {
         char *slib = "";
-        GSW_Device_t *gsw_dev;
 
         if (pArgs->prmc < 1)
         {
@@ -3633,23 +3577,94 @@ OS_boolean_t cmds_fapi(CmdArgs_t *pArgs, int *err)
         ret = fapi_GSW_Mac_TableLoopDetect(pArgs->prmc, pArgs->prmvs);
     }
 
-    else if (strcmp(pArgs->name, "fapi-GSW-PceRuleMove") == 0)
+    else if (strcmp(pArgs->name, "fapi-Mac-RmonGet") == 0)
     {
         char *slib = "";
-        GSW_Device_t *gsw_dev;
 
-        if (pArgs->prmc < 4)
+        if (pArgs->prmc < 1)
         {
-            printf("Usage: fapi-GSW-PceRuleMove\n");
-            printf("cur.nLogicalPortId=x1 cur.pattern.nIndex=y1 cur.nSubIfIdGroup=z1 cur.region=s1\n");
-            printf("new.nLogicalPortId=x2 new.pattern.nIndex=y2 new.nSubIfIdGroup=z2 new.region=s2\n");
+            printf("Usage: fapi-Mac-RmonGet idx=<mac_idx>\n");
             goto goto_end_help;
         }
 
         slib = slif_lib;
 
         api_gsw_get_links(slib);
-        ret = fapi_GSW_PCE_RuleMove(pArgs->prmc, pArgs->prmvs);
+        ret = fapi_Mac_RmonGet(pArgs->prmc, pArgs->prmvs);
+    }
+    else if (strcmp(pArgs->name, "fapi-Mac-RmonClear") == 0)
+    {
+        char *slib = "";
+
+        if (pArgs->prmc < 1)
+        {
+            printf("Usage: fapi-Mac-RmonClear idx=<mac_idx>\n");
+            goto goto_end_help;
+        }
+
+        slib = slif_lib;
+
+        api_gsw_get_links(slib);
+        ret = fapi_Mac_RmonClear(pArgs->prmc, pArgs->prmvs);
+    }
+    else if (strcmp(pArgs->name, "fapi-Mac-RegisterGet") == 0)
+    {
+
+        char *slib = "";
+        if (pArgs->prmc < 2)
+        {
+            printf("Usage: fapi-Mac-RegisterGet idx=<mac_idx> nRegAddr=<reg>\n");
+            printf("idx: MAC index\n");
+            printf("reg: register\n");
+            goto goto_end_help;
+        }
+
+        slib = slif_lib;
+
+        api_gsw_get_links(slib);
+        ret = fapi_Mac_RegisterGet(pArgs->prmc, pArgs->prmvs);
+    }
+
+    else if (strcmp(pArgs->name, "fapi-Mac-RegisterSet") == 0)
+    {
+
+        char *slib = "";
+        if (pArgs->prmc < 3)
+        {
+            printf("Usage: fapi-Mac-RegisterSet idx=<mac_idx> nRegAddr=<reg> nData=<data>\n");
+            printf("idx: MAC index\n");
+            printf("reg: register\n");
+            printf("data: data to write\n");
+            goto goto_end_help;
+        }
+
+        slib = slif_lib;
+        api_gsw_get_links(slib);
+        ret = fapi_Mac_RegisterSet(pArgs->prmc, pArgs->prmvs);
+    }
+
+    else if (strcmp(pArgs->name, "fapi-Sys-DaemonList") == 0)
+    {
+        char *slib = "";
+
+        slib = slif_lib;
+        api_gsw_get_links(slib);
+        ret = fapi_Sys_DaemonList(pArgs->prmc, pArgs->prmvs);
+    }
+    else if (strcmp(pArgs->name, "fapi-Sys-DaemonSet") == 0)
+    {
+        char *slib = "";
+        if (pArgs->prmc < 2)
+        {
+            printf("Usage: fapi-Sys-DaemonSet id=<id> state=<state>\n");
+            printf("id: daemon ID\n");
+            printf("state: daemon state: 1 - running, 0 - suspended\n");
+            goto goto_end_help;
+        }
+
+        slib = slif_lib;
+        api_gsw_get_links(slib);
+        ret = fapi_Sys_DaemonSet(pArgs->prmc, pArgs->prmvs);
     }
 
     /***************
@@ -3698,6 +3713,12 @@ int cmds_fapi_symlink_set(void)
     system("ln -sf ./ethswbox /usr/sbin/fapi-GSW-QoS-WredPortCfgGet");
     system("ln -sf ./ethswbox /usr/sbin/fapi-GSW-TrunkingCfgSet");
     system("ln -sf ./ethswbox /usr/sbin/fapi-GSW-TrunkingCfgGet");
+    system("ln -sf ./ethswbox /usr/sbin/fapi-GSW-Trunking-LAGCfgGet");
+    system("ln -sf ./ethswbox /usr/sbin/fapi-GSW-Trunking-LAGCfgSet");
+    /*system("ln -sf ./ethswbox /usr/sbin/fapi-GSW-Poe-GlobalCfgSet");
+    system("ln -sf ./ethswbox /usr/sbin/fapi-GSW-Poe-GlobalStatusGet");
+    system("ln -sf ./ethswbox /usr/sbin/fapi-GSW-Poe-PortCfgGet");
+    system("ln -sf ./ethswbox /usr/sbin/fapi-GSW-Poe-PortCfgSet");*/
     system("ln -sf ./ethswbox /usr/sbin/fapi-GSW-MAC-TableClear");
     system("ln -sf ./ethswbox /usr/sbin/fapi-GSW-MAC-TableClear-Cond");
     system("ln -sf ./ethswbox /usr/sbin/fapi-GSW-CfgGet");
@@ -3765,6 +3786,15 @@ int cmds_fapi_symlink_set(void)
     system("ln -sf ./ethswbox /usr/sbin/fapi-GSW-PceRuleFree");
     system("ln -sf ./ethswbox /usr/sbin/fapi-GSW-PceRuleEnable");
     system("ln -sf ./ethswbox /usr/sbin/fapi-GSW-PceRuleDisable");
+    system("ln -sf ./ethswbox /usr/sbin/fapi-GSW-PceRuleMove");
+    system("ln -sf ./ethswbox /usr/sbin/fapi-GSW-PceRuleBlockSize");
+
+    system("ln -sf ./ethswbox /usr/sbin/fapi-GSW-PceRuleLogicDelete");
+    system("ln -sf ./ethswbox /usr/sbin/fapi-GSW-PceRuleLogicRead");
+    system("ln -sf ./ethswbox /usr/sbin/fapi-GSW-PceRuleLogicWrite");
+    system("ln -sf ./ethswbox /usr/sbin/fapi-GSW-PceRuleLogicEnable");
+    system("ln -sf ./ethswbox /usr/sbin/fapi-GSW-PceRuleLogicDisable");
+    system("ln -sf ./ethswbox /usr/sbin/fapi-GSW-PceRuleLogicMove");
 
     system("ln -sf ./ethswbox /usr/sbin/fapi-GSW-MulticastRouterPortAdd");
     system("ln -sf ./ethswbox /usr/sbin/fapi-GSW-MulticastRouterPortRemove");
@@ -3826,9 +3856,10 @@ int cmds_fapi_symlink_set(void)
 
     system("ln -sf ./ethswbox /usr/sbin/fapi-GSW-SS-Sptag-Set");
     system("ln -sf ./ethswbox /usr/sbin/fapi-GSW-SS-Sptag-Get");
+#ifdef SUPPORT_DSCP_DROP_PRECEDENCE
     system("ln -sf ./ethswbox /usr/sbin/fapi-GSW-QoS-DSCP-DropPrecedenceCfgGet");
     system("ln -sf ./ethswbox /usr/sbin/fapi-GSW-QoS-DSCP-DropPrecedenceCfgSet");
-
+#endif
     system("ln -sf ./ethswbox /usr/sbin/fapi-GSW-QoS-ColorMarkingTableGet");
     system("ln -sf ./ethswbox /usr/sbin/fapi-GSW-QoS-ColorMarkingTableSet");
     system("ln -sf ./ethswbox /usr/sbin/fapi-GSW-QoS-ColorReMarkingTableGet");
@@ -3842,15 +3873,29 @@ int cmds_fapi_symlink_set(void)
     system("ln -sf ./ethswbox /usr/sbin/fapi-GSW-QoS-PmapperTableGet");
     system("ln -sf ./ethswbox /usr/sbin/fapi-GSW-QoS-PmapperTableSet");
 
-    system("ln -sf ./ethswbox /usr/sbin/fapi-GSW-PceRuleBlockSize");
     system("ln -sf ./ethswbox /usr/sbin/fapi-GSW-BridgePortLoopRead");
-
     system("ln -sf ./ethswbox /usr/sbin/fapi-GSW-TflowCountModeGet");
     system("ln -sf ./ethswbox /usr/sbin/fapi-GSW-TflowCountModeSet");
-
     system("ln -sf ./ethswbox /usr/sbin/fapi-GSW-Mac-TableLoopDetect");
-    system("ln -sf ./ethswbox /usr/sbin/fapi-GSW-PceRuleMove");
-        
+
+    system("ln -sf ./ethswbox /usr/sbin/fapi-Mac-RmonGet");
+    system("ln -sf ./ethswbox /usr/sbin/fapi-Mac-RmonClear");
+    system("ln -sf ./ethswbox /usr/sbin/fapi-Mac-RegisterGet");
+    system("ln -sf ./ethswbox /usr/sbin/fapi-Mac-RegisterSet");
+    system("ln -sf ./ethswbox /usr/sbin/fapi-Sys-DaemonList");
+    system("ln -sf ./ethswbox /usr/sbin/fapi-Sys-DaemonSet");
+
+#ifdef ETHSWBOX_RPI4EVK
+    system("ln -sf ./ethswbox /usr/sbin/fapi-lif-set-pins");
+    system("ln -sf ./ethswbox /usr/sbin/fapi-lif-scan");
+#endif
+    system("ln -sf ./ethswbox /usr/sbin/fapi-c22-mdio-read");
+    system("ln -sf ./ethswbox /usr/sbin/fapi-c22-mdio-write");
+    system("ln -sf ./ethswbox /usr/sbin/fapi-c45-mdio-read");
+    system("ln -sf ./ethswbox /usr/sbin/fapi-c45-mdio-write");
+    system("ln -sf ./ethswbox /usr/sbin/fapi-smdio-read");
+    system("ln -sf ./ethswbox /usr/sbin/fapi-smdio-write");
+    system("ln -sf ./ethswbox /usr/sbin/fapi-rescue-enhwuart");
     return OS_SUCCESS;
 }
 

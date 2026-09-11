@@ -80,7 +80,32 @@ typedef enum {
 	/** Enable all fields */
 	GSW_CTP_PORT_CONFIG_MASK_ALL = 0x7FFFFFFF,
 	/** Bypass any check for debug purpose */
-	GSW_CTP_PORT_CONFIG_MASK_FORCE = 0x80000000
+	GSW_CTP_PORT_CONFIG_MASK_FORCE = 0x80000000,
+
+	/** \cond INTERNAL */
+	/** Filter for ingress related operations */
+	GSW_CTP_PORT_CONFIG_MASK_INGRESS = GSW_CTP_PORT_CONFIG_MASK_BRIDGE_PORT_ID |
+					   GSW_CTP_PORT_CONFIG_MASK_FORCE_TRAFFIC_CLASS |
+					   GSW_CTP_PORT_CONFIG_MASK_INGRESS_VLAN |
+					   GSW_CTP_PORT_CONFIG_MASK_INGRESS_VLAN_IGMP |
+					   GSW_CTP_PORT_CONFIG_MASK_INRESS_NTO1_VLAN |
+					   GSW_CTP_PORT_CONFIG_INGRESS_METER |
+					   GSW_CTP_PORT_CONFIG_BRIDGING_BYPASS |
+					   GSW_CTP_PORT_CONFIG_INGRESS_MARKING |
+					   GSW_CTP_PORT_CONFIG_EGRESS_MARKING |
+					   GSW_CTP_PORT_CONFIG_FLOW_ENTRY |
+					   GSW_CTP_PORT_CONFIG_LOOPBACK_AND_MIRROR |
+					   GSW_CTP_PORT_CONFIG_LOOPBACK_AND_MIRROR,
+	/** Filter for egress related operations */
+	GSW_CTP_PORT_CONFIG_MASK_EGRESS = GSW_CTP_PORT_CONFIG_MASK_EGRESS_VLAN |
+					  GSW_CTP_PORT_CONFIG_MASK_EGRESS_VLAN_IGMP |
+					  GSW_CTP_PORT_CONFIG_MASK_EGRESS_NTO1_VLAN |
+					  GSW_CTP_PORT_CONFIG_EGRESS_METER |
+					  GSW_CTP_PORT_CONFIG_EGRESS_REMARKING |
+					  GSW_CTP_PORT_CONFIG_EGRESS_MARKING_OVERRIDE |
+					  GSW_CTP_PORT_CONFIG_LOOPBACK_AND_MIRROR |
+					  GSW_CTP_PORT_CONFIG_LOOPBACK_AND_MIRROR,
+	/** \endcond */
 } GSW_CtpPortConfigMask_t;
 
 /** \brief CTP Port Configuration.
@@ -176,12 +201,14 @@ typedef struct {
 	/** Ingress color marking mode for ingress traffic. */
 	GSW_ColorMarkingMode_t eIngressMarkingMode;
 	/** Egress color marking mode for ingress traffic at egress priority queue
-	    color marking stage */
+	    color marking stage. Used when bEgressMarkingOverrideEnable is FALSE. */
 	GSW_ColorMarkingMode_t eEgressMarkingMode;
-	/** Egress color marking mode override color marking mode from last stage. */
+	/** Egress color marking mode override.
+	    If TRUE, eEgressMarkingModeOverride is used instead of eEgressMarkingMode. */
 	gsw_bool_t bEgressMarkingOverrideEnable;
-	/** Egress color marking mode for egress traffic. Valid only when
-	    bEgressMarkingOverride is TRUE. */
+	/** Egress color marking mode for egress traffic.
+	    Valid only when bEgressMarkingOverrideEnable is TRUE.
+	    When enabled, this field overrides eEgressMarkingMode. */
 	GSW_ColorMarkingMode_t eEgressMarkingModeOverride;
 
 	/** Color remarking for egress traffic. */
@@ -292,6 +319,11 @@ typedef enum {
 	GSW_LOGICAL_PORT_GINT = 4,
 	/** Others (sub interface ID is 0 by default) */
 	GSW_LOGICAL_PORT_OTHER = 0xFF,
+
+	/** \cond INTERNAL */
+	/** \brief force 32-bit enum type */
+	GSW_LOGICAL_PORT_INTERNAL_SIZE = 0x7fffffff,
+	/** \endcond */
 } GSW_LogicalPortMode_t;
 
 /** \brief CTP Port Assignment/association with logical port.

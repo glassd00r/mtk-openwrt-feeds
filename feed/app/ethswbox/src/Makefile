@@ -13,21 +13,21 @@ INCLUDES := -Iexample/ethswbox_sdk/src \
 		-Iswitch_hostapi/include/gpy \
 		-Iswitch_hostapi/include/gswip \
 		-Iswitch_hostapi/src \
-		-Iswitch_ioctl/src
 
 # Source files
 SRCS := $(wildcard example/ethswbox_sdk/src/cli/*.c) \
 		$(wildcard example/ethswbox_sdk/src/cli/cmds/*.c) \
 		$(wildcard example/ethswbox_sdk/src/fapi/*.c) \
 		$(wildcard example/ethswbox_sdk/src/os/*.c) \
-		$(wildcard switch_ioctl/src/*.c) \
 		switch_hostapi/src/gsw_api.c \
 		switch_hostapi/src/gsw_cli_common.c \
 		switch_hostapi/src/gsw_ss.c \
 		switch_hostapi/src/host_adapt_user.c \
+		switch_hostapi/src/host_smdio_ssb.c \
 		switch_hostapi/src/host_api_impl.c \
-		switch_hostapi/src/host_smdio_ssb_user.c \
+		switch_hostapi/src/host_mac_api.c \
 		switch_hostapi/src/mdio_relay.c \
+		switch_hostapi/src/sw_hal_host.c \
 		switch_hostapi/src/sys_misc.c
 
 # Define the C object files

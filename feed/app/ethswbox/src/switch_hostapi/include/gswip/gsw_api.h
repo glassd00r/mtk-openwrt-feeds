@@ -528,7 +528,279 @@ GSW_return_t GSW_PceRuleWrite(const GSW_Device_t *dev, GSW_PCE_rule_t *parm);
 */
 GSW_return_t GSW_PceRuleDelete(const GSW_Device_t *dev, GSW_PCE_ruleEntry_t *parm);
 
+/**
+   \brief This command moves PCE rule.
+   A move operation is help API to combine read, write, delete, which is
+   implemented in more efficient way. It moves specified PCE rule to
+   new entry index and mark current entry index as not in use.
+
+   \param dev Pointer to switch device.
+   \param parm Pointer to \ref GSW_PCE_rule_move_t.
+
+   \remarks The function returns an error code in case an error occurs.
+            The error code is described in \ref GSW_return_t.
+
+   \return Return value as follows:
+   - GSW_statusOk: if successful
+   - An error code in case an error occurs
+*/
 GSW_return_t GSW_PceRuleMove(const GSW_Device_t *dev, GSW_PCE_rule_move_t *parm);
+
+/**
+   \brief This command get pre-allocated PCE rule number.
+   This is not general GSW API. Instead it's pre-configuration which
+   can be changed later by application. It outputs the number of
+   pre-configured PCE rules of global or per CTP.
+
+   \param dev Pointer to switch device.
+   \param parm Pointer to \ref GSW_PCE_rule_num_t.
+
+   \remarks The function returns an error code in case an error occurs.
+            The error code is described in \ref GSW_return_t.
+
+   \return Return value as follows:
+   - GSW_statusOk: if successful
+   - An error code in case an error occurs
+*/
+GSW_return_t GSW_MaxPceRuleEntryNumGet(const GSW_Device_t *dev, GSW_PCE_rule_num_t *parm);
+
+/**
+   \brief Write a PCE rule using logical index.
+
+   The logical index (pattern.nIndex) is translated to a physical index via
+   rank-based bitmap mapping. Behavior depends on pattern.bEnable:
+   - If bEnable is true and the logical index is not yet allocated, an INSERT
+     is performed: physical entries are shifted to open a gap, the rule is
+     written, the bitmap bit is set, and the HW block size is updated.
+   - If bEnable is true and the logical index is already allocated, an UPDATE
+     is performed: the rule is overwritten at the same physical position.
+   - If bEnable is false and the logical index is allocated, a DELETE is
+     performed: the HW entry is cleared, physical entries are shifted to
+     close the gap, the bitmap bit is cleared, and the HW block size is
+     updated.
+
+   Only \ref GSW_PCE_RULE_COMMMON and \ref GSW_PCE_RULE_CTP regions are
+   supported.
+
+   \param dev Pointer to switch device.
+   \param parm Pointer to \ref GSW_PCE_rule_t.
+
+   \remarks The function returns an error code in case an error occurs.
+            The error code is described in \ref GSW_return_t.
+
+   \return Return value as follows:
+   - GSW_statusOk: if successful
+   - An error code in case an error occurs
+*/
+GSW_return_t GSW_PceRuleLogicWrite(const GSW_Device_t *dev, GSW_PCE_rule_t *parm);
+
+/**
+   \brief Read a PCE rule via logical index.
+
+   The logical index (pattern.nIndex) must be allocated (bitmap bit set).
+   The rule data is read from the corresponding physical position.
+   On return, the caller's region, logicalportid, subifidgroup, and
+   pattern.nIndex are preserved.
+
+   Only \ref GSW_PCE_RULE_COMMMON and \ref GSW_PCE_RULE_CTP regions are
+   supported.
+
+   \param dev Pointer to switch device.
+   \param parm Pointer to \ref GSW_PCE_rule_t.
+
+   \remarks The function returns an error code in case an error occurs.
+            The error code is described in \ref GSW_return_t.
+
+   \return Return value as follows:
+   - GSW_statusOk: if successful
+   - An error code in case an error occurs
+*/
+GSW_return_t GSW_PceRuleLogicRead(const GSW_Device_t *dev, GSW_PCE_rule_t *parm);
+
+/**
+   \brief Enable an existing PCE rule by logical index.
+
+   The logical index (nIndex) must be allocated. Sets the pattern.bEnable
+   flag in HW without moving the entry.
+
+   Only \ref GSW_PCE_RULE_COMMMON and \ref GSW_PCE_RULE_CTP regions are
+   supported.
+
+   \param dev Pointer to switch device.
+   \param parm Pointer to \ref GSW_PCE_ruleEntry_t.
+
+   \remarks The function returns an error code in case an error occurs.
+            The error code is described in \ref GSW_return_t.
+
+   \return Return value as follows:
+   - GSW_statusOk: if successful
+   - An error code in case an error occurs
+*/
+GSW_return_t GSW_PceRuleLogicEnable(const GSW_Device_t *dev, GSW_PCE_ruleEntry_t *parm);
+
+/**
+   \brief Disable an existing PCE rule by logical index.
+
+   The logical index (nIndex) must be allocated. Clears the pattern.bEnable
+   flag in HW without moving the entry. The rule keeps its physical slot.
+
+   Only \ref GSW_PCE_RULE_COMMMON and \ref GSW_PCE_RULE_CTP regions are
+   supported.
+
+   \param dev Pointer to switch device.
+   \param parm Pointer to \ref GSW_PCE_ruleEntry_t.
+
+   \remarks The function returns an error code in case an error occurs.
+            The error code is described in \ref GSW_return_t.
+
+   \return Return value as follows:
+   - GSW_statusOk: if successful
+   - An error code in case an error occurs
+*/
+GSW_return_t GSW_PceRuleLogicDisable(const GSW_Device_t *dev, GSW_PCE_ruleEntry_t *parm);
+
+/**
+   \brief Delete a PCE rule by logical index (unconditional).
+
+   Clears the HW entry, shifts physical entries forward to close the gap,
+   clears the bitmap bit, frees any multi-ref tracking entry, and updates
+   the HW block size. This is an unconditional delete that ignores
+   reference counting.
+
+   Only \ref GSW_PCE_RULE_COMMMON and \ref GSW_PCE_RULE_CTP regions are
+   supported.
+
+   \param dev Pointer to switch device.
+   \param parm Pointer to \ref GSW_PCE_ruleEntry_t.
+
+   \remarks The function returns an error code in case an error occurs.
+            The error code is described in \ref GSW_return_t.
+
+   \return Return value as follows:
+   - GSW_statusOk: if successful
+   - An error code in case an error occurs
+*/
+GSW_return_t GSW_PceRuleLogicDelete(const GSW_Device_t *dev, GSW_PCE_ruleEntry_t *parm);
+
+/**
+   \brief Check whether a logical PCE rule index is in use (bitmap check only).
+
+   Returns true if the logical index has been allocated (bit set in logic_bmp).
+   This is a lightweight query -- no HW access is performed.
+
+   \param dev Pointer to switch device.
+   \param parm Pointer to \ref GSW_PCE_ruleEntry_t with region, logicalportid,
+               subifidgroup, and nIndex populated.
+
+   \return Return value as follows:
+   - GSW_statusOk: if the logical index is allocated (in use)
+   - GSW_statusEntryNotFound: if the logical index is not in use
+   - GSW_statusParam: invalid parameters
+   - GSW_statusValueRange: nIndex out of range
+*/
+GSW_return_t GSW_PceRuleLogicIsUsed(const GSW_Device_t *dev, GSW_PCE_ruleEntry_t *parm);
+
+/**
+   \brief Convert an in-use logical index to its absolute physical TFLOW index.
+
+   The logical index (nIndex) must be allocated (bit set in logic_bmp).
+   Returns the absolute physical index (phys_start + offset) that can be used
+   with GSW_PCE_RULE_DEBUG region for direct HW access.
+
+   No HW access is performed -- the result is computed purely from the bitmap.
+
+   \param dev Pointer to switch device.
+   \param parm Pointer to \ref GSW_PCE_ruleEntry_t with region, logicalportid,
+               subifidgroup, and nIndex populated.
+
+   \return Return value as follows:
+   - GSW_statusOk: if successful. On success, parm->nIndex is set to the
+     absolute physical TFLOW index and parm->region is set to
+     GSW_PCE_RULE_DEBUG for direct HW access.
+   - GSW_statusParam: invalid parameters
+   - GSW_statusValueRange: nIndex out of range
+   - GSW_statusEntryNotFound: logical index is not in use
+*/
+GSW_return_t GSW_PceRuleLogicToPhys(const GSW_Device_t *dev, GSW_PCE_ruleEntry_t *parm);
+
+/**
+   \brief Add a reference to an existing logical PCE rule.
+
+   The logical index (nIndex) must be allocated. This is used when multiple
+   features share the same PCE rule (e.g., Loop Detection, OAM, LACP sharing
+   an OAM rule).
+
+   The first call transitions the entry from implicit refcount 1 to explicit
+   refcount 2 by allocating a multi-ref tracking entry. Subsequent calls
+   increment the explicit refcount.
+
+   The rule is not modified in HW -- only the refcount tracking changes.
+
+   Only \ref GSW_PCE_RULE_COMMMON and \ref GSW_PCE_RULE_CTP regions are
+   supported.
+
+   \param dev Pointer to switch device.
+   \param parm Pointer to \ref GSW_PCE_ruleEntry_t.
+
+   \remarks The function returns an error code in case an error occurs.
+            The error code is described in \ref GSW_return_t.
+
+   \return Return value as follows:
+   - GSW_statusOk: if successful
+   - An error code in case an error occurs
+*/
+GSW_return_t GSW_PceRuleLogicRefAdd(const GSW_Device_t *dev, GSW_PCE_ruleEntry_t *parm);
+
+/**
+   \brief Remove a reference from a logical PCE rule.
+
+   Decrements the refcount. Behavior depends on the resulting count:
+   - refcount > 1: stays explicitly tracked, rule untouched in HW.
+   - refcount == 1: free the multi-ref tracking entry (back to implicit
+     single-owner), rule stays in HW.
+   - refcount == 0: auto-delete -- the rule is removed from HW, physical
+     entries are shifted, bitmap is cleared, and HW block size is updated
+     (equivalent to \ref GSW_PceRuleLogicDelete).
+
+   If no multi-ref entry exists, the entry has implicit refcount 1, so
+   this call transitions directly to refcount 0 and deletes the rule.
+
+   Only \ref GSW_PCE_RULE_COMMMON and \ref GSW_PCE_RULE_CTP regions are
+   supported.
+
+   \param dev Pointer to switch device.
+   \param parm Pointer to \ref GSW_PCE_ruleEntry_t.
+
+   \remarks The function returns an error code in case an error occurs.
+            The error code is described in \ref GSW_return_t.
+
+   \return Return value as follows:
+   - GSW_statusOk: if successful
+   - An error code in case an error occurs
+*/
+GSW_return_t GSW_PceRuleLogicRefRemove(const GSW_Device_t *dev, GSW_PCE_ruleEntry_t *parm);
+
+/**
+   \brief Move a PCE rule from one logical index to another.
+
+   Both indices must be in the same region (and same CTP if CTP region).
+   Physical entries are shifted as needed to maintain the rank-based
+   mapping invariant.
+
+   Only \ref GSW_PCE_RULE_COMMMON and \ref GSW_PCE_RULE_CTP regions are
+   supported.
+
+   \param dev Pointer to switch device.
+   \param parm Pointer to \ref GSW_PCE_rule_move_t.
+
+   \remarks The function returns an error code in case an error occurs.
+            The error code is described in \ref GSW_return_t.
+
+   \return Return value as follows:
+   - GSW_statusOk: if successful
+   - An error code in case an error occurs
+*/
+GSW_return_t GSW_PceRuleLogicMove(const GSW_Device_t *dev, GSW_PCE_rule_move_t *parm);
 
 /** @cond INTERNAL */
 GSW_return_t GSW_DumpTable(const GSW_Device_t *dev, GSW_table_t *parm);
@@ -705,6 +977,13 @@ GSW_return_t GSW_CTP_PortAssignmentAlloc(const GSW_Device_t *dev, GSW_CTP_portAs
    \brief Free CTP from Logical Port. Valid for GSWIP-3.1.
    It is used to stop association between CTP and Logical port. And it will stop
    SDMA so that the ingress traffic from this port is stopped.
+
+   \param dev Pointer to switch device.
+   \param parm Pointer to \ref GSW_CTP_portAssignment_t.
+
+   \return Return value as follows:
+   - GSW_statusOk: if successful
+   - An error code in case an error occurs
 */
 GSW_return_t GSW_CTP_PortAssignmentFree(const GSW_Device_t *dev, GSW_CTP_portAssignment_t *parm);
 
@@ -862,6 +1141,7 @@ GSW_return_t GSW_QoS_DSCP_ClassGet(const GSW_Device_t *dev, GSW_QoS_DSCP_ClassCf
 */
 GSW_return_t GSW_QoS_DSCP_ClassSet(const GSW_Device_t *dev, GSW_QoS_DSCP_ClassCfg_t *parm);
 
+#ifdef SUPPORT_DSCP_DROP_PRECEDENCE
 /**
    \brief Configures the DSCP to Drop Precedence assignment mapping table.
    This mapping table is used to identify the switch internally used drop
@@ -901,6 +1181,7 @@ GSW_return_t GSW_QoS_DSCP_DropPrecedenceCfgSet(const GSW_Device_t *dev, GSW_QoS_
    - An error code in case an error occurs
 */
 GSW_return_t GSW_QoS_DSCP_DropPrecedenceCfgGet(const GSW_Device_t *dev, GSW_QoS_DSCP_DropPrecedenceCfg_t *parm);
+#endif
 
 /**
    \brief Port Remarking Configuration. Ingress and Egress remarking options for
@@ -1430,13 +1711,21 @@ GSW_return_t GSW_QOS_ColorReMarkingTableGet(const GSW_Device_t *dev, GSW_QoS_col
 
 /**
    \brief Allocate Meter.
-   This is a part of APIs to manage meters. This API works in 2 modes. If
-   \ref GSW_QoS_meterCfg_t::nMeterId is \ref INVALID_HANDLE, this API will
-   allocate a free meter, config it with all parameters in
-   \ref GSW_QoS_meterCfg_t, and return the meter ID in
-   \ref GSW_QoS_meterCfg_t::nMeterId. Otherwise,
-   \ref GSW_QoS_meterCfg_t::nMeterId should be a valid meter ID, and this API
-   increase the reference counter of this meter. Other fields are ignored.
+   This is a part of APIs to manage meters. This API works in 2 modes.
+
+   \remarks Firmware Version Differences:
+   - WSP FW v1.0.61.61 and later: If \ref GSW_QoS_meterCfg_t::nMeterId is 0,
+     this API will allocate a free meter, configure it with all parameters in
+     \ref GSW_QoS_meterCfg_t, and return the meter ID in
+     \ref GSW_QoS_meterCfg_t::nMeterId. If nMeterId is non-zero (existing meter
+     ID), this API will increase the reference counter of that meter. Other
+     fields are ignored.
+
+   - WSP FW before v1.0.61.61 (e.g., v1.0.59.59): Regardless of the value in
+     \ref GSW_QoS_meterCfg_t::nMeterId, this API will only increase the reference
+     counter of the specified meter and does NOT allocate a new meter. For older
+     firmware versions, meters must be explicitly managed with specific meter IDs.
+
    This API is wrapper of \ref GSW_QoS_MeterCfgSet with meter resource
    management.
 
@@ -1448,6 +1737,29 @@ GSW_return_t GSW_QOS_ColorReMarkingTableGet(const GSW_Device_t *dev, GSW_QoS_col
    - An error code in case an error occurs
 */
 GSW_return_t GSW_QOS_MeterAlloc(const GSW_Device_t *dev, GSW_QoS_meterCfg_t *parm);
+
+/**
+   \brief Bulk Allocate Meters.
+   This API allocates multiple consecutive meters in a single operation.
+   This is efficient for pre-allocating meters for features like per-port
+   storm control, DHCP snooping, or OAM rate limiting where a fixed number
+   of meters are needed at initialization.
+
+   If \ref GSW_QoS_meterBulkCfg_t::nMeterBase is 0, this API will search
+   for 'num_of_meters' consecutive free meters and return the base index.
+   Otherwise, it will reserve 'num_of_meters' starting from nMeterBase.
+
+   Note: This API only marks meters as allocated (IndexInUse=1). Meters
+   still need to be configured using \ref GSW_QoS_MeterCfgSet.
+
+   \param dev Pointer to switch device.
+   \param parm Pointer to \ref GSW_QoS_meterBulkCfg_t.
+
+   \return Return value as follows:
+   - GSW_statusOk: if successful
+   - An error code in case an error occurs
+*/
+GSW_return_t GSW_QOS_MeterAllocBulk(const GSW_Device_t *dev, GSW_QoS_meterBulkCfg_t *parm);
 
 /**
    \brief Free Meter.
@@ -2153,6 +2465,18 @@ GSW_return_t GSW_MAC_TableLoopDetect(const GSW_Device_t *dev, GSW_MAC_tableLoopD
 GSW_return_t GSW_ExtendedVlanAlloc(const GSW_Device_t *dev, GSW_EXTENDEDVLAN_alloc_t *parm);
 
 /**
+   \brief Get ExtVlanEntries Per Block.
+
+   \param dev Pointer to switch device.
+   \param parm Pointer to \ref GSW_EXTENDEDVLAN_alloc_t.
+
+   \return Return value as follows:
+   - GSW_statusOk: if successful
+   - An error code in case an error occurs
+*/
+GSW_return_t GSW_GetExtVlanBlockNumEntries(const GSW_Device_t *dev, GSW_EXTENDEDVLAN_alloc_t *parm);
+
+/**
    \brief Set Extended VLAN Configuration entry. Valid for GSWIP-3.1.
    It is used to set Extended VLAN Configuration entry with index
    \ref GSW_EXTENDEDVLAN_config_t::nEntryIndex, ranging between 0 and
@@ -2226,6 +2550,18 @@ GSW_return_t GSW_Debug_VlanFilterTableStatus(const GSW_Device_t *dev, GSW_debug_
    - An error code in case an error occurs
 */
 GSW_return_t GSW_VlanFilterAlloc(const GSW_Device_t *dev, GSW_VLANFILTER_alloc_t *parm);
+
+/**
+   \brief Get VlanFilternEntries Per Block.
+
+   \param dev Pointer to switch device.
+   \param parm Pointer to \ref GSW_EXTENDEDVLAN_alloc_t.
+
+   \return Return value as follows:
+   - GSW_statusOk: if successful
+   - An error code in case an error occurs
+*/
+GSW_return_t GSW_GetVlanFilterBlockNumEntries(const GSW_Device_t *dev, GSW_VLANFILTER_alloc_t *parm);
 
 /**
    \brief Set VLAN Filter entry. Valid for GSWIP-3.1.

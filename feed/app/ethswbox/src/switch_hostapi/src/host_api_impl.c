@@ -18,7 +18,7 @@
 #define CTRL_BUSY_MASK		BIT(15)
 #define CTRL_CMD_MASK		(BIT(15) - 1)
 
-#define MAX_BUSY_LOOP		1000	/* roughly 10ms */
+#define MAX_BUSY_LOOP		1000	/* roughly 50ms */
 
 #define THR_RST_DATA		5
 
@@ -46,7 +46,7 @@ static int __wait_ctrl_busy(const GSW_Device_t *dev)
 		if (!(ret & CTRL_BUSY_MASK))
 			return 0;
 
-		dev->usleep(10);
+		dev->usleep(50);
 	}
 
 	return -ETIMEDOUT;
@@ -245,6 +245,11 @@ int gsw_api_wrap(const GSW_Device_t *dev, uint16_t cmd, void *pdata,
 
 	if (!dev || (!pdata && size))
 		return -EINVAL;
+
+	if (!dev->lock || !dev->unlock || !dev->mdiobus_read || !dev->mdiobus_write) {
+		printf("%s: device not initialised (NULL function pointer)\n", __func__);
+		return -EINVAL;
+	}
 
 	assert(size <= sizeof(mmd_api_data_t));
 	assert(r_size <= size);

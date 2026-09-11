@@ -10,11 +10,20 @@
 #ifndef __HOST_SMDIO_SSB_H__
 #define __HOST_SMDIO_SSB_H__
 #include <stdint.h>
+#include "gsw_device.h"
+
+struct host_smdio_ssb_ops {
+	const GSW_Device_t *pdev;
+
+	int (*smdio_write)(const GSW_Device_t *pdev, uint16_t phy_reg, uint16_t phy_reg_data);
+	int (*smdio_cont_write)(const GSW_Device_t *pdev, uint16_t phy_reg, uint16_t phy_reg_data[8], uint8_t num);
+	int (*smdio_read)(const GSW_Device_t *pdev, uint16_t phy_reg);
+};
 
 /**
  * Initialize host_smdio_ssb_ops operation
  */
-void host_smdio_ssb_ops_init(const void *pdev);
+struct host_smdio_ssb_ops *host_smdio_ssb_ops_init(void);
 
 /**
  * Uninitialize host_smdio_ssb_ops operation

@@ -42,7 +42,12 @@ typedef enum {
 	/** Short frame length check is enabled including VLAN Tags. */
 	GSW_PMAC_SHORT_LEN_ENA_TAG = 2,
 	/** Reserved - Currently unused */
-	GSW_PMAC_SHORT_LEN_RESERVED = 3
+	GSW_PMAC_SHORT_LEN_RESERVED = 3,
+
+	/** \cond INTERNAL */
+	/** \brief force 32-bit enum type */
+	GSW_PMAC_SHORT_LEN_INTERNAL_SIZE = 0x7fffffff,
+	/** \endcond */
 } GSW_PMAC_Short_Frame_Chk_t;
 
 /** \brief Egress PMAC Config Table Selector */
@@ -55,7 +60,12 @@ typedef enum {
 	GSW_PMAC_PROC_FLAGS_FLAG = 2,
 	/** Use reduced traffic class (saturated to 3) and flags (MPE1, MPE2) for
 	    egress config table addressing */
-	GSW_PMAC_PROC_FLAGS_MIX = 3
+	GSW_PMAC_PROC_FLAGS_MIX = 3,
+
+	/** \cond INTERNAL */
+	/** \brief force 32-bit enum type */
+	GSW_PMAC_PROC_FLAGS_INTERNAL_SIZE = 0x7fffffff,
+	/** \endcond */
 } GSW_PMAC_Proc_Flags_Eg_Cfg_t;
 
 /** \brief Configure the global settings of PMAC for GSWIP-3.x. This includes settings such as Jumbo frame, Checksum handling,
@@ -111,6 +121,11 @@ typedef enum {
 	GSW_PMAC_IG_CFG_SRC_DEF_PMAC = 1,
 	/** Field is from PMAC header of packet */
 	GSW_PMAC_IG_CFG_SRC_PMAC = 2,
+
+	/** \cond INTERNAL */
+	/** \brief force 32-bit enum type */
+	GSW_PMAC_IG_CFG_SRC_INTERNAL_SIZE = 0x7fffffff,
+	/** \endcond */
 } GSW_PMAC_Ig_Cfg_Src_t;
 
 /** \brief Configure the PMAC Ingress Configuration on a given Tx DMA channel to PMAC. (Upto 16 entries).
@@ -197,15 +212,21 @@ typedef struct {
 	u8 nBslTrafficClass;
 	/** If false, nResDW1 is ignored. */
 	gsw_bool_t bResDW1Enable;
-	/** 4-bits Reserved Field in DMA Descriptor - DW1 (bit 7 to 4) - for any future/custom usage. (Valid range : 0-15) */
+	/** 4-bits Reserved Field in DMA Descriptor - DW1 (bit 7 to 4).
+	    For future/custom usage in hardware extensions. Valid range: 0-15.
+	    Set bResDW1Enable=false and nResDW1=0 for standard operation. */
 	u8 nResDW1;
 	/** If false, nRes1DW0 is ignored. */
 	gsw_bool_t bRes1DW0Enable;
-	/** 3-bits Reserved Field in DMA Descriptor - DW0 (bit 31 to 29) - for any future/custom usage. (Valid range : 0-7) */
+	/** 3-bits Reserved Field in DMA Descriptor - DW0 (bit 31 to 29).
+	    For future/custom usage in hardware extensions. Valid range: 0-7.
+	    Set bRes1DW0Enable=false and nRes1DW0=0 for standard operation. */
 	u8 nRes1DW0;
 	/** If false, nRes2DW0 is ignored. */
 	gsw_bool_t bRes2DW0Enable;
-	/** 2-bits Reserved Field in DMA Descriptor - DW0 (bit 14 to 13) - for any future/custom usage. (Valid range : 0-2) */
+	/** 2-bits Reserved Field in DMA Descriptor - DW0 (bit 14 to 13).
+	    For future/custom usage in hardware extensions. Valid range: 0-3.
+	    Set bRes2DW0Enable=false and nRes2DW0=0 for standard operation. */
 	u8 nRes2DW0;
 	/** Selector for TrafficClass bits. If enabled, then the flags
 	bDecFlag, bEncFlag, bMpe1Flag and  bMpe2Flag are not used instead nTrafficClass parameter is used. For using these flags turn off this boolean */

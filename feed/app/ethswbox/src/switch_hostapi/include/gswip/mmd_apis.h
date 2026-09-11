@@ -15,7 +15,10 @@
 #include "mdio_relay.h"
 #include "sys_led.h"
 #include "sys_misc.h"
+#include "sw_hal_host.h"
 #include "loop_detect_cfg.h"
+#include "host_mac_api.h"
+#include "xpcs_ext.h"
 
 #define GSW_MMD_SMDIO_DEV			0
 #define GSW_MMD_DEV				30
@@ -50,7 +53,9 @@ typedef union mmd_api_data {
 	GSW_CTP_portAssignment_t GSW_CTP_portAssignment_t_data;
 	GSW_CTP_portConfig_t GSW_CTP_portConfig_t_data;
 	GSW_QoS_DSCP_ClassCfg_t GSW_QoS_DSCP_ClassCfg_t_data;
+#ifdef SUPPORT_DSCP_DROP_PRECEDENCE
 	GSW_QoS_DSCP_DropPrecedenceCfg_t GSW_QoS_DSCP_DropPrecedenceCfg_t_data;
+#endif
 	GSW_QoS_portRemarkingCfg_t GSW_QoS_portRemarkingCfg_t_data;
 	GSW_QoS_PCP_ClassCfg_t GSW_QoS_PCP_ClassCfg_t_data;
 	GSW_QoS_portCfg_t GSW_QoS_portCfg_t_data;
@@ -114,6 +119,7 @@ typedef union mmd_api_data {
 
 	struct mdio_relay_data mdio_relay_data;
 	struct mdio_relay_mod_data mdio_relay_mod_data;
+	union mdio_bulk_relay_data mdio_bulk_relay_data;
 	struct sys_fw_image_version img_ver_data;
 	struct sys_sensor_value pvt_sensor_data;
 	struct sys_delay delay_data;
@@ -122,10 +128,40 @@ typedef union mmd_api_data {
 	struct sys_reg_mod reg_mod_data;
 	struct sys_cml_clk cml_clk_data;
 	struct sys_sfp_cfg sfp_cfg_data;
+	struct sys_lldp_set lldp_set_data;
+	struct sys_lldp_get lldp_get_data;
+	struct sys_igmp_cfg igmp_cfg_data;
 	struct loop_detect_passive_cfg loop_detect_passive_cfg_data;
 	struct loop_detect_active_cfg loop_detect_active_cfg_data;
+	uint8_t mac[6];
 	struct loop_prevention_cfg loop_prevention_cfg_data;
 	struct mxl_led_sys_cfg mxl_led_sys_cfg_data;
+	struct sys_host_ip_cfg sys_host_ip_cfg_data;
+	struct sys_prg_mac sys_prg_mac_data;
+	struct sys_port_map port_map_data;
+	struct sys_pce_svc_cfg pce_svc_cfg_data;
+	struct sw_hal_host_cfg sw_hal_host_cfg_data;
+
+	host_mac_register_t host_mac_register_data;
+	host_mac_rmon_t host_mac_rmon_data;
+
+	struct xpcs_pcs_cfg xpcs_pcs_cfg_data;
+	struct xpcs_pcs_state xpcs_pcs_state_data;
+	struct xpcs_pcs_disable xpcs_pcs_disable_data;
+	struct xpcs_an_restart xpcs_an_restart_data;
+	struct xpcs_pcs_link_up xpcs_pcs_link_up_data;
+	struct xpcs_loopback_cfg xpcs_loopback_cfg_data;
+	struct xpcs_reset_cfg xpcs_reset_cfg_data;
+	struct xpcs_prbs_cfg xpcs_prbs_cfg_data;
+	struct xpcs_bert_cfg xpcs_bert_cfg_data;
+	struct xpcs_eq_get xpcs_eq_get_data;
+	struct xpcs_signal_detect xpcs_signal_detect_data;
+	struct xpcs_lpa_sts xpcs_lp_sts_data;
+
+	struct host_poe_global_cfg poe_global_cfg_data;
+	struct host_poe_port_cfg poe_port_cfg_data;
+	struct host_poe_port_status poe_port_status_data;
+	struct host_poe_global_status poe_global_status_data;
 } mmd_api_data_t;
 
 #define GSW_COMMON_MAGIC			0x0100
@@ -153,6 +189,10 @@ typedef union mmd_api_data {
 #define GPY_GPY2XX_MAGIC			0x1800
 
 #define SYS_MISC_MAGIC				0x1900
+
+#define XPCS_SERDES_MAGIC			0x1A00
+
+#define SW_HAL_HOST_MAGIC			0x1B00
 
 #ifdef MMD_API_TEST
 #define MMD_API_SIMPLE_TEST			(0x0 + 0x1)
@@ -195,6 +235,16 @@ typedef union mmd_api_data {
 #define GSW_TFLOW_PCERULEDISABLE		(GSW_TFLOW_MAGIC + 0x7)
 #define GSW_TFLOW_PCERULEBLOCKSIZE		(GSW_TFLOW_MAGIC + 0x8)
 #define GSW_TFLOW_PCERULEMOVE			(GSW_TFLOW_MAGIC + 0x9)
+#define GSW_TFLOW_PCERULELOGICWRITE		(GSW_TFLOW_MAGIC + 0xA)
+#define GSW_TFLOW_PCERULELOGICREAD		(GSW_TFLOW_MAGIC + 0xB)
+#define GSW_TFLOW_PCERULELOGICENABLE		(GSW_TFLOW_MAGIC + 0xC)
+#define GSW_TFLOW_PCERULELOGICDISABLE		(GSW_TFLOW_MAGIC + 0xD)
+#define GSW_TFLOW_PCERULELOGICDELETE		(GSW_TFLOW_MAGIC + 0xE)
+#define GSW_TFLOW_PCERULELOGICREFADD		(GSW_TFLOW_MAGIC + 0xF)
+#define GSW_TFLOW_PCERULELOGICREFREMOVE		(GSW_TFLOW_MAGIC + 0x10)
+#define GSW_TFLOW_PCERULELOGICMOVE		(GSW_TFLOW_MAGIC + 0x11)
+#define GSW_TFLOW_PCERULELOGICISUSED		(GSW_TFLOW_MAGIC + 0x12)
+#define GSW_TFLOW_PCERULELOGICTOPHYS		(GSW_TFLOW_MAGIC + 0x13)
 
 #define	GSW_BRIDGE_ALLOC			(GSW_BRDG_MAGIC + 0x1)
 #define	GSW_BRIDGE_CONFIGSET			(GSW_BRDG_MAGIC + 0x2)
@@ -219,6 +269,7 @@ typedef union mmd_api_data {
 #define	GSW_QOS_METERCFGSET			(GSW_QOS_MAGIC + 0x2)
 #define	GSW_QOS_DSCP_CLASSGET			(GSW_QOS_MAGIC + 0x4)
 #define	GSW_QOS_DSCP_CLASSSET			(GSW_QOS_MAGIC + 0x5)
+/* GSW_QOS_DSCP_DROPPRECEDENCECFGGET and GSW_QOS_DSCP_DROPPRECEDENCECFGSET are reserved */
 #define	GSW_QOS_DSCP_DROPPRECEDENCECFGGET	(GSW_QOS_MAGIC + 0x6)
 #define	GSW_QOS_DSCP_DROPPRECEDENCECFGSET	(GSW_QOS_MAGIC + 0x7)
 #define	GSW_QOS_PORTREMARKINGCFGGET		(GSW_QOS_MAGIC + 0x8)
@@ -264,6 +315,7 @@ typedef union mmd_api_data {
 #define	GSW_QOS_SVLAN_PCP_CLASSSET		(GSW_QOS_MAGIC + 0x31)
 #define	GSW_QOS_QUEUECFGGET			(GSW_QOS_MAGIC + 0x32)
 #define	GSW_QOS_QUEUECFGSET			(GSW_QOS_MAGIC + 0x33)
+#define	GSW_QOS_METERALLOCBULK			(GSW_QOS_MAGIC + 0x34)
 
 #define	GSW_RMON_PORT_GET			(GSW_RMON_MAGIC + 0x1)
 #define	GSW_RMON_MODE_SET			(GSW_RMON_MAGIC + 0x2)
@@ -340,9 +392,15 @@ typedef union mmd_api_data {
 #define GSW_SS_SPTAG_GET			(GSW_SS_MAGIC + 0x01)
 #define GSW_SS_SPTAG_SET			(GSW_SS_MAGIC + 0x02)
 
+#define MAC_REGISTER_GET			(GSW_MAC_MAGIC + 0x01)
+#define MAC_REGISTER_SET			(GSW_MAC_MAGIC + 0x02)
+#define MAC_RMON_GET				(GSW_MAC_MAGIC + 0x03)
+#define MAC_RMON_CLEAR				(GSW_MAC_MAGIC + 0x04)
+
 #define INT_GPHY_READ				(GPY_GPY2XX_MAGIC + 0x01)
 #define INT_GPHY_WRITE				(GPY_GPY2XX_MAGIC + 0x02)
 #define INT_GPHY_MOD				(GPY_GPY2XX_MAGIC + 0x03)
+#define INT_GPHY_BULK_READ			(GPY_GPY2XX_MAGIC + 0x04)
 #define EXT_MDIO_READ				(GPY_GPY2XX_MAGIC + 0x11)
 #define EXT_MDIO_WRITE				(GPY_GPY2XX_MAGIC + 0x12)
 #define EXT_MDIO_MOD				(GPY_GPY2XX_MAGIC + 0x13)
@@ -361,14 +419,95 @@ typedef union mmd_api_data {
 #define SYS_MISC_CML_CLK_SET			(SYS_MISC_MAGIC + 0x0C)
 #define SYS_MISC_SFP_GET			(SYS_MISC_MAGIC + 0x0D)
 #define SYS_MISC_SFP_SET			(SYS_MISC_MAGIC + 0x0E)
+#define SYS_MISC_LLDP_GET			(SYS_MISC_MAGIC + 0x0F)
+#define SYS_MISC_LLDP_SET			(SYS_MISC_MAGIC + 0x10)
+#define SYS_MISC_IGMP_GET			(SYS_MISC_MAGIC + 0x11)
+#define SYS_MISC_IGMP_SET			(SYS_MISC_MAGIC + 0x12)
 #define SYS_MISC_LOOP_PASSIVE_START		(SYS_MISC_MAGIC + 0x13)
 #define SYS_MISC_LOOP_PASSIVE_STOP		(SYS_MISC_MAGIC + 0x14)
 #define SYS_MISC_LOOP_ACTIVE_START		(SYS_MISC_MAGIC + 0x15)
 #define SYS_MISC_LOOP_ACTIVE_STOP		(SYS_MISC_MAGIC + 0x16)
 #define SYS_MISC_LOOP_PREVENTION_START		(SYS_MISC_MAGIC + 0x17)
 #define SYS_MISC_LOOP_PREVENTION_STOP		(SYS_MISC_MAGIC + 0x18)
-#define SYS_MISC_SYS_LED_CFG			(SYS_MISC_MAGIC + 0x19)
+#define SYS_MISC_SYS_LED_CFG_SET                (SYS_MISC_MAGIC + 0x19)
+#define SYS_MISC_HOST_IP_GET			(SYS_MISC_MAGIC + 0x1A)
+#define SYS_MISC_HOST_IP_SET			(SYS_MISC_MAGIC + 0x1B)
+#define SYS_MISC_MLD_GET			(SYS_MISC_MAGIC + 0x1C)
+#define SYS_MISC_MLD_SET			(SYS_MISC_MAGIC + 0x1D)
+#define SYS_MISC_STP_GET			(SYS_MISC_MAGIC + 0x1E)
+#define SYS_MISC_STP_SET			(SYS_MISC_MAGIC + 0x1F)
+#define SYS_MISC_PRG_MAC			(SYS_MISC_MAGIC + 0x20)
+#define SYS_MISC_LOOP_ACTIVE_CFG_GET		(SYS_MISC_MAGIC + 0x21)
+#define SYS_MISC_PORT_MAP_GET			(SYS_MISC_MAGIC + 0x22)
+#define SYS_MISC_PORT_MAP_SET			(SYS_MISC_MAGIC + 0x23)
+#define SYS_MISC_PTP_TS_CORR_CAL_GET		(SYS_MISC_MAGIC + 0x24)
+#define SYS_MISC_PTP_TS_CORR_CAL_SET		(SYS_MISC_MAGIC + 0x25)
+#define SYS_MISC_SYS_LED_CFG_GET                (SYS_MISC_MAGIC + 0x26)
+#define SYS_MISC_DATA_LED_SET			(SYS_MISC_MAGIC + 0x27)
+#define SYS_MISC_LOOP_ACTIVE_MAC_SET		(SYS_MISC_MAGIC + 0x28)
+#define SYS_MISC_LOOP_ACTIVE_MAC_GET		(SYS_MISC_MAGIC + 0x29)
+#define SYS_MISC_XG_FC_THR_RATIO_GET		(SYS_MISC_MAGIC + 0x2A)
+#define SYS_MISC_XG_FC_THR_RATIO_SET		(SYS_MISC_MAGIC + 0x2B)
+#define SYS_MISC_DAEMON_GET			(SYS_MISC_MAGIC + 0x2C)
+#define SYS_MISC_DAEMON_SET			(SYS_MISC_MAGIC + 0x2D)
+#define SYS_MISC_DAEMON_RES1			(SYS_MISC_MAGIC + 0x2E)
+#define SYS_MISC_DAEMON_RES2			(SYS_MISC_MAGIC + 0x2F)
+#define SYS_MISC_IGMP_REPORT_FLOOD_GET		(SYS_MISC_MAGIC + 0x30)
+#define SYS_MISC_IGMP_REPORT_FLOOD_SET		(SYS_MISC_MAGIC + 0x31)
+#define SYS_MISC_PCE_SVC_GET			(SYS_MISC_MAGIC + 0x32)
+#define SYS_MISC_PCE_SVC_SET			(SYS_MISC_MAGIC + 0x33)
+#define SYS_MISC_LOOP_CASCADE_CFG_GET		(SYS_MISC_MAGIC + 0x34)
+#define SYS_MISC_LOOP_CASCADE_CFG_SET		(SYS_MISC_MAGIC + 0x35)
 
-#define	MMD_API_MAXIMUM_ID			0x7FFF
+#define SW_HAL_HOST_LAGCFGGET			(SW_HAL_HOST_MAGIC + 0x00)
+#define SW_HAL_HOST_LAGCFGSET			(SW_HAL_HOST_MAGIC + 0x01)
+
+/* XPCS/SERDES Host-Facing PCS API (Phase 1) */
+#define XPCS_PCS_CONFIG				(XPCS_SERDES_MAGIC + 0x01)
+#define XPCS_PCS_GET_STATE			(XPCS_SERDES_MAGIC + 0x02)
+/*	(XPCS_SERDES_MAGIC + 0x03) -- formerly XPCS_PCS_ENABLE, removed */
+#define XPCS_PCS_DISABLE			(XPCS_SERDES_MAGIC + 0x04)
+/* Phase 2: AN Control */
+#define XPCS_AN_RESTART				(XPCS_SERDES_MAGIC + 0x05)
+/*	(XPCS_SERDES_MAGIC + 0x06) -- formerly XPCS_AN_DISABLE, removed
+ *	(use XPCS_PCS_CONFIG with neg_mode = XPCS_NEG_INBAND_AN_OFF)
+ */
+/* Phase 3: Link-Up / Utility */
+#define XPCS_PCS_LINK_UP			(XPCS_SERDES_MAGIC + 0x07)
+#define XPCS_LOOPBACK				(XPCS_SERDES_MAGIC + 0x08)
+#define XPCS_RESET				(XPCS_SERDES_MAGIC + 0x09)
+/* Phase 4: Diagnostics */
+#define XPCS_PRBS_CFG				(XPCS_SERDES_MAGIC + 0x0A)
+#define XPCS_BERT_CFG				(XPCS_SERDES_MAGIC + 0x0B)
+#define XPCS_EQ_GET				(XPCS_SERDES_MAGIC + 0x0C)
+#define XPCS_SIGNAL_DETECT			(XPCS_SERDES_MAGIC + 0x0D)
+#define XPCS_LP_LINK_STS_GET			(XPCS_SERDES_MAGIC + 0x0E)
+
+#define HOST_POE_GLOBAL_CFG_SET		(SW_HAL_HOST_MAGIC + 0x02)
+#define HOST_POE_GLOBAL_STATUS_GET	(SW_HAL_HOST_MAGIC + 0x03)
+#define HOST_POE_PORT_CFG_GET		(SW_HAL_HOST_MAGIC + 0x04)
+#define HOST_POE_PORT_CFG_SET		(SW_HAL_HOST_MAGIC + 0x05)
+
+#define MMD_API_ID_MASK				(BIT(13) - 1)
+#define MMD_API_ID_MAX				MMD_API_ID_MASK
+
+#define MMD_API_RET_MSB_MSK			BIT(14)
+
+#define MMD_API_CTRL_BUSY			BIT(15)
+
+#define MMD_API_RET_LSB_MSK			(BIT(MMD_API_RET_LSB_BITS) - 1)
+#define MMD_API_RET_LSB_BITS			10
+#define MMD_API_PARAM_LEN_MSK			MMD_API_RET_LSB_MSK
+
+#define MMD_API_CRC_CHK				BIT(14)
+
+#define MMD_API_RET_MIN				MMD_API_CRC6_ERR
+#define MMD_API_CRC6_ERR			-1024 /* Ctrl and Length/Return
+						       * CRC error
+						       */
+#define MMD_API_CRC16_ERR			-1023 /* data CRC error */
+#define MMD_API_RET_UNDERFLOW			-1022 /* error code underflow */
+#define MMD_API_RET_OVERFLOW			1023  /* return value overflow */
+#define MMD_API_RET_MAX				MMD_API_RET_OVERFLOW
 
 #endif /* _MXL_MMD_APIS_H_ */

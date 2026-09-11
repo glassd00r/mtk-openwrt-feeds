@@ -191,7 +191,7 @@ GSW_return_t GSW_GetHitSts(const GSW_Device_t *dev, GSW_HitStatusRead_t *parm)
 			    sizeof(*parm));
 }
 
-GSW_return_t GSW_GetMiscPortCfgGet(const GSW_Device_t *dev, GSW_MiscPortCfg_t *parm)
+GSW_return_t GSW_MiscPortCfgGet(const GSW_Device_t *dev, GSW_MiscPortCfg_t *parm)
 {
 	return gsw_api_wrap(dev,
 			    GSW_COMMON_MISCPORTCFGGET,
@@ -201,7 +201,7 @@ GSW_return_t GSW_GetMiscPortCfgGet(const GSW_Device_t *dev, GSW_MiscPortCfg_t *p
 			    sizeof(*parm));
 }
 
-GSW_return_t GSW_GetMiscPortCfgSet(const GSW_Device_t *dev, GSW_MiscPortCfg_t *parm)
+GSW_return_t GSW_MiscPortCfgSet(const GSW_Device_t *dev, GSW_MiscPortCfg_t *parm)
 {
 	return gsw_api_wrap(dev,
 			    GSW_COMMON_MISCPORTCFGSET,
@@ -304,6 +304,106 @@ GSW_return_t GSW_PceRuleMove(const GSW_Device_t *dev, GSW_PCE_rule_move_t *parm)
 			    sizeof(*parm),
 			    0,
 			    0);
+}
+
+GSW_return_t GSW_PceRuleLogicWrite(const GSW_Device_t *dev, GSW_PCE_rule_t *parm)
+{
+	return gsw_api_wrap(dev,
+			    GSW_TFLOW_PCERULELOGICWRITE,
+			    parm,
+			    sizeof(*parm),
+			    0,
+			    sizeof(*parm));
+}
+
+GSW_return_t GSW_PceRuleLogicRead(const GSW_Device_t *dev, GSW_PCE_rule_t *parm)
+{
+	return gsw_api_wrap(dev,
+			    GSW_TFLOW_PCERULELOGICREAD,
+			    parm,
+			    sizeof(*parm),
+			    0,
+			    sizeof(*parm));
+}
+
+GSW_return_t GSW_PceRuleLogicEnable(const GSW_Device_t *dev, GSW_PCE_ruleEntry_t *parm)
+{
+	return gsw_api_wrap(dev,
+			    GSW_TFLOW_PCERULELOGICENABLE,
+			    parm,
+			    sizeof(*parm),
+			    0,
+			    sizeof(*parm));
+}
+
+GSW_return_t GSW_PceRuleLogicDisable(const GSW_Device_t *dev, GSW_PCE_ruleEntry_t *parm)
+{
+	return gsw_api_wrap(dev,
+			    GSW_TFLOW_PCERULELOGICDISABLE,
+			    parm,
+			    sizeof(*parm),
+			    0,
+			    sizeof(*parm));
+}
+
+GSW_return_t GSW_PceRuleLogicDelete(const GSW_Device_t *dev, GSW_PCE_ruleEntry_t *parm)
+{
+	return gsw_api_wrap(dev,
+			    GSW_TFLOW_PCERULELOGICDELETE,
+			    parm,
+			    sizeof(*parm),
+			    0,
+			    sizeof(*parm));
+}
+
+GSW_return_t GSW_PceRuleLogicRefAdd(const GSW_Device_t *dev, GSW_PCE_ruleEntry_t *parm)
+{
+	return gsw_api_wrap(dev,
+			    GSW_TFLOW_PCERULELOGICREFADD,
+			    parm,
+			    sizeof(*parm),
+			    0,
+			    sizeof(*parm));
+}
+
+GSW_return_t GSW_PceRuleLogicRefRemove(const GSW_Device_t *dev, GSW_PCE_ruleEntry_t *parm)
+{
+	return gsw_api_wrap(dev,
+			    GSW_TFLOW_PCERULELOGICREFREMOVE,
+			    parm,
+			    sizeof(*parm),
+			    0,
+			    sizeof(*parm));
+}
+
+GSW_return_t GSW_PceRuleLogicMove(const GSW_Device_t *dev, GSW_PCE_rule_move_t *parm)
+{
+	return gsw_api_wrap(dev,
+			    GSW_TFLOW_PCERULELOGICMOVE,
+			    parm,
+			    sizeof(*parm),
+			    0,
+			    0);
+}
+
+GSW_return_t GSW_PceRuleLogicIsUsed(const GSW_Device_t *dev, GSW_PCE_ruleEntry_t *parm)
+{
+	return gsw_api_wrap(dev,
+			    GSW_TFLOW_PCERULELOGICISUSED,
+			    parm,
+			    sizeof(*parm),
+			    0,
+			    sizeof(*parm));
+}
+
+GSW_return_t GSW_PceRuleLogicToPhys(const GSW_Device_t *dev, GSW_PCE_ruleEntry_t *parm)
+{
+	return gsw_api_wrap(dev,
+			    GSW_TFLOW_PCERULELOGICTOPHYS,
+			    parm,
+			    sizeof(*parm),
+			    0,
+			    sizeof(*parm));
 }
 
 GSW_return_t GSW_BridgeAlloc(const GSW_Device_t *dev, GSW_BRIDGE_alloc_t *parm)
@@ -506,6 +606,7 @@ GSW_return_t GSW_QoS_DSCP_ClassSet(const GSW_Device_t *dev, GSW_QoS_DSCP_ClassCf
 			    0);
 }
 
+#ifdef SUPPORT_DSCP_DROP_PRECEDENCE
 GSW_return_t GSW_QoS_DSCP_DropPrecedenceCfgGet(const GSW_Device_t *dev, GSW_QoS_DSCP_DropPrecedenceCfg_t *parm)
 {
 	return gsw_api_wrap(dev,
@@ -525,6 +626,7 @@ GSW_return_t GSW_QoS_DSCP_DropPrecedenceCfgSet(const GSW_Device_t *dev, GSW_QoS_
 			    GSW_QOS_DSCP_DROPPRECEDENCECFGGET,
 			    0);
 }
+#endif
 
 GSW_return_t GSW_QoS_PortRemarkingCfgGet(const GSW_Device_t *dev, GSW_QoS_portRemarkingCfg_t *parm)
 {
@@ -886,6 +988,16 @@ GSW_return_t GSW_QOS_MeterAlloc(const GSW_Device_t *dev, GSW_QoS_meterCfg_t *par
 			    sizeof(*parm));
 }
 
+GSW_return_t GSW_QOS_MeterAllocBulk(const GSW_Device_t *dev, GSW_QoS_meterBulkCfg_t *parm)
+{
+	return gsw_api_wrap(dev,
+			    GSW_QOS_METERALLOCBULK,
+			    parm,
+			    sizeof(*parm),
+			    0,
+			    sizeof(*parm));
+}
+
 GSW_return_t GSW_QOS_MeterFree(const GSW_Device_t *dev, GSW_QoS_meterCfg_t *parm)
 {
 	return gsw_api_wrap(dev,
@@ -1227,7 +1339,6 @@ GSW_return_t GSW_MAC_TableLoopDetect(const GSW_Device_t *dev, GSW_MAC_tableLoopD
 			    sizeof(*parm));
 }
 
-#ifdef CONFIG_GSWIP_EVLAN
 GSW_return_t GSW_ExtendedVlanAlloc(const GSW_Device_t *dev, GSW_EXTENDEDVLAN_alloc_t *parm)
 {
 	return gsw_api_wrap(dev,
@@ -1367,7 +1478,6 @@ GSW_return_t GSW_VlanCounterMapGet(const GSW_Device_t *dev, GSW_VlanCounterMappi
 			    0,
 			    sizeof(*parm));
 }
-#endif /* CONFIG_GSWIP_EVLAN */
 
 GSW_return_t GSW_MulticastRouterPortAdd(const GSW_Device_t *dev, GSW_multicastRouter_t *parm)
 {

@@ -50,7 +50,7 @@ static void smdio_ssb_pdi_reset(uint8_t lid, uint8_t phy)
 
 int ssb_flashless_load(uint8_t lid, char *fw_path)
 {
-    int ret, i;
+    int ret;
     FILE *fwin;
     int filesize;
     uint8_t *pDataBuf;
@@ -120,7 +120,6 @@ int ssb_flashless_load(uint8_t lid, char *fw_path)
  */
 int check_registers(uint8_t lid)
 {
-    int ret, i;
 
     for (int i = 0; i < SMDIO_PHY_NR; i++)
     {

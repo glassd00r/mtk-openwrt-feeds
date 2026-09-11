@@ -60,7 +60,6 @@ OS_boolean_t cmds_ssb(CmdArgs_t *pArgs, int *err)
     else if (strcmp(pArgs->name, "ssb_smdio_download") == 0)
     {
         char *file_to_read;
-        unsigned char *pdata;
 
         if (pArgs->prmc < 1)
         {

@@ -82,7 +82,6 @@ int os_fileload (char const     *pName,
                  unsigned char **ppDataBuf, 
                  OS_size_t    *pBufSize_byte)
 {
-   int ret;
    struct stat stats;
    unsigned char *pDataBuf;
    OS_size_t     size, retVal;
@@ -116,7 +115,7 @@ int os_fileload (char const     *pName,
    pDataBuf = (unsigned char*)os_memalloc(size + 1);
    if (pDataBuf == OS_NULL)
    {
-      ret = fclose(fd);
+      fclose(fd);
       return OS_ERROR;
    }
    
@@ -124,11 +123,11 @@ int os_fileload (char const     *pName,
    if (retVal != size)
    {
       os_memfree(pDataBuf);
-      ret = fclose(fd);
+      fclose(fd);
       return OS_ERROR;
    }
 
-   ret = fclose(fd);
+   fclose(fd);
 
    pDataBuf[size] = '\0';
    *pBufSize_byte = (unsigned int)size;
@@ -140,14 +139,11 @@ int os_fileload (char const     *pName,
 
 int os_system (char const *pCmd) 
 {
-   int ret;
    if (pCmd == OS_NULL)
    {
       return OS_ERROR;
    }
-   
-   ret = system (pCmd);
-   return OS_SUCCESS;
+   return system (pCmd);
 }
 
 

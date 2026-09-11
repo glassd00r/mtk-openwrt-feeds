@@ -8,7 +8,6 @@
   this software module.
 ******************************************************************************/
 
-#include <os_types.h>
 #include <os_linux.h>
 #include <gsw_device.h>
 #include <gsw_api.h>
@@ -16,14 +15,15 @@
 #include <gsw_cli_common.h>
 #include <gsw_ss.h>
 #include <sys_misc.h>
+#include <host_mac_api.h>
+#include <sw_hal_host.h>
 
 #include <sys/socket.h>
 #include <arpa/inet.h>
 
-//#include <gsw_priv.h>
-#define lif_id 0
 #define NUM_TC 16
-#define MAX_NUM_OF_DISPLAY_PORTS 2
+
+extern uint8_t lif_id;
 
 // #############################################
 static int multicastParamRead(int argc, char *argv[], GSW_multicastTable_t *param)
@@ -174,7 +174,7 @@ struct _tbl_dump_ tbl_dump_gsw33[] = {
     {"PCE", "PBB Tunnel Table", 256, 0x10},
 };
 
-static const gsw_pce_tbl_t gsw_pce_tbl_33[] = {
+static const gsw_pce_tbl_t gsw_pce_tbl_33[] __attribute__((unused)) = {
     {0, 0, 4}, {2, 0, 0}, {1, 0, 1}, {1, 0, 0}, {1, 1, 0}, {1, 1, 0}, {4, 4, 0}, {4, 4, 0}, {1, 1, 0}, {0, 0, 1}, {0, 0, 1}, {5, 0, 10}, {0, 0, 2}, {20, 0, 10}, {2, 0, 5}, {34, 0, 31}, {0, 0, 11}, {0, 0, 1}, {0, 0, 9}, {0, 0, 7}, {0, 0, 27}, {0, 0, 14}, {3, 1, 0}, {3, 1, 0}, {1, 1, 0}, {0, 0, 10}, {0, 0, 1}, {0, 0, 1}, {0, 0, 1}, {1, 1, 0}, {4, 0, 6}, {0, 0, 1}};
 
 // #############################################################################################################
@@ -190,19 +190,19 @@ GSW_return_t fapi_GSW_RegisterMod(int prmc, char *prmv[])
     if (rret < 1)
     {
         printf("Parameter not Found: nRegAddr\n");
-        return OS_ERROR;
+        return GSW_statusErr;
     }
     rret = scanParamArg(prmc, prmv, "nData", sizeof(param.nData), &param.nData);
     if (rret < 1)
     {
         printf("Parameter not Found: nData\n");
-        return OS_ERROR;
+        return GSW_statusErr;
     }
     rret = scanParamArg(prmc, prmv, "nMask", sizeof(param.nMask), &param.nMask);
     if (rret < 1)
     {
         printf("Parameter not Found: nMask\n");
-        return OS_ERROR;
+        return GSW_statusErr;
     }
 
     gsw_dev = gsw_get_struc(lif_id, 0);
@@ -228,7 +228,7 @@ GSW_return_t fapi_GSW_RegisterGet(int prmc, char *prmv[])
     if (rret < 1)
     {
         printf("Parameter not Found: nRegAddr\n");
-        return OS_ERROR;
+        return GSW_statusErr;
     }
 
     gsw_dev = gsw_get_struc(lif_id, 0);
@@ -252,14 +252,14 @@ GSW_return_t fapi_GSW_RegisterSet(int prmc, char *prmv[])
     if (rret < 1)
     {
         printf("Parameter not Found: nRegAddr\n");
-        return OS_ERROR;
+        return GSW_statusErr;
     }
 
     rret = scanParamArg(prmc, prmv, "nData", sizeof(Param.nData), &Param.nData);
     if (rret < 1)
     {
         printf("Parameter not Found: nData\n");
-        return OS_ERROR;
+        return GSW_statusErr;
     }
 
     gsw_dev = gsw_get_struc(lif_id, 0);
@@ -283,7 +283,7 @@ GSW_return_t fapi_GSW_PortLinkCfgGet(int prmc, char *prmv[])
     if (rret < 1)
     {
         printf("Parameter not Found: nPortId\n");
-        return OS_ERROR;
+        return GSW_statusErr;
     }
 
     gsw_dev = gsw_get_struc(lif_id, 0);
@@ -320,7 +320,7 @@ GSW_return_t fapi_GSW_PortLinkCfgSet(int prmc, char *prmv[])
     if (rret < 1)
     {
         printf("Parameter not Found: nPortId\n");
-        return OS_ERROR;
+        return GSW_statusErr;
     }
 
     gsw_dev = gsw_get_struc(lif_id, 0);
@@ -387,7 +387,7 @@ GSW_return_t fapi_GSW_MonitorPortCfgSet(int prmc, char *prmv[])
     if (rret < 1)
     {
         printf("Parameter not Found: nPortId\n");
-        return OS_ERROR;
+        return GSW_statusErr;
     }
 
     gsw_dev = gsw_get_struc(lif_id, 0);
@@ -404,6 +404,8 @@ GSW_return_t fapi_GSW_MonitorPortCfgSet(int prmc, char *prmv[])
 
 GSW_return_t fapi_GSW_MonitorPortCfgGet(int prmc, char *prmv[])
 {
+    (void)prmc;
+    (void)prmv;
     GSW_Device_t *gsw_dev;
     GSW_return_t ret;
     GSW_monitorPortCfg_t param;
@@ -435,7 +437,7 @@ GSW_return_t fapi_GSW_QoS_PortCfgGet(int prmc, char *prmv[])
     if (rret < 1)
     {
         printf("Parameter not Found: nPortId\n");
-        return OS_ERROR;
+        return GSW_statusErr;
     }
 
     gsw_dev = gsw_get_struc(lif_id, 0);
@@ -464,7 +466,7 @@ GSW_return_t fapi_GSW_QoS_PortCfgSet(int prmc, char *prmv[])
     if (rret < 1)
     {
         printf("Parameter not Found: nPortId\n");
-        return OS_ERROR;
+        return GSW_statusErr;
     }
 
     gsw_dev = gsw_get_struc(lif_id, 0);
@@ -495,6 +497,8 @@ GSW_return_t fapi_GSW_QoS_PortCfgSet(int prmc, char *prmv[])
 
 GSW_return_t fapi_GSW_QoS_DSCP_ClassGet(int prmc, char *prmv[])
 {
+    (void)prmc;
+    (void)prmv;
     GSW_Device_t *gsw_dev;
     GSW_return_t ret;
     GSW_QoS_DSCP_ClassCfg_t param = {0};
@@ -527,14 +531,14 @@ GSW_return_t fapi_GSW_QoS_DSCP_ClassSet(int prmc, char *prmv[])
     if (rret < 1)
     {
         printf("Parameter not Found: nTrafficClass\n");
-        return OS_ERROR;
+        return GSW_statusErr;
     }
 
     rret = scanParamArg(prmc, prmv, "nDSCP", sizeof(nDSCP), &nDSCP);
     if (rret < 1)
     {
         printf("Parameter not Found: nDSCP\n");
-        return OS_ERROR;
+        return GSW_statusErr;
     }
 
     if (nDSCP >= 64)
@@ -565,6 +569,8 @@ GSW_return_t fapi_GSW_QoS_DSCP_ClassSet(int prmc, char *prmv[])
 
 GSW_return_t fapi_GSW_QoS_PCP_ClassGet(int prmc, char *prmv[])
 {
+    (void)prmc;
+    (void)prmv;
     GSW_Device_t *gsw_dev;
     GSW_return_t ret;
     GSW_QoS_PCP_ClassCfg_t param = {0};
@@ -597,14 +603,14 @@ GSW_return_t fapi_GSW_QoS_PCP_ClassSet(int prmc, char *prmv[])
     if (rret < 1)
     {
         printf("Parameter not Found: nTrafficClass\n");
-        return OS_ERROR;
+        return GSW_statusErr;
     }
 
     rret = scanParamArg(prmc, prmv, "nPCP", sizeof(nPCP), &nPCP);
     if (rret < 1)
     {
         printf("Parameter not Found: nPCP\n");
-        return OS_ERROR;
+        return GSW_statusErr;
     }
 
     if (nPCP >= 16)
@@ -635,6 +641,8 @@ GSW_return_t fapi_GSW_QoS_PCP_ClassSet(int prmc, char *prmv[])
 
 GSW_return_t fapi_GSW_QoS_SVLAN_PCP_ClassGet(int prmc, char *prmv[])
 {
+    (void)prmc;
+    (void)prmv;
     GSW_Device_t *gsw_dev;
     GSW_return_t ret;
     GSW_QoS_SVLAN_PCP_ClassCfg_t PCP_ClassCfg = {0};
@@ -667,14 +675,14 @@ GSW_return_t fapi_GSW_QoS_SVLAN_PCP_ClassSet(int prmc, char *prmv[])
     if (rret < 1)
     {
         printf("Parameter not Found: nTrafficClass\n");
-        return OS_ERROR;
+        return GSW_statusErr;
     }
 
     rret = scanParamArg(prmc, prmv, "nPCP", sizeof(nPCP), &nPCP);
     if (rret < 1)
     {
         printf("Parameter not Found: nPCP\n");
-        return OS_ERROR;
+        return GSW_statusErr;
     }
 
     if (nPCP >= 16)
@@ -714,7 +722,7 @@ GSW_return_t fapi_GSW_QoS_ShaperCfgGet(int prmc, char *prmv[])
     if (rret < 1)
     {
         printf("Parameter not Found: nRateShaperId\n");
-        return OS_ERROR;
+        return GSW_statusErr;
     }
 
     gsw_dev = gsw_get_struc(lif_id, 0);
@@ -728,6 +736,7 @@ GSW_return_t fapi_GSW_QoS_ShaperCfgGet(int prmc, char *prmv[])
         printf("\t%40s:\t%s\n", "bEnable", (param.bEnable > 0) ? "TRUE" : "FALSE");
         printf("\t%40s:\t0x%x\n", "nCbs", param.nCbs);
         printf("\t%40s:\t0x%x\n", "nRate", param.nRate);
+        printf("\t%40s:\t0x%x\n", "bSW", param.bSW);
     }
 
     return ret;
@@ -738,13 +747,14 @@ GSW_return_t fapi_GSW_QoS_ShaperCfgSet(int prmc, char *prmv[])
     GSW_Device_t *gsw_dev;
     GSW_return_t ret;
     GSW_QoS_ShaperCfg_t param = {0};
+    gsw_bool_t value;
     int rret;
 
     rret = scanParamArg(prmc, prmv, "nRateShaperId", sizeof(param.nRateShaperId), &param.nRateShaperId);
     if (rret < 1)
     {
         printf("Parameter not Found: nRateShaperId\n");
-        return OS_ERROR;
+        return GSW_statusErr;
     }
 
     gsw_dev = gsw_get_struc(lif_id, 0);
@@ -758,6 +768,8 @@ GSW_return_t fapi_GSW_QoS_ShaperCfgSet(int prmc, char *prmv[])
     scanParamArg(prmc, prmv, "bEnable", sizeof(param.bEnable), &param.bEnable);
     scanParamArg(prmc, prmv, "nCbs", sizeof(param.nCbs), &param.nCbs);
     scanParamArg(prmc, prmv, "nRate", sizeof(param.nRate), &param.nRate);
+    scanParamArg(prmc, prmv, "bSW", sizeof(value), &value);
+    param.bSW = value;
 
     ret = GSW_QoS_ShaperCfgSet(gsw_dev, &param);
     if (ret < 0)
@@ -781,14 +793,14 @@ GSW_return_t fapi_GSW_QoS_ShaperQueueAssign(int prmc, char *prmv[])
     if (rret < 1)
     {
         printf("Parameter not Found: nRateShaperId\n");
-        return OS_ERROR;
+        return GSW_statusErr;
     }
 
     rret = scanParamArg(prmc, prmv, "nQueueId", sizeof(param.nQueueId), &param.nQueueId);
     if (rret < 1)
     {
         printf("Parameter not Found: nQueueId\n");
-        return OS_ERROR;
+        return GSW_statusErr;
     }
 
     gsw_dev = gsw_get_struc(lif_id, 0);
@@ -814,14 +826,14 @@ GSW_return_t fapi_GSW_QoS_ShaperQueueDeassign(int prmc, char *prmv[])
     if (rret < 1)
     {
         printf("Parameter not Found: nRateShaperId\n");
-        return OS_ERROR;
+        return GSW_statusErr;
     }
 
     rret = scanParamArg(prmc, prmv, "nQueueId", sizeof(param.nQueueId), &param.nQueueId);
     if (rret < 1)
     {
         printf("Parameter not Found: nQueueId\n");
-        return OS_ERROR;
+        return GSW_statusErr;
     }
 
     gsw_dev = gsw_get_struc(lif_id, 0);
@@ -847,7 +859,7 @@ GSW_return_t fapi_GSW_QoS_ShaperQueueGet(int prmc, char *prmv[])
     if (rret < 1)
     {
         printf("Parameter not Found: nQueueId\n");
-        return OS_ERROR;
+        return GSW_statusErr;
     }
 
     gsw_dev = gsw_get_struc(lif_id, 0);
@@ -882,7 +894,7 @@ GSW_return_t fapi_GSW_QoS_SchedulerCfgGet(int prmc, char *prmv[])
     if (rret < 1)
     {
         printf("Parameter not Found: nQueueId\n");
-        return OS_ERROR;
+        return GSW_statusErr;
     }
 
     gsw_dev = gsw_get_struc(lif_id, 0);
@@ -913,7 +925,7 @@ GSW_return_t fapi_GSW_QoS_SchedulerCfgSet(int prmc, char *prmv[])
     if (rret < 1)
     {
         printf("Parameter not Found: nQueueId\n");
-        return OS_ERROR;
+        return GSW_statusErr;
     }
 
     gsw_dev = gsw_get_struc(lif_id, 0);
@@ -940,6 +952,8 @@ GSW_return_t fapi_GSW_QoS_SchedulerCfgSet(int prmc, char *prmv[])
 
 GSW_return_t fapi_GSW_QoS_WredCfgGet(int prmc, char *prmv[])
 {
+    (void)prmc;
+    (void)prmv;
     GSW_Device_t *gsw_dev;
     GSW_return_t ret;
     GSW_QoS_WRED_Cfg_t param = {0};
@@ -1017,7 +1031,7 @@ GSW_return_t fapi_GSW_QoS_WredQueueCfgGet(int prmc, char *prmv[])
     if (rret < 1)
     {
         printf("Parameter not Found: nQueueId\n");
-        return OS_ERROR;
+        return GSW_statusErr;
     }
 
     gsw_dev = gsw_get_struc(lif_id, 0);
@@ -1052,7 +1066,7 @@ GSW_return_t fapi_GSW_QoS_WredQueueCfgSet(int prmc, char *prmv[])
     if (rret < 1)
     {
         printf("Parameter not Found: nQueueId\n");
-        return OS_ERROR;
+        return GSW_statusErr;
     }
 
     gsw_dev = gsw_get_struc(lif_id, 0);
@@ -1094,7 +1108,7 @@ GSW_return_t fapi_GSW_QoS_WredPortCfgGet(int prmc, char *prmv[])
     if (rret < 1)
     {
         printf("Parameter not Found: nPortId\n");
-        return OS_ERROR;
+        return GSW_statusErr;
     }
 
     gsw_dev = gsw_get_struc(lif_id, 0);
@@ -1129,7 +1143,7 @@ GSW_return_t fapi_GSW_QoS_WredPortCfgSet(int prmc, char *prmv[])
     if (rret < 1)
     {
         printf("Parameter not Found: nPortId\n");
-        return OS_ERROR;
+        return GSW_statusErr;
     }
 
     gsw_dev = gsw_get_struc(lif_id, 0);
@@ -1160,10 +1174,11 @@ GSW_return_t fapi_GSW_QoS_WredPortCfgSet(int prmc, char *prmv[])
 
 GSW_return_t fapi_GSW_TrunkingCfgGet(int prmc, char *prmv[])
 {
+    (void)prmc;
+    (void)prmv;
     GSW_Device_t *gsw_dev;
     GSW_return_t ret;
     GSW_trunkingCfg_t param = {0};
-    int rret;
 
     memset(&param, 0, sizeof(GSW_trunkingCfg_t));
 
@@ -1190,7 +1205,6 @@ GSW_return_t fapi_GSW_TrunkingCfgSet(int prmc, char *prmv[])
     GSW_Device_t *gsw_dev;
     GSW_return_t ret;
     GSW_trunkingCfg_t param = {0};
-    int rret;
 
     memset(&param, 0, sizeof(GSW_trunkingCfg_t));
 
@@ -1220,8 +1234,155 @@ GSW_return_t fapi_GSW_TrunkingCfgSet(int prmc, char *prmv[])
     return ret;
 }
 
+GSW_return_t fapi_GSW_TrunkingLAGCfgGet(int prmc, char *prmv[])
+{
+    GSW_Device_t *gsw_dev;
+    int ret;
+    struct sw_hal_host_cfg param = {0};
+
+    gsw_dev = gsw_get_struc(lif_id, 0);
+
+    // Parse command line parameters
+    scanParamArg(prmc, prmv, "nGrpId", sizeof(param.nGrpId), &param.nGrpId);
+
+    ret = sw_hal_host_lag_cfg_get(gsw_dev, &param);
+    if (ret < 0)
+        printf("\t%40s:\t0x%x\n", "fapi_GSW_TrunkingLAGCfgGet failed with ret code", ret);
+    else
+    {
+        printf("fapi_GSW_TrunkingLAGCfgGet:\n");
+        printf("\t%40s:\t%u\n", "nGrpId", param.nGrpId);
+        printf("\t%40s:\t0x%08X\n", "nPortMap", param.nPortMap);
+    }
+
+    return ret;
+}
+
+GSW_return_t fapi_GSW_TrunkingLAGCfgSet(int prmc, char *prmv[])
+{
+    GSW_Device_t *gsw_dev;
+    int ret;
+    struct sw_hal_host_cfg param = {0};
+
+    gsw_dev = gsw_get_struc(lif_id, 0);
+
+    // Parse command line parameters
+    scanParamArg(prmc, prmv, "nGrpId", sizeof(param.nGrpId), &param.nGrpId);
+    scanParamArg(prmc, prmv, "nPortMap", sizeof(param.nPortMap), &param.nPortMap);
+
+    ret = sw_hal_host_lag_cfg_set(gsw_dev, &param);
+    if (ret < 0)
+        printf("\t%40s:\t0x%x\n", "fapi_GSW_TrunkingLAGCfgSet failed with ret code", ret);
+    else
+    {
+        printf("fapi_GSW_TrunkingLAGCfgSet done\n");
+        printf("\t%40s:\t%u\n", "nGrpId", param.nGrpId);
+        printf("\t%40s:\t0x%08X\n", "nPortMap", param.nPortMap);
+    }
+
+    return ret;
+}
+
+GSW_return_t fapi_GSW_Poe_GlobalCfgSet(int prmc, char *prmv[])
+{
+    GSW_Device_t *gsw_dev;
+    int ret;
+    struct host_poe_global_cfg param = {0};
+
+    gsw_dev = gsw_get_struc(lif_id, 0);
+
+    scanParamArg(prmc, prmv, "enable", sizeof(param.enable), &param.enable);
+    scanParamArg(prmc, prmv, "total_pwr", sizeof(param.total_pwr), &param.total_pwr);
+
+    ret = host_poe_global_cfg_set(gsw_dev, &param);
+    if (ret < 0)
+        printf("\t%40s:\t0x%x\n", "fapi_GSW_Poe_GlobalCfgSet failed with ret code", ret);
+    else
+        printf("fapi_GSW_Poe_GlobalCfgSet done\n");
+
+    return ret;
+}
+
+GSW_return_t fapi_GSW_Poe_PortCfgGet(int prmc, char *prmv[])
+{
+    GSW_Device_t *gsw_dev;
+    int ret;
+    struct host_poe_port_status param = {0};
+
+    gsw_dev = gsw_get_struc(lif_id, 0);
+
+    scanParamArg(prmc, prmv, "nPortId", sizeof(param.nPortId), &param.nPortId);
+
+    ret = host_poe_port_cfg_get(gsw_dev, &param);
+    if (ret < 0)
+        printf("\t%40s:\t0x%x\n", "fapi_GSW_Poe_PortCfgGet failed with ret code", ret);
+    else
+    {
+        printf("fapi_GSW_Poe_PortCfgGet:\n");
+        printf("\t%40s:\t%u\n", "nPortId", param.nPortId);
+        printf("\t%40s:\t%u\n", "pwr_on", param.pwr_on);
+        printf("\t%40s:\t%u\n", "admin", param.admin);
+        printf("\t%40s:\t%u (%s)\n", "mode", param.mode, param.mode ? "AT" : "AF");
+        printf("\t%40s:\t%u\n", "pd_class", param.pd_class);
+        printf("\t%40s:\t%u\n", "event", param.event);
+        printf("\t%40s:\t%u\n", "current_ma", param.current_ma);
+        printf("\t%40s:\t%u\n", "temperature", param.temperature);
+    }
+
+    return ret;
+}
+
+GSW_return_t fapi_GSW_Poe_PortCfgSet(int prmc, char *prmv[])
+{
+    GSW_Device_t *gsw_dev;
+    int ret;
+    struct host_poe_port_cfg param = {0};
+
+    gsw_dev = gsw_get_struc(lif_id, 0);
+
+    scanParamArg(prmc, prmv, "nPortId", sizeof(param.nPortId), &param.nPortId);
+    scanParamArg(prmc, prmv, "enable", sizeof(param.enable), &param.enable);
+    scanParamArg(prmc, prmv, "mode", sizeof(param.mode), &param.mode);
+
+    ret = host_poe_port_cfg_set(gsw_dev, &param);
+    if (ret < 0)
+        printf("\t%40s:\t0x%x\n", "fapi_GSW_Poe_PortCfgSet failed with ret code", ret);
+    else
+        printf("fapi_GSW_Poe_PortCfgSet done\n");
+
+    return ret;
+}
+
+GSW_return_t fapi_GSW_Poe_GlobalStatusGet(int prmc, char *prmv[])
+{
+    (void)prmc;
+    (void)prmv;
+    GSW_Device_t *gsw_dev;
+    int ret;
+    struct host_poe_global_status param = {0};
+
+    gsw_dev = gsw_get_struc(lif_id, 0);
+
+    ret = host_poe_global_status_get(gsw_dev, &param);
+    if (ret < 0)
+        printf("\t%40s:\t0x%x\n", "fapi_GSW_Poe_GlobalStatusGet failed with ret code", ret);
+    else
+    {
+        printf("fapi_GSW_Poe_GlobalStatusGet:\n");
+        printf("\t%40s:\t%u\n", "enable", param.enable);
+        printf("\t%40s:\t%u\n", "total_pwr", param.total_pwr);
+        printf("\t%40s:\t%u\n", "supply_mv", param.supply_mv);
+        printf("\t%40s:\t%u (%s)\n", "pwr_mode", param.pwr_mode, param.pwr_mode ? "Manual" : "Auto");
+        printf("\t%40s:\t%u\n", "chip_avail", param.chip_avail);
+    }
+
+    return ret;
+}
+
 GSW_return_t fapi_GSW_MAC_TableClear(int prmc, char *prmv[])
 {
+    (void)prmc;
+    (void)prmv;
     GSW_Device_t *gsw_dev;
     GSW_return_t ret;
 
@@ -1261,10 +1422,11 @@ GSW_return_t fapi_GSW_MAC_TableCondClear(int prmc, char *prmv[])
 
 GSW_return_t fapi_GSW_CfgGet(int prmc, char *prmv[])
 {
+    (void)prmc;
+    (void)prmv;
     GSW_Device_t *gsw_dev;
     GSW_return_t ret;
     GSW_cfg_t param = {0};
-    int rret;
 
     memset(&param, 0, sizeof(GSW_cfg_t));
 
@@ -1295,7 +1457,6 @@ GSW_return_t fapi_GSW_CfgSet(int prmc, char *prmv[])
     GSW_Device_t *gsw_dev;
     GSW_return_t ret;
     GSW_cfg_t param = {0};
-    int rret;
 
     memset(&param, 0, sizeof(GSW_cfg_t));
 
@@ -1340,7 +1501,7 @@ GSW_return_t fapi_GSW_MAC_TableEntryRemove(int prmc, char *prmv[])
     if (rret < 1)
     {
         printf("Parameter not Found: nMAC\n");
-        return OS_ERROR;
+        return GSW_statusErr;
     }
 
     printMAC_Address(param.nMAC);
@@ -1372,14 +1533,14 @@ GSW_return_t fapi_GSW_MAC_TableEntryQuery(int prmc, char *prmv[])
     if (rret < 1)
     {
         printf("Parameter not Found: nMAC\n");
-        return OS_ERROR;
+        return GSW_statusErr;
     }
 
     rret = scanParamArg(prmc, prmv, "nFId", sizeof(param.nFId), &param.nFId);
     if (rret < 1)
     {
         printf("Parameter not Found: nFId\n");
-        return OS_ERROR;
+        return GSW_statusErr;
     }
     scanParamArg(prmc, prmv, "nFilterFlag", sizeof(param.nFilterFlag), &param.nFilterFlag);
     scanParamArg(prmc, prmv, "nTci", sizeof(param.nTci), &param.nTci);
@@ -1434,6 +1595,8 @@ GSW_return_t fapi_GSW_MAC_TableEntryQuery(int prmc, char *prmv[])
 
 GSW_return_t fapi_GSW_QoS_FlowctrlCfgGet(int prmc, char *prmv[])
 {
+    (void)prmc;
+    (void)prmv;
     GSW_Device_t *gsw_dev;
     GSW_return_t ret;
     GSW_QoS_FlowCtrlCfg_t param = {0};
@@ -1506,7 +1669,7 @@ GSW_return_t fapi_GSW_QoS_FlowctrlPortCfgGet(int prmc, char *prmv[])
     if (rret < 1)
     {
         printf("Parameter not Found: nPortId\n");
-        return OS_ERROR;
+        return GSW_statusErr;
     }
 
     gsw_dev = gsw_get_struc(lif_id, 0);
@@ -1538,7 +1701,7 @@ GSW_return_t fapi_GSW_QoS_FlowctrlPortCfgSet(int prmc, char *prmv[])
     if (rret < 1)
     {
         printf("Parameter not Found: nPortId\n");
-        return OS_ERROR;
+        return GSW_statusErr;
     }
 
     gsw_dev = gsw_get_struc(lif_id, 0);
@@ -1608,6 +1771,8 @@ GSW_return_t fapi_GSW_MAC_TableEntryAdd(int prmc, char *prmv[])
 
 GSW_return_t fapi_GSW_MAC_TableEntryRead(int prmc, char *prmv[])
 {
+    (void)prmc;
+    (void)prmv;
     GSW_Device_t *gsw_dev;
     GSW_return_t ret;
     int i = 0;
@@ -1721,7 +1886,7 @@ GSW_return_t fapi_GSW_QoS_QueuePortSet(int prmc, char *prmv[])
     if (rret < 1)
     {
         printf("Parameter not Found: nPortId\n");
-        return OS_ERROR;
+        return GSW_statusErr;
     }
     scanParamArg(prmc, prmv, "nTrafficClassId", sizeof(param.nTrafficClassId), &param.nTrafficClassId);
     scanParamArg(prmc, prmv, "bRedirectionBypass", sizeof(param.bRedirectionBypass), &param.bRedirectionBypass);
@@ -1822,7 +1987,7 @@ GSW_return_t fapi_GSW_QoS_QueueCfgGet(int prmc, char *prmv[])
     if (rret < 1)
     {
         printf("Parameter not Found: nQueueId\n");
-        return OS_ERROR;
+        return GSW_statusErr;
     }
 
     gsw_dev = gsw_get_struc(lif_id, 0);
@@ -1846,7 +2011,6 @@ GSW_return_t fapi_GSW_QoS_QueueCfgSet(int prmc, char *prmv[])
     GSW_return_t ret;
     GSW_QoS_queueCfg_t param = {0};
     int rret;
-    uint8_t bEnable = 0, nPortId = 0;
 
     memset(&param, 0, sizeof(GSW_QoS_queueCfg_t));
 
@@ -1854,25 +2018,25 @@ GSW_return_t fapi_GSW_QoS_QueueCfgSet(int prmc, char *prmv[])
     if (rret < 1)
     {
         printf("Parameter not Found: nQueueId\n");
-        return OS_ERROR;
+        return GSW_statusErr;
     }
 
     rret = scanParamArg(prmc, prmv, "bEnable", sizeof(param.bEnable), &param.bEnable);
     if (rret < 1)
     {
         printf("Parameter not Found: bEnable\n");
-        return OS_ERROR;
+        return GSW_statusErr;
     }
     rret = scanParamArg(prmc, prmv, "nPortId", sizeof(param.nPortId), &param.nPortId);
     if (rret < 1)
     {
         printf("Parameter not Found: nPortId\n");
-        return OS_ERROR;
+        return GSW_statusErr;
     }
     if (param.nPortId > 15)
     {
         printf("nPortId (%d) is out of range (0~15)\n", param.nPortId);
-        return OS_ERROR;
+        return GSW_statusErr;
     }
     param.bEnable = param.bEnable % 2;
 
@@ -1948,7 +2112,7 @@ GSW_return_t fapi_GSW_BridgePortConfigGet(int prmc, char *prmv[])
     if (rret < 1)
     {
         printf("Parameter not Found: nBridgePortId\n");
-        return OS_ERROR;
+        return GSW_statusErr;
     }
 
     scanParamArg(prmc, prmv, "eMask", sizeof(sVar.eMask), &sVar.eMask);
@@ -2046,7 +2210,7 @@ GSW_return_t fapi_GSW_BridgePortConfigSet(int prmc, char *prmv[])
     if (rret < 1)
     {
         printf("Parameter not Found: nBridgePortId\n");
-        return OS_ERROR;
+        return GSW_statusErr;
     }
 
     sVar.eMask = 0xFFFFFFFF;
@@ -2318,7 +2482,7 @@ GSW_return_t fapi_GSW_CtpPortConfigGet(int prmc, char *prmv[])
     if (rret < 1)
     {
         printf("Parameter not Found: nLogicalPortId\n");
-        return OS_ERROR;
+        return GSW_statusErr;
     }
 
     scanParamArg(prmc, prmv, "nSubIfIdGroup", sizeof(sVar.nSubIfIdGroup), &sVar.nSubIfIdGroup);
@@ -2396,7 +2560,7 @@ GSW_return_t fapi_GSW_CtpPortConfigSet(int prmc, char *prmv[])
     if (rret < 1)
     {
         printf("Parameter not Found: nLogicalPortId\n");
-        return OS_ERROR;
+        return GSW_statusErr;
     }
 
     scanParamArg(prmc, prmv, "nSubIfIdGroup", sizeof(sVar.nSubIfIdGroup), &sVar.nSubIfIdGroup);
@@ -2554,6 +2718,8 @@ GSW_return_t fapi_GSW_BridgeAlloc(int prmc, char *prmv[])
 
     memset(&param, 0x00, sizeof(param));
 
+    scanParamArg(prmc, prmv, "nBridgeId", sizeof(param.nBridgeId), &param.nBridgeId);
+
     gsw_dev = gsw_get_struc(lif_id, 0);
     ret = GSW_BridgeAlloc(gsw_dev, &param);
     if (ret < 0)
@@ -2579,7 +2745,7 @@ GSW_return_t fapi_GSW_BridgeFree(int prmc, char *prmv[])
     if (rret < 1)
     {
         printf("Parameter not Found: nBridgeId\n");
-        return OS_ERROR;
+        return GSW_statusErr;
     }
 
     gsw_dev = gsw_get_struc(lif_id, 0);
@@ -2607,7 +2773,7 @@ GSW_return_t fapi_GSW_BridgeConfigGet(int prmc, char *prmv[])
     if (rret < 1)
     {
         printf("Parameter not Found: nBridgeId\n");
-        return OS_ERROR;
+        return GSW_statusErr;
     }
 
     scanParamArg(prmc, prmv, "eMask", sizeof(param.eMask), &param.eMask);
@@ -2658,7 +2824,7 @@ GSW_return_t fapi_GSW_BridgeConfigSet(int prmc, char *prmv[])
     if (rret < 1)
     {
         printf("Parameter not Found: nBridgeId\n");
-        return OS_ERROR;
+        return GSW_statusErr;
     }
 
     scanParamArg(prmc, prmv, "bMacLearningLimitEnable", sizeof(sVar.bMacLearningLimitEnable), &sVar.bMacLearningLimitEnable);
@@ -2742,7 +2908,7 @@ GSW_return_t fapi_GSW_ExtendedVlanAlloc(int prmc, char *prmv[])
     if (rret < 1)
     {
         printf("Parameter not Found: nNumberOfEntries\n");
-        return OS_ERROR;
+        return GSW_statusErr;
     }
 
     gsw_dev = gsw_get_struc(lif_id, 0);
@@ -2772,7 +2938,7 @@ GSW_return_t fapi_GSW_ExtendedVlanFree(int prmc, char *prmv[])
     if (rret < 1)
     {
         printf("Parameter not Found: nExtendedVlanBlockId\n");
-        return OS_ERROR;
+        return GSW_statusErr;
     }
 
     gsw_dev = gsw_get_struc(lif_id, 0);
@@ -2802,14 +2968,14 @@ GSW_return_t fapi_GSW_ExtendedVlanGet(int prmc, char *prmv[])
     if (rret < 1)
     {
         printf("Parameter not Found: nExtendedVlanBlockId\n");
-        return OS_ERROR;
+        return GSW_statusErr;
     }
 
     rret = scanParamArg(prmc, prmv, "nEntryIndex", sizeof(sVar.nEntryIndex), &sVar.nEntryIndex);
     if (rret < 1)
     {
         printf("Parameter not Found: nEntryIndex\n");
-        return OS_ERROR;
+        return GSW_statusErr;
     }
 
     gsw_dev = gsw_get_struc(lif_id, 0);
@@ -2989,21 +3155,21 @@ GSW_return_t fapi_GSW_VlanFilterAlloc(int prmc, char *prmv[])
     if (rret < 1)
     {
         printf("Parameter not Found: nNumberOfEntries\n");
-        return OS_ERROR;
+        return GSW_statusErr;
     }
 
     rret = scanParamArg(prmc, prmv, "bDiscardUntagged", sizeof(param.bDiscardUntagged), &param.bDiscardUntagged);
     if (rret < 1)
     {
         printf("Parameter not Found: bDiscardUntagged\n");
-        return OS_ERROR;
+        return GSW_statusErr;
     }
 
     rret = scanParamArg(prmc, prmv, "bDiscardUnmatchedTagged", sizeof(param.bDiscardUnmatchedTagged), &param.bDiscardUnmatchedTagged);
     if (rret < 1)
     {
         printf("Parameter not Found: bDiscardUnmatchedTagged\n");
-        return OS_ERROR;
+        return GSW_statusErr;
     }
 
     gsw_dev = gsw_get_struc(lif_id, 0);
@@ -3033,7 +3199,7 @@ GSW_return_t fapi_GSW_VlanFilterFree(int prmc, char *prmv[])
     if (rret < 1)
     {
         printf("Parameter not Found: nVlanFilterBlockId\n");
-        return OS_ERROR;
+        return GSW_statusErr;
     }
 
     gsw_dev = gsw_get_struc(lif_id, 0);
@@ -3053,7 +3219,6 @@ GSW_return_t fapi_GSW_VlanFilterGet(int prmc, char *prmv[])
 {
     GSW_Device_t *gsw_dev;
     GSW_return_t ret;
-    unsigned char f = 0;
 
     GSW_VLANFILTER_config_t sVar = {0};
     int rret;
@@ -3064,14 +3229,14 @@ GSW_return_t fapi_GSW_VlanFilterGet(int prmc, char *prmv[])
     if (rret < 1)
     {
         printf("Parameter not Found: nVlanFilterBlockId\n");
-        return OS_ERROR;
+        return GSW_statusErr;
     }
 
     rret = scanParamArg(prmc, prmv, "nEntryIndex", sizeof(sVar.nEntryIndex), &sVar.nEntryIndex);
     if (rret < 1)
     {
         printf("Parameter not Found: nEntryIndex\n");
-        return OS_ERROR;
+        return GSW_statusErr;
     }
 
     gsw_dev = gsw_get_struc(lif_id, 0);
@@ -3095,7 +3260,6 @@ GSW_return_t fapi_GSW_VlanFilterSet(int prmc, char *prmv[])
 {
     GSW_Device_t *gsw_dev;
     GSW_return_t ret;
-    unsigned char f = 0;
     GSW_VLANFILTER_config_t sVar = {0};
     int rret;
 
@@ -3105,35 +3269,35 @@ GSW_return_t fapi_GSW_VlanFilterSet(int prmc, char *prmv[])
     if (rret < 1)
     {
         printf("Parameter not Found: nVlanFilterBlockId\n");
-        return OS_ERROR;
+        return GSW_statusErr;
     }
 
     rret = scanParamArg(prmc, prmv, "nEntryIndex", sizeof(sVar.nEntryIndex), &sVar.nEntryIndex);
     if (rret < 1)
     {
         printf("Parameter not Found: nEntryIndex\n");
-        return OS_ERROR;
+        return GSW_statusErr;
     }
 
     rret = scanParamArg(prmc, prmv, "eVlanFilterMask", sizeof(sVar.eVlanFilterMask), &sVar.eVlanFilterMask);
     if (rret < 1)
     {
         printf("Parameter not Found: eVlanFilterMask\n");
-        return OS_ERROR;
+        return GSW_statusErr;
     }
 
     rret = scanParamArg(prmc, prmv, "nVal", sizeof(sVar.nVal), &sVar.nVal);
     if (rret < 1)
     {
         printf("Parameter not Found: nVal\n");
-        return OS_ERROR;
+        return GSW_statusErr;
     }
 
     rret = scanParamArg(prmc, prmv, "bDiscardMatched", sizeof(sVar.bDiscardMatched), &sVar.bDiscardMatched);
     if (rret < 1)
     {
         printf("Parameter not Found: bDiscardMatched\n");
-        return OS_ERROR;
+        return GSW_statusErr;
     }
 
     gsw_dev = gsw_get_struc(lif_id, 0);
@@ -3159,7 +3323,7 @@ GSW_return_t fapi_GSW_STP_PortCfgGet(int prmc, char *prmv[])
     if (rret < 1)
     {
         printf("Parameter not Found: nPortId\n");
-        return OS_ERROR;
+        return GSW_statusErr;
     }
 
     gsw_dev = gsw_get_struc(lif_id, 0);
@@ -3186,14 +3350,14 @@ GSW_return_t fapi_GSW_STP_PortCfgSet(int prmc, char *prmv[])
     if (rret < 1)
     {
         printf("Parameter not Found: nPortId\n");
-        return OS_ERROR;
+        return GSW_statusErr;
     }
 
     rret = scanParamArg(prmc, prmv, "ePortState", sizeof(param.ePortState), &param.ePortState);
     if (rret < 1)
     {
         printf("Parameter not Found: ePortState\n");
-        return OS_ERROR;
+        return GSW_statusErr;
     }
 
     gsw_dev = gsw_get_struc(lif_id, 0);
@@ -3210,10 +3374,11 @@ GSW_return_t fapi_GSW_STP_PortCfgSet(int prmc, char *prmv[])
 
 GSW_return_t fapi_GSW_STP_BPDU_RuleGet(int prmc, char *prmv[])
 {
+    (void)prmc;
+    (void)prmv;
     GSW_Device_t *gsw_dev;
     GSW_return_t ret;
     GSW_STP_BPDU_Rule_t param = {0};
-    int rret;
 
     gsw_dev = gsw_get_struc(lif_id, 0);
     ret = GSW_STP_BPDU_RuleGet(gsw_dev, &param);
@@ -3233,7 +3398,6 @@ GSW_return_t fapi_GSW_STP_BPDU_RuleSet(int prmc, char *prmv[])
     GSW_Device_t *gsw_dev;
     GSW_return_t ret;
     GSW_STP_BPDU_Rule_t param = {0};
-    int rret;
 
     scanParamArg(prmc, prmv, "eForwardPort", sizeof(param.eForwardPort), &param.eForwardPort);
     scanParamArg(prmc, prmv, "nForwardPortId", sizeof(param.nForwardPortId), &param.nForwardPortId);
@@ -3261,7 +3425,7 @@ GSW_return_t fapi_GSW_QoS_MeterCfgGet(int prmc, char *prmv[])
     if (rret < 1)
     {
         printf("Parameter not Found: nMeterId\n");
-        return OS_ERROR;
+        return GSW_statusErr;
     }
 
     gsw_dev = gsw_get_struc(lif_id, 0);
@@ -3299,7 +3463,7 @@ GSW_return_t fapi_GSW_QoS_MeterCfgSet(int prmc, char *prmv[])
     if (rret < 1)
     {
         printf("Parameter not Found: nMeterId\n");
-        return OS_ERROR;
+        return GSW_statusErr;
     }
 
     scanParamArg(prmc, prmv, "bEnable", sizeof(param.bEnable), &param.bEnable);
@@ -3337,7 +3501,7 @@ GSW_return_t fapi_GSW_MAC_DefaultFilterGet(int prmc, char *prmv[])
     if (rret < 1)
     {
         printf("Parameter not Found: eType\n");
-        return OS_ERROR;
+        return GSW_statusErr;
     }
 
     gsw_dev = gsw_get_struc(lif_id, 0);
@@ -3365,7 +3529,7 @@ GSW_return_t fapi_GSW_MAC_DefaultFilterSet(int prmc, char *prmv[])
     if (rret < 1)
     {
         printf("Parameter not Found: eType\n");
-        return OS_ERROR;
+        return GSW_statusErr;
     }
 
     gsw_dev = gsw_get_struc(lif_id, 0);
@@ -3391,7 +3555,7 @@ GSW_return_t fapi_GSW_CTP_PortAssignmentGet(int prmc, char *prmv[])
     if (rret < 1)
     {
         printf("Parameter not Found: nLogicalPortId\n");
-        return OS_ERROR;
+        return GSW_statusErr;
     }
 
     gsw_dev = gsw_get_struc(lif_id, 0);
@@ -3421,7 +3585,7 @@ GSW_return_t fapi_GSW_CTP_PortAssignmentSet(int prmc, char *prmv[])
     if (rret < 1)
     {
         printf("Parameter not Found: nLogicalPortId\n");
-        return OS_ERROR;
+        return GSW_statusErr;
     }
 
     scanParamArg(prmc, prmv, "nFirstCtpPortId", sizeof(sVar.nFirstCtpPortId), &sVar.nFirstCtpPortId);
@@ -3451,7 +3615,7 @@ GSW_return_t fapi_GSW_PMAC_IG_CfgSet(int prmc, char *prmv[])
     if (rret < 1)
     {
         printf("Parameter not Found: nPmacId\n");
-        return OS_ERROR;
+        return GSW_statusErr;
     }
 
     scanParamArg(prmc, prmv, "nTxDmaChanId", sizeof(param.nTxDmaChanId), &param.nTxDmaChanId);
@@ -3488,7 +3652,7 @@ GSW_return_t fapi_GSW_PMAC_IG_CfgGet(int prmc, char *prmv[])
     if (rret < 1)
     {
         printf("Parameter not Found: nPmacId\n");
-        return OS_ERROR;
+        return GSW_statusErr;
     }
 
     scanParamArg(prmc, prmv, "nTxDmaChanId", sizeof(param.nTxDmaChanId), &param.nTxDmaChanId);
@@ -3535,7 +3699,7 @@ GSW_return_t fapi_GSW_PMAC_EG_CfgGet(int prmc, char *prmv[])
     if (rret < 1)
     {
         printf("Parameter not Found: nPmacId\n");
-        return OS_ERROR;
+        return GSW_statusErr;
     }
 
     scanParamArg(prmc, prmv, "nDestPortId", sizeof(param.nDestPortId), &param.nDestPortId);
@@ -3592,7 +3756,7 @@ GSW_return_t fapi_GSW_PMAC_EG_CfgSet(int prmc, char *prmv[])
     if (rret < 1)
     {
         printf("Parameter not Found: nPmacId\n");
-        return OS_ERROR;
+        return GSW_statusErr;
     }
 
     scanParamArg(prmc, prmv, "bRedirEnable", sizeof(param.bRedirEnable), &param.bRedirEnable);
@@ -3642,14 +3806,14 @@ GSW_return_t fapi_GSW_PMAC_BM_CfgGet(int prmc, char *prmv[])
     if (rret < 1)
     {
         printf("Parameter not Found: nTxDmaChanId\n");
-        return OS_ERROR;
+        return GSW_statusErr;
     }
 
     rret = scanParamArg(prmc, prmv, "nPmacId", sizeof(param.nPmacId), &param.nPmacId);
     if (rret < 1)
     {
         printf("Parameter not Found: nPmacId\n");
-        return OS_ERROR;
+        return GSW_statusErr;
     }
 
     gsw_dev = gsw_get_struc(lif_id, 0);
@@ -3677,14 +3841,14 @@ GSW_return_t fapi_GSW_PMAC_BM_CfgSet(int prmc, char *prmv[])
     if (rret < 1)
     {
         printf("Parameter not Found: nTxDmaChanId\n");
-        return OS_ERROR;
+        return GSW_statusErr;
     }
 
     rret = scanParamArg(prmc, prmv, "nPmacId", sizeof(param.nPmacId), &param.nPmacId);
     if (rret < 1)
     {
         printf("Parameter not Found: nPmacId\n");
-        return OS_ERROR;
+        return GSW_statusErr;
     }
 
     scanParamArg(prmc, prmv, "txQMask", sizeof(param.txQMask), &param.txQMask);
@@ -3714,7 +3878,7 @@ GSW_return_t fapi_GSW_PMAC_GLBL_CfgGet(int prmc, char *prmv[])
     if (rret < 1)
     {
         printf("Parameter not Found: nPmacId\n");
-        return OS_ERROR;
+        return GSW_statusErr;
     }
 
     gsw_dev = gsw_get_struc(lif_id, 0);
@@ -3761,7 +3925,7 @@ GSW_return_t fapi_GSW_PMAC_GLBL_CfgSet(int prmc, char *prmv[])
     if (rret < 1)
     {
         printf("Parameter not Found: nPmacId\n");
-        return OS_ERROR;
+        return GSW_statusErr;
     }
 
     scanParamArg(prmc, prmv, "bRxFCSDis", sizeof(param.bRxFCSDis), &param.bRxFCSDis);
@@ -3794,11 +3958,883 @@ GSW_return_t fapi_GSW_PMAC_GLBL_CfgSet(int prmc, char *prmv[])
     return ret;
 }
 
+static int gsw_pce_rule_display(GSW_PCE_rule_t *pce_rule)
+{
+	int i;
+
+	if (pce_rule->pattern.bEnable) {
+		printf("\n\tp.nIndex                                           = %u", pce_rule->pattern.nIndex);
+
+		if (pce_rule->pattern.bMAC_DstEnable) {
+			printf("\n\tp.bMAC_DstEnable                                   = %u", pce_rule->pattern.bMAC_DstEnable);
+			printf("\n\tp.bDstMAC_Exclude                                  = %u", pce_rule->pattern.bDstMAC_Exclude);
+			printf("\n\tp.nMAC_Dst                                         = ");
+
+			for (i = 0; i < 6; i++) {
+				printf("%2.2x", pce_rule->pattern.nMAC_Dst[i]);
+			}
+
+			printf("\n\tp.nMAC_DstMask                                     = 0x%x", pce_rule->pattern.nMAC_DstMask);
+		}
+
+		if (pce_rule->pattern.bMAC_SrcEnable) {
+			printf("\n\tp.bMAC_SrcEnable                                   = %u", pce_rule->pattern.bMAC_SrcEnable);
+			printf("\n\tp.bSrcMAC_Exclude                                  = %u", pce_rule->pattern.bSrcMAC_Exclude);
+			printf("\n\tp.nMAC_Src                                         = ");
+
+			for (i = 0; i < 6; i++) {
+				printf("%2.2x", pce_rule->pattern.nMAC_Src[i]);
+			}
+
+			printf("\n\tp.nMAC_SrcMask                                     = 0x%x", pce_rule->pattern.nMAC_SrcMask);
+		}
+
+		if (pce_rule->pattern.eDstIP_Select) {
+			printf("\n\tp.eDstIP_Select                                    = %u", pce_rule->pattern.eDstIP_Select);
+			printf("\n\tp.bDstIP_Exclude                                   = %u", pce_rule->pattern.bDstIP_Exclude);
+
+			if (pce_rule->pattern.eDstIP_Select == GSW_PCE_IP_V4) {
+				printf("\n\tp.nDstIP                                           = 0x%x", pce_rule->pattern.nDstIP.nIPv4);
+				printf("\n\tp.nDstIP_Mask                                      = 0x%x", pce_rule->pattern.nDstIP_Mask);
+			} else if (pce_rule->pattern.eDstIP_Select == GSW_PCE_IP_V6) {
+				printf("\n\tp.nDstIP                                           = ");
+
+				for (i = 0; i < 8; i++) {
+					if (i == 7)
+						printf("%x", pce_rule->pattern.nDstIP.nIPv6[i]);
+					else
+						printf("%x:", pce_rule->pattern.nDstIP.nIPv6[i]);
+				}
+
+				printf("\n\tp.nDstIP_Mask                                      = 0x%x", pce_rule->pattern.nDstIP_Mask);
+			}
+		}
+
+		if (pce_rule->pattern.eInnerDstIP_Select) {
+			printf("\n\tp.eInnerDstIP_Select                               = %u", pce_rule->pattern.eInnerDstIP_Select);
+			printf("\n\tp.bInnerDstIP_Exclude                              = %u", pce_rule->pattern.bInnerDstIP_Exclude);
+
+			if (pce_rule->pattern.eInnerDstIP_Select == GSW_PCE_IP_V4) {
+				printf("\n\tp.nInnerDstIP                                      = 0x%x", pce_rule->pattern.nInnerDstIP.nIPv4);
+				printf("\n\tp.nInnerDstIP_Mask                                 = 0x%x", pce_rule->pattern.nInnerDstIP_Mask);
+			} else if (pce_rule->pattern.eInnerDstIP_Select == GSW_PCE_IP_V6) {
+				printf("\n\tp.nInnerDstIP                                      = ");
+
+				for (i = 0; i < 8; i++) {
+					if (i == 7)
+						printf("%x", pce_rule->pattern.nInnerDstIP.nIPv6[i]);
+					else
+						printf("%x:", pce_rule->pattern.nInnerDstIP.nIPv6[i]);
+				}
+
+				printf("\n\tp.nInnerDstIP_Mask                                 = 0x%x", pce_rule->pattern.nInnerDstIP_Mask);
+			}
+		}
+
+		if (pce_rule->pattern.eSrcIP_Select) {
+			printf("\n\tp.eSrcIP_Select                                    = %u", pce_rule->pattern.eSrcIP_Select);
+			printf("\n\tp.bSrcIP_Exclude                                   = %u", pce_rule->pattern.bSrcIP_Exclude);
+
+			if (pce_rule->pattern.eSrcIP_Select == GSW_PCE_IP_V4) {
+				printf("\n\tp.nSrcIP                                           = 0x%x", pce_rule->pattern.nSrcIP.nIPv4);
+				printf("\n\tp.nSrcIP_Mask                                      = 0x%x", pce_rule->pattern.nSrcIP_Mask);
+			} else if (pce_rule->pattern.eSrcIP_Select == GSW_PCE_IP_V6) {
+				printf("\n\tp.nSrcIP                                           = ");
+
+				for (i = 0; i < 8; i++) {
+					if (i == 7)
+						printf("%x", pce_rule->pattern.nSrcIP.nIPv6[i]);
+					else
+						printf("%x:", pce_rule->pattern.nSrcIP.nIPv6[i]);
+				}
+
+				printf("\n\tp.nSrcIP_Mask                                      = 0x%x", pce_rule->pattern.nSrcIP_Mask);
+			}
+		}
+
+		if (pce_rule->pattern.eInnerSrcIP_Select) {
+			printf("\n\tp.eInnerSrcIP_Select                               = %u", pce_rule->pattern.eInnerSrcIP_Select);
+			printf("\n\tp.bInnerSrcIP_Exclude                              = %u", pce_rule->pattern.bInnerSrcIP_Exclude);
+
+			if (pce_rule->pattern.eInnerSrcIP_Select == GSW_PCE_IP_V4) {
+				printf("\n\tp.nInnerSrcIP                                      = 0x%x", pce_rule->pattern.nInnerSrcIP.nIPv4);
+				printf("\n\tp.nInnerSrcIP_Mask                                 = 0x%x", pce_rule->pattern.nInnerSrcIP_Mask);
+			} else if (pce_rule->pattern.eInnerSrcIP_Select == GSW_PCE_IP_V6) {
+				printf("\n\tp.nInnerSrcIP                                      = ");
+
+				for (i = 0; i < 8; i++) {
+					if (i == 7)
+						printf("%x", pce_rule->pattern.nInnerSrcIP.nIPv6[i]);
+					else
+						printf("%x:", pce_rule->pattern.nInnerSrcIP.nIPv6[i]);
+				}
+
+				printf("\n\tp.nInnerSrcIP_Mask                                 = 0x%x", pce_rule->pattern.nInnerSrcIP_Mask);
+			}
+		}
+
+		if (pce_rule->pattern.bVid) {
+			printf("\n\tp.bVid                                             = %u", pce_rule->pattern.bVid);
+			printf("\n\tp.bVid_Exclude                                     = %u", pce_rule->pattern.bVid_Exclude);
+			printf("\n\tp.nVid                                             = %u", pce_rule->pattern.nVid);
+
+			if (pce_rule->pattern.bVidRange_Select)
+				printf("\n\tp.bVidRange_Select                                 = %u (Range Key)", pce_rule->pattern.bVidRange_Select);
+			else
+				printf("\n\tp.bVidRange_Select                                 = %u (Mask Key)", pce_rule->pattern.bVidRange_Select);
+
+			printf("\n\tp.nVidRange                                        = %u", pce_rule->pattern.nVidRange);
+			printf("\n\tp.bVid_Original                                    = %u", pce_rule->pattern.bVid_Original);
+		}
+
+		if (pce_rule->pattern.bSLAN_Vid) {
+			printf("\n\tp.bSLAN_Vid                                        = %u", pce_rule->pattern.bSLAN_Vid);
+			printf("\n\tp.bSLANVid_Exclude                                 = %u", pce_rule->pattern.bSLANVid_Exclude);
+			printf("\n\tp.nSLAN_Vid                                        = %u", pce_rule->pattern.nSLAN_Vid);
+
+			if (pce_rule->pattern.bSVidRange_Select)
+				printf("\n\tp.bSVidRange_Select                                = %u (Range Key)", pce_rule->pattern.bSVidRange_Select);
+			else
+				printf("\n\tp.bSVidRange_Select                                = %u (Mask Key)", pce_rule->pattern.bSVidRange_Select);
+
+			printf("\n\tp.nOuterVidRange                                   = %u", pce_rule->pattern.nOuterVidRange);
+			printf("\n\tp.bOuterVid_Original                               = %u", pce_rule->pattern.bOuterVid_Original);
+		}
+
+		if (pce_rule->pattern.bPortIdEnable) {
+			printf("\n\tp.bPortIdEnable                                    = %u", pce_rule->pattern.bPortIdEnable);
+			printf("\n\tp.bPortId_Exclude                                  = %u", pce_rule->pattern.bPortId_Exclude);
+			printf("\n\tp.nPortId                                          = %u", pce_rule->pattern.nPortId);
+		}
+
+		if (pce_rule->pattern.bSubIfIdEnable) {
+			printf("\n\tp.bSubIfIdEnable                                   = %u", pce_rule->pattern.bSubIfIdEnable);
+			printf("\n\tp.bSubIfId_Exclude                                 = %u", pce_rule->pattern.bSubIfId_Exclude);
+			printf("\n\tp.eSubIfIdType                                     = %u", pce_rule->pattern.eSubIfIdType);
+			printf("\n\tp.nSubIfId                                         = %u", pce_rule->pattern.nSubIfId);
+		}
+
+		if (pce_rule->pattern.bPktLngEnable) {
+			printf("\n\tp.bPktLngEnable                                    = %u", pce_rule->pattern.bPktLngEnable);
+			printf("\n\tp.bPktLng_Exclude                                  = %u", pce_rule->pattern.bPktLng_Exclude);
+			printf("\n\tp.nPktLng                                          = %u", pce_rule->pattern.nPktLng);
+			printf("\n\tp.nPktLngRange                                     = %u", pce_rule->pattern.nPktLngRange);
+		}
+
+		if (pce_rule->pattern.bPayload1_SrcEnable) {
+			printf("\n\tp.bPayload1_Exclude                                = %u", pce_rule->pattern.bPayload1_Exclude);
+			printf("\n\tp.nPayload1                                        = 0x%x", pce_rule->pattern.nPayload1);
+			printf("\n\tp.bPayload1MaskRange_Select                        = %u", pce_rule->pattern.bPayload1MaskRange_Select);
+			printf("\n\tp.nPayload1_Mask                                   = 0x%x", pce_rule->pattern.nPayload1_Mask);
+		}
+
+		if (pce_rule->pattern.bPayload2_SrcEnable) {
+			printf("\n\tp.bPayload2_Exclude                                = %u", pce_rule->pattern.bPayload2_Exclude);
+			printf("\n\tp.nPayload2                                        = 0x%x", pce_rule->pattern.nPayload2);
+			printf("\n\tp.bPayload2MaskRange_Select                        = %u", pce_rule->pattern.bPayload2MaskRange_Select);
+			printf("\n\tp.nPayload2_Mask                                   = 0x%x", pce_rule->pattern.nPayload2_Mask);
+		}
+
+		if (pce_rule->pattern.bParserFlagLSB_Enable) {
+			printf("\n\tp.bParserFlagLSB_Exclude                           = %u", pce_rule->pattern.bParserFlagLSB_Exclude);
+			printf("\n\tp.nParserFlagLSB                                   = 0x%x", pce_rule->pattern.nParserFlagLSB);
+			printf("\n\tp.nParserFlagLSB_Mask                              = 0x%x", pce_rule->pattern.nParserFlagLSB_Mask);
+		}
+
+		if (pce_rule->pattern.bParserFlagMSB_Enable) {
+			printf("\n\tp.bParserFlagMSB_Exclude                           = %u", pce_rule->pattern.bParserFlagMSB_Exclude);
+			printf("\n\tp.nParserFlagMSB                                   = 0x%x", pce_rule->pattern.nParserFlagMSB);
+			printf("\n\tp.nParserFlagMSB_Mask                              = 0x%x", pce_rule->pattern.nParserFlagMSB_Mask);
+		}
+
+		if (pce_rule->pattern.bParserFlag1LSB_Enable) {
+			printf("\n\tp.bParserFlag1LSB_Exclude                          = %u", pce_rule->pattern.bParserFlag1LSB_Exclude);
+			printf("\n\tp.nParserFlag1LSB                                  = 0x%x", pce_rule->pattern.nParserFlag1LSB);
+			printf("\n\tp.nParserFlag1LSB_Mask                             = 0x%x", pce_rule->pattern.nParserFlag1LSB_Mask);
+		}
+
+		if (pce_rule->pattern.bParserFlag1MSB_Enable) {
+			printf("\n\tp.bParserFlag1MSB_Exclude                          = %u", pce_rule->pattern.bParserFlag1MSB_Exclude);
+			printf("\n\tp.nParserFlag1MSB                                  = 0x%x", pce_rule->pattern.nParserFlag1MSB);
+			printf("\n\tp.nParserFlag1MSB_Mask                             = 0x%x", pce_rule->pattern.nParserFlag1MSB_Mask);
+		}
+
+		if (pce_rule->action.eVLAN_Action) {
+			printf("\n\ta.eVLAN_Action				= %u", pce_rule->action.eVLAN_Action);
+			printf("\n\ta.nVLAN_Id					= %u", pce_rule->action.nVLAN_Id);
+		}
+
+		if (pce_rule->action.eSVLAN_Action) {
+			printf("\n\ta.eSVLAN_Action 			= %u", pce_rule->action.eSVLAN_Action);
+			printf("\n\ta.nSVLAN_Id 				= %u", pce_rule->action.nSVLAN_Id);
+		}
+
+		if (pce_rule->action.eVLAN_CrossAction)
+			printf("\n\ta.eVLAN_CrossAction 		= %u", pce_rule->action.eVLAN_CrossAction);
+
+		if (pce_rule->action.bPortBitMapMuxControl)
+			printf("\n\ta.bPortBitMapMuxControl 	= %u", pce_rule->action.bPortBitMapMuxControl);
+
+		if (pce_rule->action.bCVLAN_Ignore_Control)
+			printf("\n\ta.bCVLAN_Ignore_Control 	= %u", pce_rule->action.bCVLAN_Ignore_Control);
+
+		if (pce_rule->action.eLearningAction)
+			printf("\n\ta.eLearningAction                                  = %u", pce_rule->action.eLearningAction);
+
+		if (pce_rule->action.eSnoopingTypeAction)
+			printf("\n\ta.eSnoopingTypeAction                              = %u", pce_rule->action.eSnoopingTypeAction);
+
+		if (pce_rule->pattern.bEtherTypeEnable) {
+			printf("\n\tp.bEtherType_Exclude                               = 0x%x", pce_rule->pattern.bEtherType_Exclude);
+			printf("\n\tp.nEtherType                                       = 0x%x", pce_rule->pattern.nEtherType);
+			printf("\n\tp.nEtherTypeMask                                   = 0x%x", pce_rule->pattern.nEtherTypeMask);
+		}
+
+		if (pce_rule->pattern.bProtocolEnable) {
+			printf("\n\tp.bProtocol_Exclude                                = 0x%x", pce_rule->pattern.bProtocol_Exclude);
+			printf("\n\tp.nProtocol                                        = 0x%x", pce_rule->pattern.nProtocol);
+			printf("\n\tp.nProtocolMask                                    = 0x%x", pce_rule->pattern.nProtocolMask);
+		}
+
+		if (pce_rule->pattern.bInnerProtocolEnable) {
+			printf("\n\tp.bInnerProtocol_Exclude                           = 0x%x", pce_rule->pattern.bInnerProtocol_Exclude);
+			printf("\n\tp.nInnerProtocol                                   = 0x%x", pce_rule->pattern.nInnerProtocol);
+			printf("\n\tp.nInnerProtocolMask                               = 0x%x", pce_rule->pattern.nInnerProtocolMask);
+		}
+
+		if (pce_rule->pattern.bSessionIdEnable) {
+			printf("\n\tp.bSessionIdEnable                                 = 0x%x", pce_rule->pattern.bSessionIdEnable);
+			printf("\n\tp.bSessionId_Exclude                               = 0x%x", pce_rule->pattern.bSessionId_Exclude);
+			printf("\n\tp.nSessionId                                       = 0x%x", pce_rule->pattern.nSessionId);
+		}
+
+		if (pce_rule->pattern.bPPP_ProtocolEnable) {
+			printf("\n\tp.bPPP_Protocol_Exclude                            = 0x%x", pce_rule->pattern.bPPP_Protocol_Exclude);
+			printf("\n\tp.nPPP_Protocol                                    = 0x%x", pce_rule->pattern.nPPP_Protocol);
+			printf("\n\tp.nPPP_ProtocolMask                                = 0x%x", pce_rule->pattern.nPPP_ProtocolMask);
+		}
+
+		if (pce_rule->pattern.bAppDataMSB_Enable) {
+			printf("\n\tp.bAppMSB_Exclude                                  = 0x%x", pce_rule->pattern.bAppMSB_Exclude);
+			printf("\n\tp.nAppDataMSB                                      = 0x%x", pce_rule->pattern.nAppDataMSB);
+			printf("\n\tp.bAppMaskRangeMSB_Select                          = %u", pce_rule->pattern.bAppMaskRangeMSB_Select);
+			printf("\n\tp.nAppMaskRangeMSB                                 = 0x%x", pce_rule->pattern.nAppMaskRangeMSB);
+		}
+
+		if (pce_rule->pattern.bAppDataLSB_Enable) {
+			printf("\n\tp.bAppLSB_Exclude                                  = 0x%x", pce_rule->pattern.bAppLSB_Exclude);
+			printf("\n\tp.nAppDataLSB                                      = 0x%x", pce_rule->pattern.nAppDataLSB);
+			printf("\n\tp.bAppMaskRangeLSB_Select                          = %u", pce_rule->pattern.bAppMaskRangeLSB_Select);
+			printf("\n\tp.nAppMaskRangeLSB                                 = 0x%x", pce_rule->pattern.nAppMaskRangeLSB);
+		}
+
+		if (pce_rule->pattern.bDSCP_Enable) {
+			printf("\n\tp.bDSCP_Exclude                                    = %u", pce_rule->pattern.bDSCP_Exclude);
+			printf("\n\tp.nDSCP                                            = %u", pce_rule->pattern.nDSCP);
+		}
+
+		if (pce_rule->pattern.bInner_DSCP_Enable) {
+			printf("\n\tp.bInnerDSCP_Exclude                               = %u", pce_rule->pattern.bInnerDSCP_Exclude);
+			printf("\n\tp.nInnerDSCP                                       = %u", pce_rule->pattern.nInnerDSCP);
+		}
+
+		if (pce_rule->action.bRemarkAction)
+			printf("\n\ta.bRemarkAction                                    = Enabled  val = %u", pce_rule->action.bRemarkAction);
+
+		if (pce_rule->action.bRemarkPCP)
+			printf("\n\ta.bRemarkPCP                                       = Disabled val = %u", pce_rule->action.bRemarkPCP);
+
+		if (pce_rule->action.bRemarkDSCP)
+			printf("\n\ta.bRemarkDSCP                                      = Disabled val = %u", pce_rule->action.bRemarkDSCP);
+
+		if (pce_rule->action.bRemarkClass)
+			printf("\n\ta.bRemarkClass                                     = Disabled val = %u", pce_rule->action.bRemarkClass);
+
+		if (pce_rule->action.bRemarkSTAG_PCP)
+			printf("\n\ta.bRemarkSTAG_PCP                                  = Disabled val = %u", pce_rule->action.bRemarkSTAG_PCP);
+
+		if (pce_rule->action.bRemarkSTAG_DEI)
+			printf("\n\ta.bRemarkSTAG_DEI                                  = Disabled val = %u", pce_rule->action.bRemarkSTAG_DEI);
+
+		if ((pce_rule->action.bRMON_Action) || (pce_rule->action.bFlowID_Action)) {
+			printf("\n\ta.nFlowID/nRmon_ID                                 = %u", pce_rule->action.nFlowID);
+		}
+
+		if (pce_rule->pattern.bPCP_Enable) {
+			printf("\n\tp.bPCP_Enable                                      = %u", pce_rule->pattern.bPCP_Enable);
+			printf("\n\tp.bCTAG_PCP_DEI_Exclude                            = %u", pce_rule->pattern.bCTAG_PCP_DEI_Exclude);
+			printf("\n\tp.nPCP                                             = %u", pce_rule->pattern.nPCP);
+		}
+
+		if (pce_rule->pattern.bSTAG_PCP_DEI_Enable) {
+			printf("\n\tp.bSTAG_PCP_DEI_Enable                             = %u", pce_rule->pattern.bSTAG_PCP_DEI_Enable);
+			printf("\n\tp.bSTAG_PCP_DEI_Exclude                            = %u", pce_rule->pattern.bSTAG_PCP_DEI_Exclude);
+			printf("\n\tp.nSTAG_PCP_DEI                                    = %u", pce_rule->pattern.nSTAG_PCP_DEI);
+		}
+
+		if (pce_rule->action.ePortMapAction) {
+			printf("\n\ta.ePortMapAction                                   = 0x%x", pce_rule->action.ePortMapAction);
+
+			for (i = 0; i < 8; i++) {
+				if (pce_rule->action.nForwardPortMap[i])
+					printf("\n\ta.nForwardPortMap[%d]                               = 0x%x", i, pce_rule->action.nForwardPortMap[i]);
+			}
+		}
+
+		if (pce_rule->action.eTrafficClassAction) {
+			printf("\n\ta.eTrafficClassAction                              = %u", pce_rule->action.eTrafficClassAction);
+			printf("\n\ta.nTrafficClassAlternate                           = %u", pce_rule->action.nTrafficClassAlternate);
+		}
+
+		if (pce_rule->action.bPortTrunkAction) {
+			printf("\n\ta.bPortTrunkAction                                 = Enabled");
+			printf("\n\ta.bPortLinkSelection                               = %u", pce_rule->action.bPortLinkSelection);
+		}
+
+		if (pce_rule->action.bExtendedVlanEnable) {
+			printf("\n\ta.bExtendedVlanEnable                              = Enabled");
+			printf("\n\ta.nExtendedVlanBlockId                             = %u", pce_rule->action.nExtendedVlanBlockId);
+		}
+
+		if (pce_rule->action.ePortFilterType_Action) {
+			printf("\n\ta.ePortFilterType_Action                           = %u", pce_rule->action.ePortFilterType_Action);
+
+			for (i = 0; i < 8; i++) {
+				if (pce_rule->action.nForwardPortMap[i])
+					printf("\n\ta.nForwardPortMap[%d]                              = 0x%x", i,  pce_rule->action.nForwardPortMap[i]);
+			}
+		}
+
+		if (pce_rule->action.eProcessPath_Action)
+			printf("\n\ta.eProcessPath_Action                              = %u", pce_rule->action.eProcessPath_Action);
+
+		if (pce_rule->action.bOamEnable)
+			printf("\n\ta.bOamEnable                                       = %u", pce_rule->action.bOamEnable);
+
+		if (pce_rule->action.bExtractEnable)
+			printf("\n\ta.bExtractEnable                                   = %u", pce_rule->action.bExtractEnable);
+
+		if (pce_rule->action.bOamEnable || pce_rule->action.bExtractEnable)
+			printf("\n\ta.nRecordId                                        = %u", pce_rule->action.nRecordId);
+
+		if (pce_rule->action.eColorFrameAction != GSW_PCE_ACTION_COLOR_FRAME_DISABLE)
+			printf("\n\ta.eColorFrameAction                                = %u", pce_rule->action.eColorFrameAction);
+
+		if (pce_rule->action.eMeterAction) {
+			printf("\n\ta.eMeterAction                                     = %u", pce_rule->action.eMeterAction);
+			printf("\n\ta.nMeterId                                         = %u", pce_rule->action.nMeterId);
+		}
+
+		if (pce_rule->action.bFidEnable)
+			printf("\n\ta.nFId                                             = %u", pce_rule->action.nFId);
+
+		if (pce_rule->pattern.bInsertionFlag_Enable)
+			printf("\n\tp.nInsertionFlag                                   = %u", pce_rule->pattern.nInsertionFlag);
+
+		if (pce_rule->action.eCrossStateAction == GSW_PCE_ACTION_CROSS_STATE_CROSS)
+			printf("\n\tp.eCrossStateAction                                = GSW_PCE_ACTION_CROSS_STATE_CROSS");
+		else if (pce_rule->action.eCrossStateAction == GSW_PCE_ACTION_CROSS_STATE_REGULAR)
+			printf("\n\tp.eCrossStateAction                                = GSW_PCE_ACTION_CROSS_STATE_REGULAR");
+		else
+			printf("\n\tp.eCrossStateAction                                = GSW_PCE_ACTION_CROSS_STATE_DISABLE");
+
+		/*Applicable onlt for GSWIP 3.2*/
+		if (pce_rule->pattern.bFlexibleField4Enable) {
+			printf("\n\tp.bFlexibleField4_ExcludeEnable                    = %u", pce_rule->pattern.bFlexibleField4_ExcludeEnable);
+			printf("\n\tp.bFlexibleField4_RangeEnable                      = %u", pce_rule->pattern.bFlexibleField4_RangeEnable);
+			printf("\n\tp.nFlexibleField4_ParserIndex                      = %u", pce_rule->pattern.nFlexibleField4_ParserIndex);
+			printf("\n\tp.nFlexibleField4_Value                            = %u", pce_rule->pattern.nFlexibleField4_Value);
+			printf("\n\tp.nFlexibleField4_MaskOrRange                      = %u", pce_rule->pattern.nFlexibleField4_MaskOrRange);
+		}
+
+		if (pce_rule->pattern.bFlexibleField3Enable) {
+			printf("\n\tp.bFlexibleField3_ExcludeEnable                    = %u", pce_rule->pattern.bFlexibleField3_ExcludeEnable);
+			printf("\n\tp.bFlexibleField3_RangeEnable                      = %u", pce_rule->pattern.bFlexibleField3_RangeEnable);
+			printf("\n\tp.nFlexibleField3_ParserIndex                      = %u", pce_rule->pattern.nFlexibleField3_ParserIndex);
+			printf("\n\tp.nFlexibleField3_Value                            = %u", pce_rule->pattern.nFlexibleField3_Value);
+			printf("\n\tp.nFlexibleField3_MaskOrRange                      = %u", pce_rule->pattern.nFlexibleField3_MaskOrRange);
+		}
+
+		if (pce_rule->pattern.bFlexibleField2Enable) {
+			printf("\n\tp.bFlexibleField2_ExcludeEnable                    = %u", pce_rule->pattern.bFlexibleField2_ExcludeEnable);
+			printf("\n\tp.bFlexibleField2_RangeEnable                      = %u", pce_rule->pattern.bFlexibleField2_RangeEnable);
+			printf("\n\tp.nFlexibleField2_ParserIndex                      = %u", pce_rule->pattern.nFlexibleField2_ParserIndex);
+			printf("\n\tp.nFlexibleField2_Value                            = %u", pce_rule->pattern.nFlexibleField2_Value);
+			printf("\n\tp.nFlexibleField2_MaskOrRange                      = %u", pce_rule->pattern.nFlexibleField2_MaskOrRange);
+		}
+
+		if (pce_rule->pattern.bFlexibleField1Enable) {
+			printf("\n\tp.bFlexibleField1_ExcludeEnable                    = %u", pce_rule->pattern.bFlexibleField1_ExcludeEnable);
+			printf("\n\tp.bFlexibleField1_RangeEnable                      = %u", pce_rule->pattern.bFlexibleField1_RangeEnable);
+			printf("\n\tp.nFlexibleField1_ParserIndex                      = %u", pce_rule->pattern.nFlexibleField1_ParserIndex);
+			printf("\n\tp.nFlexibleField1_Value                            = %u", pce_rule->pattern.nFlexibleField1_Value);
+			printf("\n\tp.nFlexibleField1_MaskOrRange                      = %u", pce_rule->pattern.nFlexibleField1_MaskOrRange);
+		}
+
+		if (pce_rule->action.sPBB_Action.bIheaderActionEnable) {
+			printf("\n\ta.sPBB_Action.bIheaderActionEnable                 = %u", pce_rule->action.sPBB_Action.bIheaderActionEnable);
+
+			switch (pce_rule->action.sPBB_Action.eIheaderOpMode) {
+			case GSW_PCE_I_HEADER_OPERATION_INSERT :
+				printf("\n\ta.sPBB_Action.eIheaderOpMode                       = GSW_PCE_I_HEADER_OPERATION_INSERT");
+				printf("\n\ta.sPBB_Action.nTunnelIdKnownTraffic                = %u", pce_rule->action.sPBB_Action.nTunnelIdKnownTraffic);
+				printf("\n\ta.sPBB_Action.nTunnelIdUnKnownTraffic              = %u", pce_rule->action.sPBB_Action.nTunnelIdUnKnownTraffic);
+				printf("\n\ta.sPBB_Action.bB_DstMac_FromMacTableEnable	       = %u", pce_rule->action.sPBB_Action.bB_DstMac_FromMacTableEnable);
+				break;
+
+			case GSW_PCE_I_HEADER_OPERATION_REPLACE :
+				printf("\n\ta.sPBB_Action.eIheaderOpMode                       = GSW_PCE_I_HEADER_OPERATION_REPLACE");
+				printf("\n\ta.sPBB_Action.nTunnelIdKnownTraffic                = %u", pce_rule->action.sPBB_Action.nTunnelIdKnownTraffic);
+				printf("\n\ta.sPBB_Action.nTunnelIdUnKnownTraffic              = %u", pce_rule->action.sPBB_Action.nTunnelIdUnKnownTraffic);
+				printf("\n\ta.sPBB_Action.bReplace_B_SrcMacEnable              = %u", pce_rule->action.sPBB_Action.bReplace_B_SrcMacEnable);
+				printf("\n\ta.sPBB_Action.bReplace_B_DstMacEnable              = %u", pce_rule->action.sPBB_Action.bReplace_B_DstMacEnable);
+				printf("\n\ta.sPBB_Action.bReplace_I_TAG_ResEnable             = %u", pce_rule->action.sPBB_Action.bReplace_I_TAG_ResEnable);
+				printf("\n\ta.sPBB_Action.bReplace_I_TAG_UacEnable             = %u", pce_rule->action.sPBB_Action.bReplace_I_TAG_UacEnable);
+				printf("\n\ta.sPBB_Action.bReplace_I_TAG_DeiEnable             = %u", pce_rule->action.sPBB_Action.bReplace_I_TAG_DeiEnable);
+				printf("\n\ta.sPBB_Action.bReplace_I_TAG_PcpEnable             = %u", pce_rule->action.sPBB_Action.bReplace_I_TAG_PcpEnable);
+				printf("\n\ta.sPBB_Action.bReplace_I_TAG_SidEnable             = %u", pce_rule->action.sPBB_Action.bReplace_I_TAG_SidEnable);
+				printf("\n\ta.sPBB_Action.bReplace_I_TAG_TpidEnable            = %u", pce_rule->action.sPBB_Action.bReplace_I_TAG_TpidEnable);
+				break;
+
+			case GSW_PCE_I_HEADER_OPERATION_REMOVE :
+				printf("\n\ta.sPBB_Action.eIheaderOpMode                       = GSW_PCE_I_HEADER_OPERATION_REMOVE");
+				break;
+
+			case GSW_PCE_I_HEADER_OPERATION_NOCHANGE :
+				printf("\n\ta.sPBB_Action.eIheaderOpMode                       = GSW_PCE_I_HEADER_OPERATION_NOCHANGE");
+				break;
+
+			default:
+				break;
+			}
+		}
+
+		/*Applicable onlt for GSWIP 3.2*/
+		if (pce_rule->action.sPBB_Action.bBtagActionEnable) {
+			printf("\n\ta.sPBB_Action.bBtagActionEnable                    = %u", pce_rule->action.sPBB_Action.bBtagActionEnable);
+
+			switch (pce_rule->action.sPBB_Action.eBtagOpMode) {
+			case GSW_PCE_B_TAG_OPERATION_INSERT :
+				printf("\n\ta.sPBB_Action.eBtagOpMode                          = GSW_PCE_B_TAG_OPERATION_INSERT");
+				printf("\n\ta.sPBB_Action.nProcessIdKnownTraffic               = %u", pce_rule->action.sPBB_Action.nProcessIdKnownTraffic);
+				printf("\n\ta.sPBB_Action.nProcessIdUnKnownTraffic             = %u", pce_rule->action.sPBB_Action.nProcessIdUnKnownTraffic);
+				break;
+
+			case GSW_PCE_B_TAG_OPERATION_REPLACE :
+				printf("\n\ta.sPBB_Action.eBtagOpMode                          = GSW_PCE_B_TAG_OPERATION_REPLACE");
+				printf("\n\ta.sPBB_Action.nProcessIdKnownTraffic               = %u", pce_rule->action.sPBB_Action.nProcessIdKnownTraffic);
+				printf("\n\ta.sPBB_Action.nProcessIdUnKnownTraffic             = %u", pce_rule->action.sPBB_Action.nProcessIdUnKnownTraffic);
+				printf("\n\ta.sPBB_Action.bReplace_B_TAG_DeiEnable             = %u", pce_rule->action.sPBB_Action.bReplace_B_TAG_DeiEnable);
+				printf("\n\ta.sPBB_Action.bReplace_B_TAG_PcpEnable             = %u", pce_rule->action.sPBB_Action.bReplace_B_TAG_PcpEnable);
+				printf("\n\ta.sPBB_Action.bReplace_B_TAG_VidEnable             = %u", pce_rule->action.sPBB_Action.bReplace_B_TAG_VidEnable);
+				printf("\n\ta.sPBB_Action.bReplace_B_TAG_TpidEnable            = %u", pce_rule->action.sPBB_Action.bReplace_B_TAG_TpidEnable);
+				break;
+
+			case GSW_PCE_B_TAG_OPERATION_REMOVE :
+				printf("\n\ta.sPBB_Action.eBtagOpMode                          = GSW_PCE_B_TAG_OPERATION_REMOVE");
+				break;
+
+			case GSW_PCE_B_TAG_OPERATION_NOCHANGE :
+				printf("\n\ta.sPBB_Action.eBtagOpMode                          = GSW_PCE_B_TAG_OPERATION_NOCHANGE");
+				break;
+
+			default:
+				break;
+			}
+		}
+
+		/*Applicable onlt for GSWIP 3.2*/
+		if (pce_rule->action.sPBB_Action.bMacTableMacinMacActionEnable) {
+			printf("\n\ta.sPBB_Action.bMacTableMacinMacActionEnable                = %u", pce_rule->action.sPBB_Action.bMacTableMacinMacActionEnable);
+
+			switch (pce_rule->action.sPBB_Action.eMacTableMacinMacSelect) {
+			case GSW_PCE_OUTER_MAC_SELECTED :
+				printf("\n\ta.sPBB_Action.eMacTableMacinMacSelect              = GSW_PCE_OUTER_MAC_SELECTED");
+				break;
+
+			case GSW_PCE_INNER_MAC_SELECTED :
+				printf("\n\ta.sPBB_Action.eMacTableMacinMacSelect              = GSW_PCE_INNER_MAC_SELECTED");
+				break;
+
+			default:
+				break;
+			}
+		}
+
+		if (pce_rule->action.bDestSubIf_Action_Enable) {
+			printf("\n\ta.sDestSubIF_Action.bDestSubIFIDActionEnable       = %u", pce_rule->action.sDestSubIF_Action.bDestSubIFIDActionEnable);
+			printf("\n\ta.sDestSubIF_Action.bDestSubIFIDAssignmentEnable   = %u", pce_rule->action.sDestSubIF_Action.bDestSubIFIDAssignmentEnable);
+			printf("\n\ta.sDestSubIF_Action.nDestSubIFGrp_Field            = %u", pce_rule->action.sDestSubIF_Action.nDestSubIFGrp_Field);
+		}
+	} else {
+		printf("\n\tp.nIndex rule not set at                           = %u", pce_rule->pattern.nIndex);
+	}
+
+	printf("\n");
+
+	return 0;
+}
+
+static void gsw_pce_rule_scan_write_params(size_t argc, char *argv[], GSW_PCE_rule_t *rule)
+{
+	scanParamArg(argc, argv, "nLogicalPortId", sizeof(rule->logicalportid), &rule->logicalportid);
+	scanParamArg(argc, argv, "nSubIfIdGroup", sizeof(rule->subifidgroup), &rule->subifidgroup);
+	scanParamArg(argc, argv, "region", sizeof(rule->region), &rule->region);
+	scanParamArg(argc, argv, "pattern.bEnable", sizeof(rule->pattern.bEnable), &rule->pattern.bEnable);
+	scanParamArg(argc, argv, "pattern.bPortIdEnable", sizeof(rule->pattern.bPortIdEnable), &rule->pattern.bPortIdEnable);
+	scanParamArg(argc, argv, "pattern.nPortId", sizeof(rule->pattern.nPortId), &rule->pattern.nPortId);
+	scanParamArg(argc, argv, "pattern.bPortId_Exclude", sizeof(rule->pattern.bPortId_Exclude), &rule->pattern.bPortId_Exclude);
+	scanParamArg(argc, argv, "pattern.bSubIfIdEnable", sizeof(rule->pattern.bSubIfIdEnable), &rule->pattern.bSubIfIdEnable);
+	scanParamArg(argc, argv, "pattern.nSubIfId", sizeof(rule->pattern.nSubIfId), &rule->pattern.nSubIfId);
+	scanParamArg(argc, argv, "pattern.eSubIfIdType", sizeof(rule->pattern.eSubIfIdType), &rule->pattern.eSubIfIdType);
+	scanParamArg(argc, argv, "pattern.bSubIfId_Exclude", sizeof(rule->pattern.bSubIfId_Exclude), &rule->pattern.bSubIfId_Exclude);
+	scanParamArg(argc, argv, "pattern.bInsertionFlag_Enable", sizeof(rule->pattern.bInsertionFlag_Enable), &rule->pattern.bInsertionFlag_Enable);
+	scanParamArg(argc, argv, "pattern.nInsertionFlag", sizeof(rule->pattern.nInsertionFlag), &rule->pattern.nInsertionFlag);
+	scanParamArg(argc, argv, "pattern.bDSCP_Enable", sizeof(rule->pattern.bDSCP_Enable), &rule->pattern.bDSCP_Enable);
+	scanParamArg(argc, argv, "pattern.nDSCP", sizeof(rule->pattern.nDSCP), &rule->pattern.nDSCP);
+	scanParamArg(argc, argv, "pattern.bDSCP_Exclude", sizeof(rule->pattern.bDSCP_Exclude), &rule->pattern.bDSCP_Exclude);
+	scanParamArg(argc, argv, "pattern.bInner_DSCP_Enable", sizeof(rule->pattern.bInner_DSCP_Enable), &rule->pattern.bInner_DSCP_Enable);
+	scanParamArg(argc, argv, "pattern.nInnerDSCP", sizeof(rule->pattern.nInnerDSCP), &rule->pattern.nInnerDSCP);
+	scanParamArg(argc, argv, "pattern.bInnerDSCP_Exclude", sizeof(rule->pattern.bInnerDSCP_Exclude), &rule->pattern.bInnerDSCP_Exclude);
+	scanParamArg(argc, argv, "pattern.bPCP_Enable", sizeof(rule->pattern.bPCP_Enable), &rule->pattern.bPCP_Enable);
+	scanParamArg(argc, argv, "pattern.nPCP", sizeof(rule->pattern.nPCP), &rule->pattern.nPCP);
+	scanParamArg(argc, argv, "pattern.bCTAG_PCP_DEI_Exclude", sizeof(rule->pattern.bCTAG_PCP_DEI_Exclude), &rule->pattern.bCTAG_PCP_DEI_Exclude);
+	scanParamArg(argc, argv, "pattern.bSTAG_PCP_DEI_Enable", sizeof(rule->pattern.bSTAG_PCP_DEI_Enable), &rule->pattern.bSTAG_PCP_DEI_Enable);
+	scanParamArg(argc, argv, "pattern.nSTAG_PCP_DEI", sizeof(rule->pattern.nSTAG_PCP_DEI), &rule->pattern.nSTAG_PCP_DEI);
+	scanParamArg(argc, argv, "pattern.bSTAG_PCP_DEI_Exclude", sizeof(rule->pattern.bSTAG_PCP_DEI_Exclude), &rule->pattern.bSTAG_PCP_DEI_Exclude);
+	scanParamArg(argc, argv, "pattern.bPktLngEnable", sizeof(rule->pattern.bPktLngEnable), &rule->pattern.bPktLngEnable);
+	scanParamArg(argc, argv, "pattern.nPktLng", sizeof(rule->pattern.nPktLng), &rule->pattern.nPktLng);
+	scanParamArg(argc, argv, "pattern.nPktLngRange", sizeof(rule->pattern.nPktLngRange), &rule->pattern.nPktLngRange);
+	scanParamArg(argc, argv, "pattern.bPktLng_Exclude", sizeof(rule->pattern.bPktLng_Exclude), &rule->pattern.bPktLng_Exclude);
+	scanParamArg(argc, argv, "pattern.bMAC_DstEnable", sizeof(rule->pattern.bMAC_DstEnable), &rule->pattern.bMAC_DstEnable);
+	scanMAC_Arg(argc, argv, "pattern.nMAC_Dst", rule->pattern.nMAC_Dst);
+	scanParamArg(argc, argv, "pattern.nMAC_DstMask", sizeof(rule->pattern.nMAC_DstMask), &rule->pattern.nMAC_DstMask);
+	scanParamArg(argc, argv, "pattern.bDstMAC_Exclude", sizeof(rule->pattern.bDstMAC_Exclude), &rule->pattern.bDstMAC_Exclude);
+	scanParamArg(argc, argv, "pattern.bMAC_SrcEnable", sizeof(rule->pattern.bMAC_SrcEnable), &rule->pattern.bMAC_SrcEnable);
+	scanMAC_Arg(argc, argv, "pattern.nMAC_Src", rule->pattern.nMAC_Src);
+	scanParamArg(argc, argv, "pattern.nMAC_SrcMask", sizeof(rule->pattern.nMAC_SrcMask), &rule->pattern.nMAC_SrcMask);
+	scanParamArg(argc, argv, "pattern.bSrcMAC_Exclude", sizeof(rule->pattern.bSrcMAC_Exclude), &rule->pattern.bSrcMAC_Exclude);
+	scanParamArg(argc, argv, "pattern.bAppDataMSB_Enable", sizeof(rule->pattern.bAppDataMSB_Enable), &rule->pattern.bAppDataMSB_Enable);
+	scanParamArg(argc, argv, "pattern.nAppDataMSB", sizeof(rule->pattern.nAppDataMSB), &rule->pattern.nAppDataMSB);
+	scanParamArg(argc, argv, "pattern.bAppMaskRangeMSB_Select", sizeof(rule->pattern.bAppMaskRangeMSB_Select), &rule->pattern.bAppMaskRangeMSB_Select);
+	scanParamArg(argc, argv, "pattern.nAppMaskRangeMSB", sizeof(rule->pattern.nAppMaskRangeMSB), &rule->pattern.nAppMaskRangeMSB);
+	scanParamArg(argc, argv, "pattern.bAppMSB_Exclude", sizeof(rule->pattern.bAppMSB_Exclude), &rule->pattern.bAppMSB_Exclude);
+
+	scanParamArg(argc, argv, "pattern.bAppDataLSB_Enable", sizeof(rule->pattern.bAppDataLSB_Enable), &rule->pattern.bAppDataLSB_Enable);
+	scanParamArg(argc, argv, "pattern.nAppDataLSB", sizeof(rule->pattern.nAppDataLSB), &rule->pattern.nAppDataLSB);
+	scanParamArg(argc, argv, "pattern.bAppMaskRangeLSB_Select", sizeof(rule->pattern.bAppMaskRangeLSB_Select), &rule->pattern.bAppMaskRangeLSB_Select);
+	scanParamArg(argc, argv, "pattern.nAppMaskRangeLSB", sizeof(rule->pattern.nAppMaskRangeLSB), &rule->pattern.nAppMaskRangeLSB);
+	scanParamArg(argc, argv, "pattern.bAppLSB_Exclude", sizeof(rule->pattern.bAppLSB_Exclude), &rule->pattern.bAppLSB_Exclude);
+
+	scanParamArg(argc, argv, "pattern.eDstIP_Select", sizeof(rule->pattern.eDstIP_Select), &rule->pattern.eDstIP_Select);
+
+	if (rule->pattern.eDstIP_Select == GSW_PCE_IP_V4)
+		scanIPv4_Arg(argc, argv, "pattern.nDstIP", &rule->pattern.nDstIP.nIPv4);
+	else if (rule->pattern.eDstIP_Select == GSW_PCE_IP_V6)
+		scanIPv6_Arg(argc, argv, "pattern.nDstIP", rule->pattern.nDstIP.nIPv6);
+
+	scanParamArg(argc, argv, "pattern.nDstIP_Mask", sizeof(rule->pattern.nDstIP_Mask), &rule->pattern.nDstIP_Mask);
+	scanParamArg(argc, argv, "pattern.bDstIP_Exclude", sizeof(rule->pattern.bDstIP_Exclude), &rule->pattern.bDstIP_Exclude);
+
+	scanParamArg(argc, argv, "pattern.eInnerDstIP_Select", sizeof(rule->pattern.eInnerDstIP_Select), &rule->pattern.eInnerDstIP_Select);
+
+	if (rule->pattern.eInnerDstIP_Select == GSW_PCE_IP_V4)
+		scanIPv4_Arg(argc, argv, "pattern.nInnerDstIP", &rule->pattern.nInnerDstIP.nIPv4);
+	else if (rule->pattern.eInnerDstIP_Select == GSW_PCE_IP_V6)
+		scanIPv6_Arg(argc, argv, "pattern.nInnerDstIP", rule->pattern.nInnerDstIP.nIPv6);
+
+	scanParamArg(argc, argv, "pattern.nInnerDstIP_Mask", sizeof(rule->pattern.nInnerDstIP_Mask), &rule->pattern.nInnerDstIP_Mask);
+	scanParamArg(argc, argv, "pattern.bInnerDstIP_Exclude", sizeof(rule->pattern.bInnerDstIP_Exclude), &rule->pattern.bInnerDstIP_Exclude);
+
+	scanParamArg(argc, argv, "pattern.eSrcIP_Select", sizeof(rule->pattern.eSrcIP_Select), &rule->pattern.eSrcIP_Select);
+
+	if (rule->pattern.eSrcIP_Select == GSW_PCE_IP_V4)
+		scanIPv4_Arg(argc, argv, "pattern.nSrcIP", &rule->pattern.nSrcIP.nIPv4);
+	else if (rule->pattern.eSrcIP_Select == GSW_PCE_IP_V6)
+		scanIPv6_Arg(argc, argv, "pattern.nSrcIP", rule->pattern.nSrcIP.nIPv6);
+
+	scanParamArg(argc, argv, "pattern.nSrcIP_Mask", sizeof(rule->pattern.nSrcIP_Mask), &rule->pattern.nSrcIP_Mask);
+	scanParamArg(argc, argv, "pattern.bSrcIP_Exclude", sizeof(rule->pattern.bSrcIP_Exclude), &rule->pattern.bSrcIP_Exclude);
+
+	scanParamArg(argc, argv, "pattern.eInnerSrcIP_Select", sizeof(rule->pattern.eInnerSrcIP_Select), &rule->pattern.eInnerSrcIP_Select);
+
+	if (rule->pattern.eInnerSrcIP_Select == GSW_PCE_IP_V4)
+		scanIPv4_Arg(argc, argv, "pattern.nInnerSrcIP", &rule->pattern.nInnerSrcIP.nIPv4);
+	else if (rule->pattern.eInnerSrcIP_Select == GSW_PCE_IP_V6)
+		scanIPv6_Arg(argc, argv, "pattern.nInnerSrcIP", rule->pattern.nInnerSrcIP.nIPv6);
+
+	scanParamArg(argc, argv, "pattern.nInnerSrcIP_Mask", sizeof(rule->pattern.nInnerSrcIP_Mask), &rule->pattern.nInnerSrcIP_Mask);
+	scanParamArg(argc, argv, "pattern.bInnerSrcIP_Exclude", sizeof(rule->pattern.bInnerSrcIP_Exclude), &rule->pattern.bInnerSrcIP_Exclude);
+
+	scanParamArg(argc, argv, "pattern.bEtherTypeEnable", sizeof(rule->pattern.bEtherTypeEnable), &rule->pattern.bEtherTypeEnable);
+	scanParamArg(argc, argv, "pattern.nEtherType", sizeof(rule->pattern.nEtherType), &rule->pattern.nEtherType);
+	scanParamArg(argc, argv, "pattern.nEtherTypeMask", sizeof(rule->pattern.nEtherTypeMask), &rule->pattern.nEtherTypeMask);
+	scanParamArg(argc, argv, "pattern.bEtherType_Exclude", sizeof(rule->pattern.bEtherType_Exclude), &rule->pattern.bEtherType_Exclude);
+
+	scanParamArg(argc, argv, "pattern.bProtocolEnable", sizeof(rule->pattern.bProtocolEnable), &rule->pattern.bProtocolEnable);
+	scanParamArg(argc, argv, "pattern.nProtocol", sizeof(rule->pattern.nProtocol), &rule->pattern.nProtocol);
+	scanParamArg(argc, argv, "pattern.nProtocolMask", sizeof(rule->pattern.nProtocolMask), &rule->pattern.nProtocolMask);
+	scanParamArg(argc, argv, "pattern.bProtocol_Exclude", sizeof(rule->pattern.bProtocol_Exclude), &rule->pattern.bProtocol_Exclude);
+
+	scanParamArg(argc, argv, "pattern.bInnerProtocolEnable", sizeof(rule->pattern.bInnerProtocolEnable), &rule->pattern.bInnerProtocolEnable);
+	scanParamArg(argc, argv, "pattern.nInnerProtocol", sizeof(rule->pattern.nInnerProtocol), &rule->pattern.nInnerProtocol);
+	scanParamArg(argc, argv, "pattern.nInnerProtocolMask", sizeof(rule->pattern.nInnerProtocolMask), &rule->pattern.nInnerProtocolMask);
+	scanParamArg(argc, argv, "pattern.bInnerProtocol_Exclude", sizeof(rule->pattern.bInnerProtocol_Exclude), &rule->pattern.bInnerProtocol_Exclude);
+
+	scanParamArg(argc, argv, "pattern.bSessionIdEnable", sizeof(rule->pattern.bSessionIdEnable), &rule->pattern.bSessionIdEnable);
+	scanParamArg(argc, argv, "pattern.nSessionId", sizeof(rule->pattern.nSessionId), &rule->pattern.nSessionId);
+	scanParamArg(argc, argv, "pattern.bSessionId_Exclude", sizeof(rule->pattern.bSessionId_Exclude), &rule->pattern.bSessionId_Exclude);
+
+	scanParamArg(argc, argv, "pattern.bPPP_ProtocolEnable", sizeof(rule->pattern.bPPP_ProtocolEnable), &rule->pattern.bPPP_ProtocolEnable);
+	scanParamArg(argc, argv, "pattern.nPPP_Protocol", sizeof(rule->pattern.nPPP_Protocol), &rule->pattern.nPPP_Protocol);
+	scanParamArg(argc, argv, "pattern.nPPP_ProtocolMask", sizeof(rule->pattern.nPPP_ProtocolMask), &rule->pattern.nPPP_ProtocolMask);
+	scanParamArg(argc, argv, "pattern.bPPP_Protocol_Exclude", sizeof(rule->pattern.bPPP_Protocol_Exclude), &rule->pattern.bPPP_Protocol_Exclude);
+
+	scanParamArg(argc, argv, "pattern.bVid", sizeof(rule->pattern.bVid), &rule->pattern.bVid);
+	scanParamArg(argc, argv, "pattern.nVid", sizeof(rule->pattern.nVid), &rule->pattern.nVid);
+	scanParamArg(argc, argv, "pattern.bVidRange_Select", sizeof(rule->pattern.bVidRange_Select), &rule->pattern.bVidRange_Select);
+	scanParamArg(argc, argv, "pattern.nVidRange", sizeof(rule->pattern.nVidRange), &rule->pattern.nVidRange);
+	scanParamArg(argc, argv, "pattern.bVid_Exclude", sizeof(rule->pattern.bVid_Exclude), &rule->pattern.bVid_Exclude);
+
+	scanParamArg(argc, argv, "pattern.bSLAN_Vid", sizeof(rule->pattern.bSLAN_Vid), &rule->pattern.bSLAN_Vid);
+	scanParamArg(argc, argv, "pattern.nSLAN_Vid", sizeof(rule->pattern.nSLAN_Vid), &rule->pattern.nSLAN_Vid);
+	scanParamArg(argc, argv, "pattern.bSLANVid_Exclude", sizeof(rule->pattern.bSLANVid_Exclude), &rule->pattern.bSLANVid_Exclude);
+
+	scanParamArg(argc, argv, "pattern.bPayload1_SrcEnable", sizeof(rule->pattern.bPayload1_SrcEnable), &rule->pattern.bPayload1_SrcEnable);
+	scanParamArg(argc, argv, "pattern.nPayload1", sizeof(rule->pattern.nPayload1), &rule->pattern.nPayload1);
+	scanParamArg(argc, argv, "pattern.bPayload1MaskRange_Select", sizeof(rule->pattern.bPayload1MaskRange_Select), &rule->pattern.bPayload1MaskRange_Select);
+	scanParamArg(argc, argv, "pattern.nPayload1_Mask", sizeof(rule->pattern.nPayload1_Mask), &rule->pattern.nPayload1_Mask);
+	scanParamArg(argc, argv, "pattern.bPayload1_Exclude", sizeof(rule->pattern.bPayload1_Exclude), &rule->pattern.bPayload1_Exclude);
+
+	scanParamArg(argc, argv, "pattern.bPayload2_SrcEnable", sizeof(rule->pattern.bPayload2_SrcEnable), &rule->pattern.bPayload2_SrcEnable);
+	scanParamArg(argc, argv, "pattern.nPayload2", sizeof(rule->pattern.nPayload2), &rule->pattern.nPayload2);
+	scanParamArg(argc, argv, "pattern.bPayload2MaskRange_Select", sizeof(rule->pattern.bPayload2MaskRange_Select), &rule->pattern.bPayload2MaskRange_Select);
+	scanParamArg(argc, argv, "pattern.nPayload2_Mask", sizeof(rule->pattern.nPayload2_Mask), &rule->pattern.nPayload2_Mask);
+	scanParamArg(argc, argv, "pattern.bPayload2_Exclude", sizeof(rule->pattern.bPayload2_Exclude), &rule->pattern.bPayload2_Exclude);
+
+	scanParamArg(argc, argv, "pattern.bParserFlagLSB_Enable", sizeof(rule->pattern.bParserFlagLSB_Enable), &rule->pattern.bParserFlagLSB_Enable);
+	scanParamArg(argc, argv, "pattern.nParserFlagLSB", sizeof(rule->pattern.nParserFlagLSB), &rule->pattern.nParserFlagLSB);
+	scanParamArg(argc, argv, "pattern.nParserFlagLSB_Mask", sizeof(rule->pattern.nParserFlagLSB_Mask), &rule->pattern.nParserFlagLSB_Mask);
+	scanParamArg(argc, argv, "pattern.bParserFlagLSB_Exclude", sizeof(rule->pattern.bParserFlagLSB_Exclude), &rule->pattern.bParserFlagLSB_Exclude);
+
+	scanParamArg(argc, argv, "pattern.bParserFlagMSB_Enable", sizeof(rule->pattern.bParserFlagMSB_Enable), &rule->pattern.bParserFlagMSB_Enable);
+	scanParamArg(argc, argv, "pattern.nParserFlagMSB", sizeof(rule->pattern.nParserFlagMSB), &rule->pattern.nParserFlagMSB);
+	scanParamArg(argc, argv, "pattern.nParserFlagMSB_Mask", sizeof(rule->pattern.nParserFlagMSB_Mask), &rule->pattern.nParserFlagMSB_Mask);
+	scanParamArg(argc, argv, "pattern.bParserFlagMSB_Exclude", sizeof(rule->pattern.bParserFlagMSB_Exclude), &rule->pattern.bParserFlagMSB_Exclude);
+
+	scanParamArg(argc, argv, "pattern.bParserFlag1LSB_Enable", sizeof(rule->pattern.bParserFlag1LSB_Enable), &rule->pattern.bParserFlag1LSB_Enable);
+	scanParamArg(argc, argv, "pattern.nParserFlag1LSB", sizeof(rule->pattern.nParserFlag1LSB), &rule->pattern.nParserFlag1LSB);
+	scanParamArg(argc, argv, "pattern.nParserFlag1LSB_Mask", sizeof(rule->pattern.nParserFlag1LSB_Mask), &rule->pattern.nParserFlag1LSB_Mask);
+	scanParamArg(argc, argv, "pattern.bParserFlag1LSB_Exclude", sizeof(rule->pattern.bParserFlag1LSB_Exclude), &rule->pattern.bParserFlag1LSB_Exclude);
+
+	scanParamArg(argc, argv, "pattern.bParserFlag1MSB_Enable", sizeof(rule->pattern.bParserFlag1MSB_Enable), &rule->pattern.bParserFlag1MSB_Enable);
+	scanParamArg(argc, argv, "pattern.nParserFlag1MSB", sizeof(rule->pattern.nParserFlag1MSB), &rule->pattern.nParserFlag1MSB);
+	scanParamArg(argc, argv, "pattern.nParserFlag1MSB_Mask", sizeof(rule->pattern.nParserFlag1MSB_Mask), &rule->pattern.nParserFlag1MSB_Mask);
+	scanParamArg(argc, argv, "pattern.bParserFlag1MSB_Exclude", sizeof(rule->pattern.bParserFlag1MSB_Exclude), &rule->pattern.bParserFlag1MSB_Exclude);
+
+	scanParamArg(argc, argv, "pattern.bVid_Original",      sizeof(rule->pattern.bVid_Original), &rule->pattern.bVid_Original);
+	scanParamArg(argc, argv, "pattern.nOuterVidRange",     sizeof(rule->pattern.nOuterVidRange), &rule->pattern.nOuterVidRange);
+	scanParamArg(argc, argv, "pattern.bSVidRange_Select",  sizeof(rule->pattern.bSVidRange_Select), &rule->pattern.bSVidRange_Select);
+	scanParamArg(argc, argv, "pattern.bOuterVid_Original", sizeof(rule->pattern.bOuterVid_Original), &rule->pattern.bOuterVid_Original);
+
+	scanParamArg(argc, argv, "action.eTrafficClassAction", sizeof(rule->action.eTrafficClassAction), &rule->action.eTrafficClassAction);
+	scanParamArg(argc, argv, "action.nTrafficClassAlternate", sizeof(rule->action.nTrafficClassAlternate), &rule->action.nTrafficClassAlternate);
+	scanParamArg(argc, argv, "action.eSnoopingTypeAction", sizeof(rule->action.eSnoopingTypeAction), &rule->action.eSnoopingTypeAction);
+	scanParamArg(argc, argv, "action.eLearningAction", sizeof(rule->action.eLearningAction), &rule->action.eLearningAction);
+	scanParamArg(argc, argv, "action.eIrqAction", sizeof(rule->action.eIrqAction), &rule->action.eIrqAction);
+	scanParamArg(argc, argv, "action.eCrossStateAction", sizeof(rule->action.eCrossStateAction), &rule->action.eCrossStateAction);
+	scanParamArg(argc, argv, "action.eCritFrameAction", sizeof(rule->action.eCritFrameAction), &rule->action.eCritFrameAction);
+	scanParamArg(argc, argv, "action.eTimestampAction", sizeof(rule->action.eTimestampAction), &rule->action.eTimestampAction);
+	scanParamArg(argc, argv, "action.ePortMapAction", sizeof(rule->action.ePortMapAction), &rule->action.ePortMapAction);
+	scanParamArg(argc, argv, "action.nForwardPortMap", sizeof(rule->action.nForwardPortMap[0]), &rule->action.nForwardPortMap[0]);
+	for (size_t i = 1; i < ARRAY_SIZE(rule->action.nForwardPortMap); i++) {
+		char buf[32];
+
+		snprintf(buf, sizeof(buf), "action.nForwardPortMap[%zu]", i);
+		scanParamArg(argc, argv, buf, sizeof(rule->action.nForwardPortMap[i]), &rule->action.nForwardPortMap[i]);
+	}
+
+	scanParamArg(argc, argv, "action.bRemarkAction", sizeof(rule->action.bRemarkAction), &rule->action.bRemarkAction);
+	scanParamArg(argc, argv, "action.bRemarkPCP", sizeof(rule->action.bRemarkAction), &rule->action.bRemarkPCP);
+	scanParamArg(argc, argv, "action.bRemarkSTAG_PCP", sizeof(rule->action.bRemarkSTAG_PCP), &rule->action.bRemarkSTAG_PCP);
+	scanParamArg(argc, argv, "action.bRemarkSTAG_DEI", sizeof(rule->action.bRemarkSTAG_DEI), &rule->action.bRemarkSTAG_DEI);
+	scanParamArg(argc, argv, "action.bRemarkDSCP", sizeof(rule->action.bRemarkDSCP), &rule->action.bRemarkDSCP);
+	scanParamArg(argc, argv, "action.bRemarkClass", sizeof(rule->action.bRemarkClass), &rule->action.bRemarkClass);
+	scanParamArg(argc, argv, "action.eMeterAction", sizeof(rule->action.eMeterAction), &rule->action.eMeterAction);
+	scanParamArg(argc, argv, "action.nMeterId", sizeof(rule->action.nMeterId), &rule->action.nMeterId);
+	scanParamArg(argc, argv, "action.bRMON_Action", sizeof(rule->action.bRMON_Action), &rule->action.bRMON_Action);
+	scanParamArg(argc, argv, "action.nRMON_Id", sizeof(rule->action.nRMON_Id), &rule->action.nRMON_Id);
+	scanParamArg(argc, argv, "action.eVLAN_Action", sizeof(rule->action.eVLAN_Action), &rule->action.eVLAN_Action);
+	scanParamArg(argc, argv, "action.nVLAN_Id", sizeof(rule->action.nVLAN_Id), &rule->action.nVLAN_Id);
+	scanParamArg(argc, argv, "action.nFId", sizeof(rule->action.nFId), &rule->action.nFId);
+	scanParamArg(argc, argv, "action.bFidEnable", sizeof(rule->action.bFidEnable), &rule->action.bFidEnable);
+
+	scanParamArg(argc, argv, "action.eSVLAN_Action", sizeof(rule->action.eSVLAN_Action), &rule->action.eSVLAN_Action);
+	scanParamArg(argc, argv, "action.nSVLAN_Id", sizeof(rule->action.nSVLAN_Id), &rule->action.nSVLAN_Id);
+	scanParamArg(argc, argv, "action.eVLAN_CrossAction", sizeof(rule->action.eVLAN_CrossAction), &rule->action.eVLAN_CrossAction);
+	scanParamArg(argc, argv, "action.bPortBitMapMuxControl", sizeof(rule->action.bPortBitMapMuxControl), &rule->action.bPortBitMapMuxControl);
+	scanParamArg(argc, argv, "action.bCVLAN_Ignore_Control", sizeof(rule->action.bCVLAN_Ignore_Control), &rule->action.bCVLAN_Ignore_Control);
+	scanParamArg(argc, argv, "action.bPortLinkSelection", sizeof(rule->action.bPortLinkSelection), &rule->action.bPortLinkSelection);
+	scanParamArg(argc, argv, "action.bPortTrunkAction", sizeof(rule->action.bPortTrunkAction), &rule->action.bPortTrunkAction);
+
+	scanParamArg(argc, argv, "action.bFlowID_Action", sizeof(rule->action.bFlowID_Action), &rule->action.bFlowID_Action);
+	scanParamArg(argc, argv, "action.nFlowID", sizeof(rule->action.nFlowID), &rule->action.nFlowID);
+
+	scanParamArg(argc, argv, "action.bRoutExtId_Action", sizeof(rule->action.bRoutExtId_Action), &rule->action.bRoutExtId_Action);
+	scanParamArg(argc, argv, "action.nRoutExtId", sizeof(rule->action.nRoutExtId), &rule->action.nRoutExtId);
+
+	scanParamArg(argc, argv, "action.bRtDstPortMaskCmp_Action", sizeof(rule->action.bRtDstPortMaskCmp_Action), &rule->action.bRtDstPortMaskCmp_Action);
+	scanParamArg(argc, argv, "action.bRtSrcPortMaskCmp_Action", sizeof(rule->action.bRtSrcPortMaskCmp_Action), &rule->action.bRtSrcPortMaskCmp_Action);
+	scanParamArg(argc, argv, "action.bRtDstIpMaskCmp_Action", sizeof(rule->action.bRtDstIpMaskCmp_Action), &rule->action.bRtDstIpMaskCmp_Action);
+	scanParamArg(argc, argv, "action.bRtSrcIpMaskCmp_Action", sizeof(rule->action.bRtSrcIpMaskCmp_Action), &rule->action.bRtSrcIpMaskCmp_Action);
+	scanParamArg(argc, argv, "action.bRtInnerIPasKey_Action", sizeof(rule->action.bRtInnerIPasKey_Action), &rule->action.bRtInnerIPasKey_Action);
+
+	scanParamArg(argc, argv, "action.bRtAccelEna_Action", sizeof(rule->action.bRtAccelEna_Action), &rule->action.bRtAccelEna_Action);
+	scanParamArg(argc, argv, "action.bRtCtrlEna_Action", sizeof(rule->action.bRtCtrlEna_Action), &rule->action.bRtCtrlEna_Action);
+	scanParamArg(argc, argv, "action.eProcessPath_Action", sizeof(rule->action.eProcessPath_Action), &rule->action.eProcessPath_Action);
+	scanParamArg(argc, argv, "action.ePortFilterType_Action", sizeof(rule->action.ePortFilterType_Action), &rule->action.ePortFilterType_Action);
+
+	scanParamArg(argc, argv, "action.bOamEnable",          sizeof(rule->action.bOamEnable), &rule->action.bOamEnable);
+	scanParamArg(argc, argv, "action.nRecordId",           sizeof(rule->action.nRecordId), &rule->action.nRecordId);
+	scanParamArg(argc, argv, "action.bExtractEnable",      sizeof(rule->action.bExtractEnable), &rule->action.bExtractEnable);
+	scanParamArg(argc, argv, "action.bPceBypassPath",      sizeof(rule->action.bPceBypassPath), &rule->action.bPceBypassPath);
+	scanParamArg(argc, argv, "action.bTxFlowCnt",          sizeof(rule->action.bTxFlowCnt), &rule->action.bTxFlowCnt);
+	scanParamArg(argc, argv, "action.eTimeFormat",         sizeof(rule->action.eTimeFormat), &rule->action.eTimeFormat);
+	scanParamArg(argc, argv, "action.bNoPktUpdate",        sizeof(rule->action.bNoPktUpdate), &rule->action.bNoPktUpdate);
+	scanParamArg(argc, argv, "action.bAppendToPkt",        sizeof(rule->action.bAppendToPkt), &rule->action.bAppendToPkt);
+	scanParamArg(argc, argv, "action.nTimeComp",           sizeof(rule->action.nTimeComp), &rule->action.nTimeComp);
+	scanParamArg(argc, argv, "action.nInsExtPoint",        sizeof(rule->action.nInsExtPoint), &rule->action.nInsExtPoint);
+	scanParamArg(argc, argv, "action.nPtpSeqId",           sizeof(rule->action.nPtpSeqId), &rule->action.nPtpSeqId);
+	scanParamArg(argc, argv, "action.nPktUpdateOffset",    sizeof(rule->action.nPktUpdateOffset), &rule->action.nPktUpdateOffset);
+	scanParamArg(argc, argv, "action.nOamFlowId",          sizeof(rule->action.nOamFlowId), &rule->action.nOamFlowId);
+	scanParamArg(argc, argv, "action.eColorFrameAction",    sizeof(rule->action.eColorFrameAction), &rule->action.eColorFrameAction);
+	scanParamArg(argc, argv, "action.bExtendedVlanEnable",  sizeof(rule->action.bExtendedVlanEnable), &rule->action.bExtendedVlanEnable);
+	scanParamArg(argc, argv, "action.nExtendedVlanBlockId", sizeof(rule->action.nExtendedVlanBlockId), &rule->action.nExtendedVlanBlockId);
+
+	/*Aplicable for GSWIP 3.2*/
+
+	scanParamArg(argc, argv, "pattern.bFlexibleField4Enable",
+		     sizeof(rule->pattern.bFlexibleField4Enable), &rule->pattern.bFlexibleField4Enable);
+	scanParamArg(argc, argv, "pattern.bFlexibleField4_ExcludeEnable",
+		     sizeof(rule->pattern.bFlexibleField4_ExcludeEnable), &rule->pattern.bFlexibleField4_ExcludeEnable);
+	scanParamArg(argc, argv, "pattern.bFlexibleField4_RangeEnable",
+		     sizeof(rule->pattern.bFlexibleField4_RangeEnable), &rule->pattern.bFlexibleField4_RangeEnable);
+	scanParamArg(argc, argv, "pattern.nFlexibleField4_ParserIndex",
+		     sizeof(rule->pattern.nFlexibleField4_ParserIndex), &rule->pattern.nFlexibleField4_ParserIndex);
+	scanParamArg(argc, argv, "pattern.nFlexibleField4_Value",
+		     sizeof(rule->pattern.nFlexibleField4_Value), &rule->pattern.nFlexibleField4_Value);
+	scanParamArg(argc, argv, "pattern.nFlexibleField4_MaskOrRange",
+		     sizeof(rule->pattern.nFlexibleField4_MaskOrRange), &rule->pattern.nFlexibleField4_MaskOrRange);
+
+	scanParamArg(argc, argv, "pattern.bFlexibleField3Enable",
+		     sizeof(rule->pattern.bFlexibleField3Enable), &rule->pattern.bFlexibleField3Enable);
+	scanParamArg(argc, argv, "pattern.bFlexibleField3_ExcludeEnable",
+		     sizeof(rule->pattern.bFlexibleField3_ExcludeEnable), &rule->pattern.bFlexibleField3_ExcludeEnable);
+	scanParamArg(argc, argv, "pattern.bFlexibleField3_RangeEnable",
+		     sizeof(rule->pattern.bFlexibleField3_RangeEnable), &rule->pattern.bFlexibleField3_RangeEnable);
+	scanParamArg(argc, argv, "pattern.nFlexibleField3_ParserIndex",
+		     sizeof(rule->pattern.nFlexibleField3_ParserIndex), &rule->pattern.nFlexibleField3_ParserIndex);
+	scanParamArg(argc, argv, "pattern.nFlexibleField3_Value",
+		     sizeof(rule->pattern.nFlexibleField3_Value), &rule->pattern.nFlexibleField3_Value);
+	scanParamArg(argc, argv, "pattern.nFlexibleField3_MaskOrRange",
+		     sizeof(rule->pattern.nFlexibleField3_MaskOrRange), &rule->pattern.nFlexibleField3_MaskOrRange);
+
+	scanParamArg(argc, argv, "pattern.bFlexibleField2Enable",
+		     sizeof(rule->pattern.bFlexibleField2Enable), &rule->pattern.bFlexibleField2Enable);
+	scanParamArg(argc, argv, "pattern.bFlexibleField2_ExcludeEnable",
+		     sizeof(rule->pattern.bFlexibleField2_ExcludeEnable), &rule->pattern.bFlexibleField2_ExcludeEnable);
+	scanParamArg(argc, argv, "pattern.bFlexibleField2_RangeEnable",
+		     sizeof(rule->pattern.bFlexibleField2_RangeEnable), &rule->pattern.bFlexibleField2_RangeEnable);
+	scanParamArg(argc, argv, "pattern.nFlexibleField2_ParserIndex",
+		     sizeof(rule->pattern.nFlexibleField2_ParserIndex), &rule->pattern.nFlexibleField2_ParserIndex);
+	scanParamArg(argc, argv, "pattern.nFlexibleField2_Value",
+		     sizeof(rule->pattern.nFlexibleField2_Value), &rule->pattern.nFlexibleField2_Value);
+	scanParamArg(argc, argv, "pattern.nFlexibleField2_MaskOrRange",
+		     sizeof(rule->pattern.nFlexibleField2_MaskOrRange), &rule->pattern.nFlexibleField2_MaskOrRange);
+
+	scanParamArg(argc, argv, "pattern.bFlexibleField1Enable",
+		     sizeof(rule->pattern.bFlexibleField1Enable), &rule->pattern.bFlexibleField1Enable);
+	scanParamArg(argc, argv, "pattern.bFlexibleField1_ExcludeEnable",
+		     sizeof(rule->pattern.bFlexibleField1_ExcludeEnable), &rule->pattern.bFlexibleField1_ExcludeEnable);
+	scanParamArg(argc, argv, "pattern.bFlexibleField1_RangeEnable",
+		     sizeof(rule->pattern.bFlexibleField1_RangeEnable), &rule->pattern.bFlexibleField1_RangeEnable);
+	scanParamArg(argc, argv, "pattern.nFlexibleField1_ParserIndex",
+		     sizeof(rule->pattern.nFlexibleField1_ParserIndex), &rule->pattern.nFlexibleField1_ParserIndex);
+	scanParamArg(argc, argv, "pattern.nFlexibleField1_Value",
+		     sizeof(rule->pattern.nFlexibleField1_Value), &rule->pattern.nFlexibleField1_Value);
+	scanParamArg(argc, argv, "pattern.nFlexibleField1_MaskOrRange",
+		     sizeof(rule->pattern.nFlexibleField1_MaskOrRange), &rule->pattern.nFlexibleField1_MaskOrRange);
+
+	scanParamArg(argc, argv, "action.bPBB_Action_Enable", sizeof(rule->action.bPBB_Action_Enable), &rule->action.bPBB_Action_Enable);
+	scanParamArg(argc, argv, "action.sPBB_Action.bIheaderActionEnable",
+		     sizeof(rule->action.sPBB_Action.bIheaderActionEnable), &rule->action.sPBB_Action.bIheaderActionEnable);
+	scanParamArg(argc, argv, "action.sPBB_Action.eIheaderOpMode",
+		     sizeof(rule->action.sPBB_Action.eIheaderOpMode), &rule->action.sPBB_Action.eIheaderOpMode);
+	scanParamArg(argc, argv, "action.sPBB_Action.bTunnelIdKnownTrafficEnable",
+		     sizeof(rule->action.sPBB_Action.bTunnelIdKnownTrafficEnable), &rule->action.sPBB_Action.bTunnelIdKnownTrafficEnable);
+	scanParamArg(argc, argv, "action.sPBB_Action.nTunnelIdKnownTraffic",
+		     sizeof(rule->action.sPBB_Action.nTunnelIdKnownTraffic), &rule->action.sPBB_Action.nTunnelIdKnownTraffic);
+	scanParamArg(argc, argv, "action.sPBB_Action.bTunnelIdUnKnownTrafficEnable",
+		     sizeof(rule->action.sPBB_Action.bTunnelIdUnKnownTrafficEnable), &rule->action.sPBB_Action.bTunnelIdUnKnownTrafficEnable);
+	scanParamArg(argc, argv, "action.sPBB_Action.nTunnelIdUnKnownTraffic",
+		     sizeof(rule->action.sPBB_Action.nTunnelIdUnKnownTraffic), &rule->action.sPBB_Action.nTunnelIdUnKnownTraffic);
+	scanParamArg(argc, argv, "action.sPBB_Action.bB_DstMac_FromMacTableEnable",
+		     sizeof(rule->action.sPBB_Action.bB_DstMac_FromMacTableEnable), &rule->action.sPBB_Action.bB_DstMac_FromMacTableEnable);
+	scanParamArg(argc, argv, "action.sPBB_Action.bReplace_B_SrcMacEnable",
+		     sizeof(rule->action.sPBB_Action.bReplace_B_SrcMacEnable), &rule->action.sPBB_Action.bReplace_B_SrcMacEnable);
+	scanParamArg(argc, argv, "action.sPBB_Action.bReplace_B_DstMacEnable",
+		     sizeof(rule->action.sPBB_Action.bReplace_B_DstMacEnable), &rule->action.sPBB_Action.bReplace_B_DstMacEnable);
+	scanParamArg(argc, argv, "action.sPBB_Action.bReplace_I_TAG_ResEnable",
+		     sizeof(rule->action.sPBB_Action.bReplace_I_TAG_ResEnable), &rule->action.sPBB_Action.bReplace_I_TAG_ResEnable);
+	scanParamArg(argc, argv, "action.sPBB_Action.bReplace_I_TAG_UacEnable",
+		     sizeof(rule->action.sPBB_Action.bReplace_I_TAG_UacEnable), &rule->action.sPBB_Action.bReplace_I_TAG_UacEnable);
+	scanParamArg(argc, argv, "action.sPBB_Action.bReplace_I_TAG_DeiEnable",
+		     sizeof(rule->action.sPBB_Action.bReplace_I_TAG_DeiEnable), &rule->action.sPBB_Action.bReplace_I_TAG_DeiEnable);
+	scanParamArg(argc, argv, "action.sPBB_Action.bReplace_I_TAG_PcpEnable",
+		     sizeof(rule->action.sPBB_Action.bReplace_I_TAG_PcpEnable), &rule->action.sPBB_Action.bReplace_I_TAG_PcpEnable);
+	scanParamArg(argc, argv, "action.sPBB_Action.bReplace_I_TAG_SidEnable",
+		     sizeof(rule->action.sPBB_Action.bReplace_I_TAG_SidEnable), &rule->action.sPBB_Action.bReplace_I_TAG_SidEnable);
+	scanParamArg(argc, argv, "action.sPBB_Action.bReplace_I_TAG_TpidEnable",
+		     sizeof(rule->action.sPBB_Action.bReplace_I_TAG_TpidEnable), &rule->action.sPBB_Action.bReplace_I_TAG_TpidEnable);
+	scanParamArg(argc, argv, "action.sPBB_Action.bBtagActionEnable",
+		     sizeof(rule->action.sPBB_Action.bBtagActionEnable), &rule->action.sPBB_Action.bBtagActionEnable);
+	scanParamArg(argc, argv, "action.sPBB_Action.eBtagOpMode",
+		     sizeof(rule->action.sPBB_Action.eBtagOpMode), &rule->action.sPBB_Action.eBtagOpMode);
+	scanParamArg(argc, argv, "action.sPBB_Action.bProcessIdKnownTrafficEnable",
+		     sizeof(rule->action.sPBB_Action.bProcessIdKnownTrafficEnable), &rule->action.sPBB_Action.bProcessIdKnownTrafficEnable);
+	scanParamArg(argc, argv, "action.sPBB_Action.nProcessIdKnownTraffic",
+		     sizeof(rule->action.sPBB_Action.nProcessIdKnownTraffic), &rule->action.sPBB_Action.nProcessIdKnownTraffic);
+	scanParamArg(argc, argv, "action.sPBB_Action.bProcessIdUnKnownTrafficEnable",
+		     sizeof(rule->action.sPBB_Action.bProcessIdUnKnownTrafficEnable), &rule->action.sPBB_Action.bProcessIdUnKnownTrafficEnable);
+	scanParamArg(argc, argv, "action.sPBB_Action.nProcessIdUnKnownTraffic",
+		     sizeof(rule->action.sPBB_Action.nProcessIdUnKnownTraffic), &rule->action.sPBB_Action.nProcessIdUnKnownTraffic);
+	scanParamArg(argc, argv, "action.sPBB_Action.bReplace_B_TAG_DeiEnable",
+		     sizeof(rule->action.sPBB_Action.bReplace_B_TAG_DeiEnable), &rule->action.sPBB_Action.bReplace_B_TAG_DeiEnable);
+	scanParamArg(argc, argv, "action.sPBB_Action.bReplace_B_TAG_PcpEnable",
+		     sizeof(rule->action.sPBB_Action.bReplace_B_TAG_PcpEnable), &rule->action.sPBB_Action.bReplace_B_TAG_PcpEnable);
+	scanParamArg(argc, argv, "action.sPBB_Action.bReplace_B_TAG_VidEnable",
+		     sizeof(rule->action.sPBB_Action.bReplace_B_TAG_VidEnable), &rule->action.sPBB_Action.bReplace_B_TAG_VidEnable);
+	scanParamArg(argc, argv, "action.sPBB_Action.bReplace_B_TAG_TpidEnable",
+		     sizeof(rule->action.sPBB_Action.bReplace_B_TAG_TpidEnable), &rule->action.sPBB_Action.bReplace_B_TAG_TpidEnable);
+
+	scanParamArg(argc, argv, "action.sPBB_Action.bMacTableMacinMacActionEnable",
+		     sizeof(rule->action.sPBB_Action.bMacTableMacinMacActionEnable), &rule->action.sPBB_Action.bMacTableMacinMacActionEnable);
+	scanParamArg(argc, argv, "action.sPBB_Action.eMacTableMacinMacSelect",
+		     sizeof(rule->action.sPBB_Action.eMacTableMacinMacSelect), &rule->action.sPBB_Action.eMacTableMacinMacSelect);
+
+	scanParamArg(argc, argv, "action.bDestSubIf_Action_Enable",
+		     sizeof(rule->action.bDestSubIf_Action_Enable), &rule->action.bDestSubIf_Action_Enable);
+	scanParamArg(argc, argv, "action.sDestSubIF_Action.bDestSubIFIDActionEnable",
+		     sizeof(rule->action.sDestSubIF_Action.bDestSubIFIDActionEnable), &rule->action.sDestSubIF_Action.bDestSubIFIDActionEnable);
+	scanParamArg(argc, argv, "action.sDestSubIF_Action.bDestSubIFIDAssignmentEnable",
+		     sizeof(rule->action.sDestSubIF_Action.bDestSubIFIDAssignmentEnable), &rule->action.sDestSubIF_Action.bDestSubIFIDAssignmentEnable);
+	scanParamArg(argc, argv, "action.sDestSubIF_Action.nDestSubIFGrp_Field",
+		     sizeof(rule->action.sDestSubIF_Action.nDestSubIFGrp_Field), &rule->action.sDestSubIF_Action.nDestSubIFGrp_Field);
+}
+
 GSW_return_t fapi_GSW_PceRuleRead(int prmc, char *prmv[])
 {
     GSW_PCE_rule_t pce_rule = {0};
-    int i;
-
     GSW_Device_t *gsw_dev;
     GSW_return_t ret;
     int rret;
@@ -3807,7 +4843,7 @@ GSW_return_t fapi_GSW_PceRuleRead(int prmc, char *prmv[])
     if (rret < 1)
     {
         printf("Parameter not Found: pattern.nIndex\n");
-        return OS_ERROR;
+        return GSW_statusErr;
     }
 
     scanParamArg(prmc, prmv, "nLogicalPortId", sizeof(pce_rule.logicalportid), &pce_rule.logicalportid);
@@ -3821,582 +4857,8 @@ GSW_return_t fapi_GSW_PceRuleRead(int prmc, char *prmv[])
     else
     {
         printf("fapi_GSW_PceRuleRead done\n");
-
-        if (pce_rule.pattern.bEnable)
-        {
-            printf("\n\tp.nIndex                                           = %u", pce_rule.pattern.nIndex);
-
-            if (pce_rule.pattern.bMAC_DstEnable)
-            {
-                printf("\n\tp.bMAC_DstEnable                                   = %u", pce_rule.pattern.bMAC_DstEnable);
-                printf("\n\tp.bDstMAC_Exclude                                  = %u", pce_rule.pattern.bDstMAC_Exclude);
-                printf("\n\tp.nMAC_Dst                                         = ");
-
-                for (i = 0; i < 6; i++)
-                {
-                    printf("%2.2x", pce_rule.pattern.nMAC_Dst[i]);
-                }
-                printf("\n\tp.nMAC_DstMask                                     = 0x%x", pce_rule.pattern.nMAC_DstMask);
-            }
-
-            if (pce_rule.pattern.bMAC_SrcEnable)
-            {
-                printf("\n\tp.bMAC_SrcEnable                                   = %u", pce_rule.pattern.bMAC_SrcEnable);
-                printf("\n\tp.bSrcMAC_Exclude                                  = %u", pce_rule.pattern.bSrcMAC_Exclude);
-                printf("\n\tp.nMAC_Src                                         = ");
-
-                for (i = 0; i < 6; i++)
-                {
-                    printf("%2.2x", pce_rule.pattern.nMAC_Src[i]);
-                }
-                printf("\n\tp.nMAC_SrcMask                                     = 0x%x", pce_rule.pattern.nMAC_SrcMask);
-            }
-
-            if (pce_rule.pattern.eDstIP_Select)
-            {
-                printf("\n\tp.eDstIP_Select                                    = %u", pce_rule.pattern.eDstIP_Select);
-                printf("\n\tp.bDstIP_Exclude                                   = %u", pce_rule.pattern.bDstIP_Exclude);
-
-                if (pce_rule.pattern.eDstIP_Select == GSW_PCE_IP_V4)
-                {
-                    printf("\n\tp.nDstIP                                           = 0x%x", pce_rule.pattern.nDstIP.nIPv4);
-                    printf("\n\tp.nDstIP_Mask                                      = 0x%x", pce_rule.pattern.nDstIP_Mask);
-                }
-                else if (pce_rule.pattern.eDstIP_Select == GSW_PCE_IP_V6)
-                {
-                    printf("\n\tp.nDstIP                                           = ");
-
-                    for (i = 0; i < 8; i++)
-                    {
-                        if (i == 7)
-                            printf("%x", pce_rule.pattern.nDstIP.nIPv6[i]);
-                        else
-                            printf("%x:", pce_rule.pattern.nDstIP.nIPv6[i]);
-                    }
-                    printf("\n\tp.nDstIP_Mask                                      = 0x%x", pce_rule.pattern.nDstIP_Mask);
-                }
-            }
-
-            if (pce_rule.pattern.eInnerDstIP_Select)
-            {
-                printf("\n\tp.eInnerDstIP_Select                               = %u", pce_rule.pattern.eInnerDstIP_Select);
-                printf("\n\tp.bInnerDstIP_Exclude                              = %u", pce_rule.pattern.bInnerDstIP_Exclude);
-
-                if (pce_rule.pattern.eInnerDstIP_Select == GSW_PCE_IP_V4)
-                {
-                    printf("\n\tp.nInnerDstIP                                      = 0x%x", pce_rule.pattern.nInnerDstIP.nIPv4);
-                    printf("\n\tp.nInnerDstIP_Mask                                 = 0x%x", pce_rule.pattern.nInnerDstIP_Mask);
-                }
-                else if (pce_rule.pattern.eInnerDstIP_Select == GSW_PCE_IP_V6)
-                {
-                    printf("\n\tp.nInnerDstIP                                      = ");
-
-                    for (i = 0; i < 8; i++)
-                    {
-                        if (i == 7)
-                            printf("%x", pce_rule.pattern.nInnerDstIP.nIPv6[i]);
-                        else
-                            printf("%x:", pce_rule.pattern.nInnerDstIP.nIPv6[i]);
-                    }
-                    printf("\n\tp.nInnerDstIP_Mask                                 = 0x%x", pce_rule.pattern.nInnerDstIP_Mask);
-                }
-            }
-
-            if (pce_rule.pattern.eSrcIP_Select)
-            {
-                printf("\n\tp.eSrcIP_Select                                    = %u", pce_rule.pattern.eSrcIP_Select);
-                printf("\n\tp.bSrcIP_Exclude                                   = %u", pce_rule.pattern.bSrcIP_Exclude);
-
-                if (pce_rule.pattern.eSrcIP_Select == GSW_PCE_IP_V4)
-                {
-                    printf("\n\tp.nSrcIP                                           = 0x%x", pce_rule.pattern.nSrcIP.nIPv4);
-                    printf("\n\tp.nSrcIP_Mask                                      = 0x%x", pce_rule.pattern.nSrcIP_Mask);
-                }
-                else if (pce_rule.pattern.eSrcIP_Select == GSW_PCE_IP_V6)
-                {
-                    printf("\n\tp.nSrcIP                                           = ");
-
-                    for (i = 0; i < 8; i++)
-                    {
-                        if (i == 7)
-                            printf("%x", pce_rule.pattern.nSrcIP.nIPv6[i]);
-                        else
-                            printf("%x:", pce_rule.pattern.nSrcIP.nIPv6[i]);
-                    }
-                    printf("\n\tp.nSrcIP_Mask                                      = 0x%x", pce_rule.pattern.nSrcIP_Mask);
-                }
-            }
-
-            if (pce_rule.pattern.eInnerSrcIP_Select)
-            {
-                printf("\n\tp.eInnerSrcIP_Select                               = %u", pce_rule.pattern.eInnerSrcIP_Select);
-                printf("\n\tp.bInnerSrcIP_Exclude                              = %u", pce_rule.pattern.bInnerSrcIP_Exclude);
-
-                if (pce_rule.pattern.eInnerSrcIP_Select == GSW_PCE_IP_V4)
-                {
-                    printf("\n\tp.nInnerSrcIP                                      = 0x%x", pce_rule.pattern.nInnerSrcIP.nIPv4);
-                    printf("\n\tp.nInnerSrcIP_Mask                                 = 0x%x", pce_rule.pattern.nInnerSrcIP_Mask);
-                }
-                else if (pce_rule.pattern.eInnerSrcIP_Select == GSW_PCE_IP_V6)
-                {
-                    printf("\n\tp.nInnerSrcIP                                      = ");
-
-                    for (i = 0; i < 8; i++)
-                    {
-                        if (i == 7)
-                            printf("%x", pce_rule.pattern.nInnerSrcIP.nIPv6[i]);
-                        else
-                            printf("%x:", pce_rule.pattern.nInnerSrcIP.nIPv6[i]);
-                    }
-                    printf("\n\tp.nInnerSrcIP_Mask                                 = 0x%x", pce_rule.pattern.nInnerSrcIP_Mask);
-                }
-            }
-
-            if (pce_rule.pattern.bVid)
-            {
-                printf("\n\tp.bVid                                             = %u", pce_rule.pattern.bVid);
-                printf("\n\tp.bVid_Exclude                                     = %u", pce_rule.pattern.bVid_Exclude);
-                printf("\n\tp.nVid                                             = %u", pce_rule.pattern.nVid);
-
-                if (pce_rule.pattern.bVidRange_Select)
-                    printf("\n\tp.bVidRange_Select                                 = %u (Range Key)", pce_rule.pattern.bVidRange_Select);
-                else
-                    printf("\n\tp.bVidRange_Select                                 = %u (Mask Key)", pce_rule.pattern.bVidRange_Select);
-
-                printf("\n\tp.nVidRange                                        = %u", pce_rule.pattern.nVidRange);
-                printf("\n\tp.bVid_Original                                    = %u", pce_rule.pattern.bVid_Original);
-            }
-
-            if (pce_rule.pattern.bSLAN_Vid)
-            {
-                printf("\n\tp.bSLAN_Vid                                        = %u", pce_rule.pattern.bSLAN_Vid);
-                printf("\n\tp.bSLANVid_Exclude                                 = %u", pce_rule.pattern.bSLANVid_Exclude);
-                printf("\n\tp.nSLAN_Vid                                        = %u", pce_rule.pattern.nSLAN_Vid);
-
-                if (pce_rule.pattern.bSVidRange_Select)
-                    printf("\n\tp.bSVidRange_Select                                = %u (Range Key)", pce_rule.pattern.bSVidRange_Select);
-                else
-                    printf("\n\tp.bSVidRange_Select                                = %u (Mask Key)", pce_rule.pattern.bSVidRange_Select);
-
-                printf("\n\tp.nOuterVidRange                                   = %u", pce_rule.pattern.nOuterVidRange);
-                printf("\n\tp.bOuterVid_Original                               = %u", pce_rule.pattern.bOuterVid_Original);
-            }
-
-            if (pce_rule.pattern.bPortIdEnable)
-            {
-                printf("\n\tp.bPortIdEnable                                    = %u", pce_rule.pattern.bPortIdEnable);
-                printf("\n\tp.bPortId_Exclude                                  = %u", pce_rule.pattern.bPortId_Exclude);
-                printf("\n\tp.nPortId                                          = %u", pce_rule.pattern.nPortId);
-            }
-
-            if (pce_rule.pattern.bSubIfIdEnable)
-            {
-                printf("\n\tp.bSubIfIdEnable                                   = %u", pce_rule.pattern.bSubIfIdEnable);
-                printf("\n\tp.bSubIfId_Exclude                                 = %u", pce_rule.pattern.bSubIfId_Exclude);
-                printf("\n\tp.eSubIfIdType                                     = %u", pce_rule.pattern.eSubIfIdType);
-                printf("\n\tp.nSubIfId                                         = %u", pce_rule.pattern.nSubIfId);
-            }
-
-            if (pce_rule.pattern.bPktLngEnable)
-            {
-                printf("\n\tp.bPktLngEnable                                    = %u", pce_rule.pattern.bPktLngEnable);
-                printf("\n\tp.bPktLng_Exclude                                  = %u", pce_rule.pattern.bPktLng_Exclude);
-                printf("\n\tp.nPktLng                                          = %u", pce_rule.pattern.nPktLng);
-                printf("\n\tp.nPktLngRange                                     = %u", pce_rule.pattern.nPktLngRange);
-            }
-
-            if (pce_rule.pattern.bPayload1_SrcEnable)
-            {
-                printf("\n\tp.bPayload1_Exclude                                = %u", pce_rule.pattern.bPayload1_Exclude);
-                printf("\n\tp.nPayload1                                        = 0x%x", pce_rule.pattern.nPayload1);
-                printf("\n\tp.bPayload1MaskRange_Select                        = %u", pce_rule.pattern.bPayload1MaskRange_Select);
-                printf("\n\tp.nPayload1_Mask                                   = 0x%x", pce_rule.pattern.nPayload1_Mask);
-            }
-
-            if (pce_rule.pattern.bPayload2_SrcEnable)
-            {
-                printf("\n\tp.bPayload2_Exclude                                = %u", pce_rule.pattern.bPayload2_Exclude);
-                printf("\n\tp.nPayload2                                        = 0x%x", pce_rule.pattern.nPayload2);
-                printf("\n\tp.bPayload2MaskRange_Select                        = %u", pce_rule.pattern.bPayload2MaskRange_Select);
-                printf("\n\tp.nPayload2_Mask                                   = 0x%x", pce_rule.pattern.nPayload2_Mask);
-            }
-
-            if (pce_rule.pattern.bParserFlagLSB_Enable)
-            {
-                printf("\n\tp.bParserFlagLSB_Exclude                           = %u", pce_rule.pattern.bParserFlagLSB_Exclude);
-                printf("\n\tp.nParserFlagLSB                                   = 0x%x", pce_rule.pattern.nParserFlagLSB);
-                printf("\n\tp.nParserFlagLSB_Mask                              = 0x%x", pce_rule.pattern.nParserFlagLSB_Mask);
-            }
-
-            if (pce_rule.pattern.bParserFlagMSB_Enable)
-            {
-                printf("\n\tp.bParserFlagMSB_Exclude                           = %u", pce_rule.pattern.bParserFlagMSB_Exclude);
-                printf("\n\tp.nParserFlagMSB                                   = 0x%x", pce_rule.pattern.nParserFlagMSB);
-                printf("\n\tp.nParserFlagMSB_Mask                              = 0x%x", pce_rule.pattern.nParserFlagMSB_Mask);
-            }
-
-            if (pce_rule.pattern.bParserFlag1LSB_Enable)
-            {
-                printf("\n\tp.bParserFlag1LSB_Exclude                          = %u", pce_rule.pattern.bParserFlag1LSB_Exclude);
-                printf("\n\tp.nParserFlag1LSB                                  = 0x%x", pce_rule.pattern.nParserFlag1LSB);
-                printf("\n\tp.nParserFlag1LSB_Mask                             = 0x%x", pce_rule.pattern.nParserFlag1LSB_Mask);
-            }
-
-            if (pce_rule.pattern.bParserFlag1MSB_Enable)
-            {
-                printf("\n\tp.bParserFlag1MSB_Exclude                          = %u", pce_rule.pattern.bParserFlag1MSB_Exclude);
-                printf("\n\tp.nParserFlag1MSB                                  = 0x%x", pce_rule.pattern.nParserFlag1MSB);
-                printf("\n\tp.nParserFlag1MSB_Mask                             = 0x%x", pce_rule.pattern.nParserFlag1MSB_Mask);
-            }
-
-            if (pce_rule.action.eVLAN_Action)
-            {
-                printf("\n\ta.eVLAN_Action				= %u", pce_rule.action.eVLAN_Action);
-                printf("\n\ta.nVLAN_Id					= %u", pce_rule.action.nVLAN_Id);
-            }
-
-            if (pce_rule.action.eSVLAN_Action)
-            {
-                printf("\n\ta.eSVLAN_Action 			= %u", pce_rule.action.eSVLAN_Action);
-                printf("\n\ta.nSVLAN_Id 				= %u", pce_rule.action.nSVLAN_Id);
-            }
-
-            if (pce_rule.action.eVLAN_CrossAction)
-                printf("\n\ta.eVLAN_CrossAction 		= %u", pce_rule.action.eVLAN_CrossAction);
-
-            if (pce_rule.action.bPortBitMapMuxControl)
-                printf("\n\ta.bPortBitMapMuxControl 	= %u", pce_rule.action.bPortBitMapMuxControl);
-
-            if (pce_rule.action.bCVLAN_Ignore_Control)
-                printf("\n\ta.bCVLAN_Ignore_Control 	= %u", pce_rule.action.bCVLAN_Ignore_Control);
-
-            if (pce_rule.action.eLearningAction)
-                printf("\n\ta.eLearningAction                                  = %u", pce_rule.action.eLearningAction);
-
-            if (pce_rule.action.eSnoopingTypeAction)
-                printf("\n\ta.eSnoopingTypeAction                              = %u", pce_rule.action.eSnoopingTypeAction);
-
-            if (pce_rule.pattern.bEtherTypeEnable)
-            {
-                printf("\n\tp.bEtherType_Exclude                               = 0x%x", pce_rule.pattern.bEtherType_Exclude);
-                printf("\n\tp.nEtherType                                       = 0x%x", pce_rule.pattern.nEtherType);
-                printf("\n\tp.nEtherTypeMask                                   = 0x%x", pce_rule.pattern.nEtherTypeMask);
-            }
-
-            if (pce_rule.pattern.bProtocolEnable)
-            {
-                printf("\n\tp.bProtocol_Exclude                                = 0x%x", pce_rule.pattern.bProtocol_Exclude);
-                printf("\n\tp.nProtocol                                        = 0x%x", pce_rule.pattern.nProtocol);
-                printf("\n\tp.nProtocolMask                                    = 0x%x", pce_rule.pattern.nProtocolMask);
-            }
-
-            if (pce_rule.pattern.bInnerProtocolEnable)
-            {
-                printf("\n\tp.bInnerProtocol_Exclude                           = 0x%x", pce_rule.pattern.bInnerProtocol_Exclude);
-                printf("\n\tp.nInnerProtocol                                   = 0x%x", pce_rule.pattern.nInnerProtocol);
-                printf("\n\tp.nInnerProtocolMask                               = 0x%x", pce_rule.pattern.nInnerProtocolMask);
-            }
-
-            if (pce_rule.pattern.bSessionIdEnable)
-            {
-                printf("\n\tp.bSessionIdEnable                                 = 0x%x", pce_rule.pattern.bSessionIdEnable);
-                printf("\n\tp.bSessionId_Exclude                               = 0x%x", pce_rule.pattern.bSessionId_Exclude);
-                printf("\n\tp.nSessionId                                       = 0x%x", pce_rule.pattern.nSessionId);
-            }
-
-            if (pce_rule.pattern.bPPP_ProtocolEnable)
-            {
-                printf("\n\tp.bPPP_Protocol_Exclude                            = 0x%x", pce_rule.pattern.bPPP_Protocol_Exclude);
-                printf("\n\tp.nPPP_Protocol                                    = 0x%x", pce_rule.pattern.nPPP_Protocol);
-                printf("\n\tp.nPPP_ProtocolMask                                = 0x%x", pce_rule.pattern.nPPP_ProtocolMask);
-            }
-
-            if (pce_rule.pattern.bAppDataMSB_Enable)
-            {
-                printf("\n\tp.bAppMSB_Exclude                                  = 0x%x", pce_rule.pattern.bAppMSB_Exclude);
-                printf("\n\tp.nAppDataMSB                                      = 0x%x", pce_rule.pattern.nAppDataMSB);
-                printf("\n\tp.bAppMaskRangeMSB_Select                          = %u", pce_rule.pattern.bAppMaskRangeMSB_Select);
-                printf("\n\tp.nAppMaskRangeMSB                                 = 0x%x", pce_rule.pattern.nAppMaskRangeMSB);
-            }
-
-            if (pce_rule.pattern.bAppDataLSB_Enable)
-            {
-                printf("\n\tp.bAppLSB_Exclude                                  = 0x%x", pce_rule.pattern.bAppLSB_Exclude);
-                printf("\n\tp.nAppDataLSB                                      = 0x%x", pce_rule.pattern.nAppDataLSB);
-                printf("\n\tp.bAppMaskRangeLSB_Select                          = %u", pce_rule.pattern.bAppMaskRangeLSB_Select);
-                printf("\n\tp.nAppMaskRangeLSB                                 = 0x%x", pce_rule.pattern.nAppMaskRangeLSB);
-            }
-
-            if (pce_rule.pattern.bDSCP_Enable)
-            {
-                printf("\n\tp.bDSCP_Exclude                                    = %u", pce_rule.pattern.bDSCP_Exclude);
-                printf("\n\tp.nDSCP                                            = %u", pce_rule.pattern.nDSCP);
-            }
-
-            if (pce_rule.pattern.bInner_DSCP_Enable)
-            {
-                printf("\n\tp.bInnerDSCP_Exclude                               = %u", pce_rule.pattern.bInnerDSCP_Exclude);
-                printf("\n\tp.nInnerDSCP                                       = %u", pce_rule.pattern.nInnerDSCP);
-            }
-
-            if (pce_rule.action.bRemarkAction)
-                printf("\n\ta.bRemarkAction                                    = Enabled  val = %u", pce_rule.action.bRemarkAction);
-
-            if (pce_rule.action.bRemarkPCP)
-                printf("\n\ta.bRemarkPCP                                       = Disabled val = %u", pce_rule.action.bRemarkPCP);
-
-            if (pce_rule.action.bRemarkDSCP)
-                printf("\n\ta.bRemarkDSCP                                      = Disabled val = %u", pce_rule.action.bRemarkDSCP);
-
-            if (pce_rule.action.bRemarkClass)
-                printf("\n\ta.bRemarkClass                                     = Disabled val = %u", pce_rule.action.bRemarkClass);
-
-            if (pce_rule.action.bRemarkSTAG_PCP)
-                printf("\n\ta.bRemarkSTAG_PCP                                  = Disabled val = %u", pce_rule.action.bRemarkSTAG_PCP);
-
-            if (pce_rule.action.bRemarkSTAG_DEI)
-                printf("\n\ta.bRemarkSTAG_DEI                                  = Disabled val = %u", pce_rule.action.bRemarkSTAG_DEI);
-
-            if ((pce_rule.action.bRMON_Action) || (pce_rule.action.bFlowID_Action))
-            {
-                printf("\n\ta.nFlowID/nRmon_ID                                 = %u", pce_rule.action.nFlowID);
-            }
-
-            if (pce_rule.pattern.bPCP_Enable)
-            {
-                printf("\n\tp.bPCP_Enable                                      = %u", pce_rule.pattern.bPCP_Enable);
-                printf("\n\tp.bCTAG_PCP_DEI_Exclude                            = %u", pce_rule.pattern.bCTAG_PCP_DEI_Exclude);
-                printf("\n\tp.nPCP                                             = %u", pce_rule.pattern.nPCP);
-            }
-
-            if (pce_rule.pattern.bSTAG_PCP_DEI_Enable)
-            {
-                printf("\n\tp.bSTAG_PCP_DEI_Enable                             = %u", pce_rule.pattern.bSTAG_PCP_DEI_Enable);
-                printf("\n\tp.bSTAG_PCP_DEI_Exclude                            = %u", pce_rule.pattern.bSTAG_PCP_DEI_Exclude);
-                printf("\n\tp.nSTAG_PCP_DEI                                    = %u", pce_rule.pattern.nSTAG_PCP_DEI);
-            }
-
-            if (pce_rule.action.ePortMapAction)
-            {
-                printf("\n\ta.ePortMapAction                                   = 0x%x", pce_rule.action.ePortMapAction);
-
-                for (i = 0; i < 8; i++)
-                {
-                    if (pce_rule.action.nForwardPortMap[i])
-                        printf("\n\ta.nForwardPortMap[%d]                              = 0x%x", i, pce_rule.action.nForwardPortMap[i]);
-                }
-            }
-
-            if (pce_rule.action.eTrafficClassAction)
-            {
-                printf("\n\ta.eTrafficClassAction                              = %u", pce_rule.action.eTrafficClassAction);
-                printf("\n\ta.nTrafficClassAlternate                           = %u", pce_rule.action.nTrafficClassAlternate);
-            }
-
-            if (pce_rule.action.bPortTrunkAction)
-            {
-                printf("\n\ta.bPortTrunkAction                                 = Enabled");
-                printf("\n\ta.bPortLinkSelection                               = %u", pce_rule.action.bPortLinkSelection);
-            }
-
-            if (pce_rule.action.bExtendedVlanEnable)
-            {
-                printf("\n\ta.bExtendedVlanEnable                              = Enabled");
-                printf("\n\ta.nExtendedVlanBlockId                             = %u", pce_rule.action.nExtendedVlanBlockId);
-            }
-
-            if (pce_rule.action.ePortFilterType_Action)
-            {
-                printf("\n\ta.ePortFilterType_Action                           = %u", pce_rule.action.ePortFilterType_Action);
-
-                for (i = 0; i < 8; i++)
-                {
-                    if (pce_rule.action.nForwardPortMap[i])
-                        printf("\n\ta.nForwardPortMap[%d]                              = 0x%x", i, pce_rule.action.nForwardPortMap[i]);
-                }
-            }
-
-            if (pce_rule.action.eProcessPath_Action)
-                printf("\n\ta.eProcessPath_Action                              = %u", pce_rule.action.eProcessPath_Action);
-
-            if (pce_rule.action.bOamEnable)
-                printf("\n\ta.bOamEnable                                       = %u", pce_rule.action.bOamEnable);
-
-            if (pce_rule.action.bExtractEnable)
-                printf("\n\ta.bExtractEnable                                   = %u", pce_rule.action.bExtractEnable);
-
-            if (pce_rule.action.bOamEnable || pce_rule.action.bExtractEnable)
-                printf("\n\ta.nRecordId                                        = %u", pce_rule.action.nRecordId);
-
-            if (pce_rule.action.eColorFrameAction != GSW_PCE_ACTION_COLOR_FRAME_DISABLE)
-                printf("\n\ta.eColorFrameAction                                = %u", pce_rule.action.eColorFrameAction);
-
-            if (pce_rule.action.eMeterAction)
-            {
-                printf("\n\ta.eMeterAction                                     = %u", pce_rule.action.eMeterAction);
-                printf("\n\ta.nMeterId                                         = %u", pce_rule.action.nMeterId);
-            }
-
-            if (pce_rule.action.bFidEnable)
-                printf("\n\ta.nFId                                             = %u", pce_rule.action.nFId);
-
-            if (pce_rule.pattern.bInsertionFlag_Enable)
-                printf("\n\tp.nInsertionFlag                                   = %u", pce_rule.pattern.nInsertionFlag);
-
-            if (pce_rule.action.eCrossStateAction == GSW_PCE_ACTION_CROSS_STATE_CROSS)
-                printf("\n\tp.eCrossStateAction                                = GSW_PCE_ACTION_CROSS_STATE_CROSS");
-            else if (pce_rule.action.eCrossStateAction == GSW_PCE_ACTION_CROSS_STATE_REGULAR)
-                printf("\n\tp.eCrossStateAction                                = GSW_PCE_ACTION_CROSS_STATE_REGULAR");
-            else
-                printf("\n\tp.eCrossStateAction                                = GSW_PCE_ACTION_CROSS_STATE_DISABLE");
-
-            /*Applicable only for GSWIP 3.2*/
-            if (pce_rule.pattern.bFlexibleField4Enable)
-            {
-                printf("\n\tp.bFlexibleField4_ExcludeEnable                    = %u", pce_rule.pattern.bFlexibleField4_ExcludeEnable);
-                printf("\n\tp.bFlexibleField4_RangeEnable                      = %u", pce_rule.pattern.bFlexibleField4_RangeEnable);
-                printf("\n\tp.nFlexibleField4_ParserIndex                      = %u", pce_rule.pattern.nFlexibleField4_ParserIndex);
-                printf("\n\tp.nFlexibleField4_Value                            = %u", pce_rule.pattern.nFlexibleField4_Value);
-                printf("\n\tp.nFlexibleField4_MaskOrRange                      = %u", pce_rule.pattern.nFlexibleField4_MaskOrRange);
-            }
-
-            if (pce_rule.pattern.bFlexibleField3Enable)
-            {
-                printf("\n\tp.bFlexibleField3_ExcludeEnable                    = %u", pce_rule.pattern.bFlexibleField3_ExcludeEnable);
-                printf("\n\tp.bFlexibleField3_RangeEnable                      = %u", pce_rule.pattern.bFlexibleField3_RangeEnable);
-                printf("\n\tp.nFlexibleField3_ParserIndex                      = %u", pce_rule.pattern.nFlexibleField3_ParserIndex);
-                printf("\n\tp.nFlexibleField3_Value                            = %u", pce_rule.pattern.nFlexibleField3_Value);
-                printf("\n\tp.nFlexibleField3_MaskOrRange                      = %u", pce_rule.pattern.nFlexibleField3_MaskOrRange);
-            }
-
-            if (pce_rule.pattern.bFlexibleField2Enable)
-            {
-                printf("\n\tp.bFlexibleField2_ExcludeEnable                    = %u", pce_rule.pattern.bFlexibleField2_ExcludeEnable);
-                printf("\n\tp.bFlexibleField2_RangeEnable                      = %u", pce_rule.pattern.bFlexibleField2_RangeEnable);
-                printf("\n\tp.nFlexibleField2_ParserIndex                      = %u", pce_rule.pattern.nFlexibleField2_ParserIndex);
-                printf("\n\tp.nFlexibleField2_Value                            = %u", pce_rule.pattern.nFlexibleField2_Value);
-                printf("\n\tp.nFlexibleField2_MaskOrRange                      = %u", pce_rule.pattern.nFlexibleField2_MaskOrRange);
-            }
-
-            if (pce_rule.pattern.bFlexibleField1Enable)
-            {
-                printf("\n\tp.bFlexibleField1_ExcludeEnable                    = %u", pce_rule.pattern.bFlexibleField1_ExcludeEnable);
-                printf("\n\tp.bFlexibleField1_RangeEnable                      = %u", pce_rule.pattern.bFlexibleField1_RangeEnable);
-                printf("\n\tp.nFlexibleField1_ParserIndex                      = %u", pce_rule.pattern.nFlexibleField1_ParserIndex);
-                printf("\n\tp.nFlexibleField1_Value                            = %u", pce_rule.pattern.nFlexibleField1_Value);
-                printf("\n\tp.nFlexibleField1_MaskOrRange                      = %u", pce_rule.pattern.nFlexibleField1_MaskOrRange);
-            }
-
-            if (pce_rule.action.sPBB_Action.bIheaderActionEnable)
-            {
-                printf("\n\ta.sPBB_Action.bIheaderActionEnable                 = %u", pce_rule.action.sPBB_Action.bIheaderActionEnable);
-
-                switch (pce_rule.action.sPBB_Action.eIheaderOpMode)
-                {
-                case GSW_PCE_I_HEADER_OPERATION_INSERT:
-                    printf("\n\ta.sPBB_Action.eIheaderOpMode                       = GSW_PCE_I_HEADER_OPERATION_INSERT");
-                    printf("\n\ta.sPBB_Action.nTunnelIdKnownTraffic                = %u", pce_rule.action.sPBB_Action.nTunnelIdKnownTraffic);
-                    printf("\n\ta.sPBB_Action.nTunnelIdUnKnownTraffic              = %u", pce_rule.action.sPBB_Action.nTunnelIdUnKnownTraffic);
-                    printf("\n\ta.sPBB_Action.bB_DstMac_FromMacTableEnable	       = %u", pce_rule.action.sPBB_Action.bB_DstMac_FromMacTableEnable);
-                    break;
-
-                case GSW_PCE_I_HEADER_OPERATION_REPLACE:
-                    printf("\n\ta.sPBB_Action.eIheaderOpMode                       = GSW_PCE_I_HEADER_OPERATION_REPLACE");
-                    printf("\n\ta.sPBB_Action.nTunnelIdKnownTraffic                = %u", pce_rule.action.sPBB_Action.nTunnelIdKnownTraffic);
-                    printf("\n\ta.sPBB_Action.nTunnelIdUnKnownTraffic              = %u", pce_rule.action.sPBB_Action.nTunnelIdUnKnownTraffic);
-                    printf("\n\ta.sPBB_Action.bReplace_B_SrcMacEnable              = %u", pce_rule.action.sPBB_Action.bReplace_B_SrcMacEnable);
-                    printf("\n\ta.sPBB_Action.bReplace_B_DstMacEnable              = %u", pce_rule.action.sPBB_Action.bReplace_B_DstMacEnable);
-                    printf("\n\ta.sPBB_Action.bReplace_I_TAG_ResEnable             = %u", pce_rule.action.sPBB_Action.bReplace_I_TAG_ResEnable);
-                    printf("\n\ta.sPBB_Action.bReplace_I_TAG_UacEnable             = %u", pce_rule.action.sPBB_Action.bReplace_I_TAG_UacEnable);
-                    printf("\n\ta.sPBB_Action.bReplace_I_TAG_DeiEnable             = %u", pce_rule.action.sPBB_Action.bReplace_I_TAG_DeiEnable);
-                    printf("\n\ta.sPBB_Action.bReplace_I_TAG_PcpEnable             = %u", pce_rule.action.sPBB_Action.bReplace_I_TAG_PcpEnable);
-                    printf("\n\ta.sPBB_Action.bReplace_I_TAG_SidEnable             = %u", pce_rule.action.sPBB_Action.bReplace_I_TAG_SidEnable);
-                    printf("\n\ta.sPBB_Action.bReplace_I_TAG_TpidEnable            = %u", pce_rule.action.sPBB_Action.bReplace_I_TAG_TpidEnable);
-                    break;
-
-                case GSW_PCE_I_HEADER_OPERATION_REMOVE:
-                    printf("\n\ta.sPBB_Action.eIheaderOpMode                       = GSW_PCE_I_HEADER_OPERATION_REMOVE");
-                    break;
-
-                case GSW_PCE_I_HEADER_OPERATION_NOCHANGE:
-                    printf("\n\ta.sPBB_Action.eIheaderOpMode                       = GSW_PCE_I_HEADER_OPERATION_NOCHANGE");
-                    break;
-
-                default:
-                    break;
-                }
-            }
-
-            /*Applicable only for GSWIP 3.2*/
-            if (pce_rule.action.sPBB_Action.bBtagActionEnable)
-            {
-                printf("\n\ta.sPBB_Action.bBtagActionEnable                    = %u", pce_rule.action.sPBB_Action.bBtagActionEnable);
-
-                switch (pce_rule.action.sPBB_Action.eBtagOpMode)
-                {
-                case GSW_PCE_B_TAG_OPERATION_INSERT:
-                    printf("\n\ta.sPBB_Action.eBtagOpMode                          = GSW_PCE_B_TAG_OPERATION_INSERT");
-                    printf("\n\ta.sPBB_Action.nProcessIdKnownTraffic               = %u", pce_rule.action.sPBB_Action.nProcessIdKnownTraffic);
-                    printf("\n\ta.sPBB_Action.nProcessIdUnKnownTraffic             = %u", pce_rule.action.sPBB_Action.nProcessIdUnKnownTraffic);
-                    break;
-
-                case GSW_PCE_B_TAG_OPERATION_REPLACE:
-                    printf("\n\ta.sPBB_Action.eBtagOpMode                          = GSW_PCE_B_TAG_OPERATION_REPLACE");
-                    printf("\n\ta.sPBB_Action.nProcessIdKnownTraffic               = %u", pce_rule.action.sPBB_Action.nProcessIdKnownTraffic);
-                    printf("\n\ta.sPBB_Action.nProcessIdUnKnownTraffic             = %u", pce_rule.action.sPBB_Action.nProcessIdUnKnownTraffic);
-                    printf("\n\ta.sPBB_Action.bReplace_B_TAG_DeiEnable             = %u", pce_rule.action.sPBB_Action.bReplace_B_TAG_DeiEnable);
-                    printf("\n\ta.sPBB_Action.bReplace_B_TAG_PcpEnable             = %u", pce_rule.action.sPBB_Action.bReplace_B_TAG_PcpEnable);
-                    printf("\n\ta.sPBB_Action.bReplace_B_TAG_VidEnable             = %u", pce_rule.action.sPBB_Action.bReplace_B_TAG_VidEnable);
-                    printf("\n\ta.sPBB_Action.bReplace_B_TAG_TpidEnable            = %u", pce_rule.action.sPBB_Action.bReplace_B_TAG_TpidEnable);
-                    break;
-
-                case GSW_PCE_B_TAG_OPERATION_REMOVE:
-                    printf("\n\ta.sPBB_Action.eBtagOpMode                          = GSW_PCE_B_TAG_OPERATION_REMOVE");
-                    break;
-
-                case GSW_PCE_B_TAG_OPERATION_NOCHANGE:
-                    printf("\n\ta.sPBB_Action.eBtagOpMode                          = GSW_PCE_B_TAG_OPERATION_NOCHANGE");
-                    break;
-
-                default:
-                    break;
-                }
-            }
-
-            /*Applicable only for GSWIP 3.2*/
-            if (pce_rule.action.sPBB_Action.bMacTableMacinMacActionEnable)
-            {
-                printf("\n\ta.sPBB_Action.bMacTableMacinMacActionEnable                = %u", pce_rule.action.sPBB_Action.bMacTableMacinMacActionEnable);
-
-                switch (pce_rule.action.sPBB_Action.eMacTableMacinMacSelect)
-                {
-                case GSW_PCE_OUTER_MAC_SELECTED:
-                    printf("\n\ta.sPBB_Action.eMacTableMacinMacSelect              = GSW_PCE_OUTER_MAC_SELECTED");
-                    break;
-
-                case GSW_PCE_INNER_MAC_SELECTED:
-                    printf("\n\ta.sPBB_Action.eMacTableMacinMacSelect              = GSW_PCE_INNER_MAC_SELECTED");
-                    break;
-
-                default:
-                    break;
-                }
-            }
-
-            if (pce_rule.action.bDestSubIf_Action_Enable)
-            {
-                printf("\n\ta.sDestSubIF_Action.bDestSubIFIDActionEnable       = %u", pce_rule.action.sDestSubIF_Action.bDestSubIFIDActionEnable);
-                printf("\n\ta.sDestSubIF_Action.bDestSubIFIDAssignmentEnable   = %u", pce_rule.action.sDestSubIF_Action.bDestSubIFIDAssignmentEnable);
-                printf("\n\ta.sDestSubIF_Action.nDestSubIFGrp_Field            = %u", pce_rule.action.sDestSubIF_Action.nDestSubIFGrp_Field);
-            }
-        }
-        else
-        {
-            printf("\n\tp.nIndex rule not set at                           = %u", pce_rule.pattern.nIndex);
-        }
-        printf("\n");
+        gsw_pce_rule_display(&pce_rule);
     }
-
     return ret;
 }
 
@@ -4409,357 +4871,14 @@ GSW_return_t fapi_GSW_PceRuleWrite(int prmc, char *prmv[])
 
     memset(&pce_rule, 0, sizeof(GSW_PCE_rule_t));
 
-    rret = scanParamArg(prmc, prmv, "nLogicalPortId", sizeof(pce_rule.logicalportid), &pce_rule.logicalportid);
-    if (rret < 1)
-    {
-        printf("Parameter not Found: nLogicalPortId\n");
-        return OS_ERROR;
-    }
     rret = scanParamArg(prmc, prmv, "pattern.nIndex", sizeof(pce_rule.pattern.nIndex), &pce_rule.pattern.nIndex);
     if (rret < 1)
     {
         printf("Parameter not Found: pattern.nIndex\n");
-        return OS_ERROR;
+        return GSW_statusErr;
     }
 
-    scanParamArg(prmc, prmv, "nSubIfIdGroup", sizeof(pce_rule.subifidgroup), &pce_rule.subifidgroup);
-    scanParamArg(prmc, prmv, "region", sizeof(pce_rule.region), &pce_rule.region);
-
-    scanParamArg(prmc, prmv, "pattern.bEnable", sizeof(pce_rule.pattern.bEnable), &pce_rule.pattern.bEnable);
-    scanParamArg(prmc, prmv, "pattern.bPortIdEnable", sizeof(pce_rule.pattern.bPortIdEnable), &pce_rule.pattern.bPortIdEnable);
-    scanParamArg(prmc, prmv, "pattern.nPortId", sizeof(pce_rule.pattern.nPortId), &pce_rule.pattern.nPortId);
-    scanParamArg(prmc, prmv, "pattern.bPortId_Exclude", sizeof(pce_rule.pattern.bPortId_Exclude), &pce_rule.pattern.bPortId_Exclude);
-    scanParamArg(prmc, prmv, "pattern.bSubIfIdEnable", sizeof(pce_rule.pattern.bSubIfIdEnable), &pce_rule.pattern.bSubIfIdEnable);
-    scanParamArg(prmc, prmv, "pattern.nSubIfId", sizeof(pce_rule.pattern.nSubIfId), &pce_rule.pattern.nSubIfId);
-    scanParamArg(prmc, prmv, "pattern.eSubIfIdType", sizeof(pce_rule.pattern.eSubIfIdType), &pce_rule.pattern.eSubIfIdType);
-    scanParamArg(prmc, prmv, "pattern.bSubIfId_Exclude", sizeof(pce_rule.pattern.bSubIfId_Exclude), &pce_rule.pattern.bSubIfId_Exclude);
-    scanParamArg(prmc, prmv, "pattern.bInsertionFlag_Enable", sizeof(pce_rule.pattern.bInsertionFlag_Enable), &pce_rule.pattern.bInsertionFlag_Enable);
-    scanParamArg(prmc, prmv, "pattern.nInsertionFlag", sizeof(pce_rule.pattern.nInsertionFlag), &pce_rule.pattern.nInsertionFlag);
-    scanParamArg(prmc, prmv, "pattern.bDSCP_Enable", sizeof(pce_rule.pattern.bDSCP_Enable), &pce_rule.pattern.bDSCP_Enable);
-    scanParamArg(prmc, prmv, "pattern.nDSCP", sizeof(pce_rule.pattern.nDSCP), &pce_rule.pattern.nDSCP);
-    scanParamArg(prmc, prmv, "pattern.bDSCP_Exclude", sizeof(pce_rule.pattern.bDSCP_Exclude), &pce_rule.pattern.bDSCP_Exclude);
-    scanParamArg(prmc, prmv, "pattern.bInner_DSCP_Enable", sizeof(pce_rule.pattern.bInner_DSCP_Enable), &pce_rule.pattern.bInner_DSCP_Enable);
-    scanParamArg(prmc, prmv, "pattern.nInnerDSCP", sizeof(pce_rule.pattern.nInnerDSCP), &pce_rule.pattern.nInnerDSCP);
-    scanParamArg(prmc, prmv, "pattern.bInnerDSCP_Exclude", sizeof(pce_rule.pattern.bInnerDSCP_Exclude), &pce_rule.pattern.bInnerDSCP_Exclude);
-    scanParamArg(prmc, prmv, "pattern.bPCP_Enable", sizeof(pce_rule.pattern.bPCP_Enable), &pce_rule.pattern.bPCP_Enable);
-    scanParamArg(prmc, prmv, "pattern.nPCP", sizeof(pce_rule.pattern.nPCP), &pce_rule.pattern.nPCP);
-    scanParamArg(prmc, prmv, "pattern.bCTAG_PCP_DEI_Exclude", sizeof(pce_rule.pattern.bCTAG_PCP_DEI_Exclude), &pce_rule.pattern.bCTAG_PCP_DEI_Exclude);
-    scanParamArg(prmc, prmv, "pattern.bSTAG_PCP_DEI_Enable", sizeof(pce_rule.pattern.bSTAG_PCP_DEI_Enable), &pce_rule.pattern.bSTAG_PCP_DEI_Enable);
-    scanParamArg(prmc, prmv, "pattern.nSTAG_PCP_DEI", sizeof(pce_rule.pattern.nSTAG_PCP_DEI), &pce_rule.pattern.nSTAG_PCP_DEI);
-    scanParamArg(prmc, prmv, "pattern.bSTAG_PCP_DEI_Exclude", sizeof(pce_rule.pattern.bSTAG_PCP_DEI_Exclude), &pce_rule.pattern.bSTAG_PCP_DEI_Exclude);
-    scanParamArg(prmc, prmv, "pattern.bPktLngEnable", sizeof(pce_rule.pattern.bPktLngEnable), &pce_rule.pattern.bPktLngEnable);
-    scanParamArg(prmc, prmv, "pattern.nPktLng", sizeof(pce_rule.pattern.nPktLng), &pce_rule.pattern.nPktLng);
-    scanParamArg(prmc, prmv, "pattern.nPktLngRange", sizeof(pce_rule.pattern.nPktLngRange), &pce_rule.pattern.nPktLngRange);
-    scanParamArg(prmc, prmv, "pattern.bPktLng_Exclude", sizeof(pce_rule.pattern.bPktLng_Exclude), &pce_rule.pattern.bPktLng_Exclude);
-    scanParamArg(prmc, prmv, "pattern.bMAC_DstEnable", sizeof(pce_rule.pattern.bMAC_DstEnable), &pce_rule.pattern.bMAC_DstEnable);
-    scanMAC_Arg(prmc, prmv, "pattern.nMAC_Dst", pce_rule.pattern.nMAC_Dst);
-    scanParamArg(prmc, prmv, "pattern.nMAC_DstMask", sizeof(pce_rule.pattern.nMAC_DstMask), &pce_rule.pattern.nMAC_DstMask);
-    scanParamArg(prmc, prmv, "pattern.bDstMAC_Exclude", sizeof(pce_rule.pattern.bDstMAC_Exclude), &pce_rule.pattern.bDstMAC_Exclude);
-    scanParamArg(prmc, prmv, "pattern.bMAC_SrcEnable", sizeof(pce_rule.pattern.bMAC_SrcEnable), &pce_rule.pattern.bMAC_SrcEnable);
-    scanMAC_Arg(prmc, prmv, "pattern.nMAC_Src", pce_rule.pattern.nMAC_Src);
-    scanParamArg(prmc, prmv, "pattern.nMAC_SrcMask", sizeof(pce_rule.pattern.nMAC_SrcMask), &pce_rule.pattern.nMAC_SrcMask);
-    scanParamArg(prmc, prmv, "pattern.bSrcMAC_Exclude", sizeof(pce_rule.pattern.bSrcMAC_Exclude), &pce_rule.pattern.bSrcMAC_Exclude);
-    scanParamArg(prmc, prmv, "pattern.bAppDataMSB_Enable", sizeof(pce_rule.pattern.bAppDataMSB_Enable), &pce_rule.pattern.bAppDataMSB_Enable);
-    scanParamArg(prmc, prmv, "pattern.nAppDataMSB", sizeof(pce_rule.pattern.nAppDataMSB), &pce_rule.pattern.nAppDataMSB);
-    scanParamArg(prmc, prmv, "pattern.bAppMaskRangeMSB_Select", sizeof(pce_rule.pattern.bAppMaskRangeMSB_Select), &pce_rule.pattern.bAppMaskRangeMSB_Select);
-    scanParamArg(prmc, prmv, "pattern.nAppMaskRangeMSB", sizeof(pce_rule.pattern.nAppMaskRangeMSB), &pce_rule.pattern.nAppMaskRangeMSB);
-    scanParamArg(prmc, prmv, "pattern.bAppMSB_Exclude", sizeof(pce_rule.pattern.bAppMSB_Exclude), &pce_rule.pattern.bAppMSB_Exclude);
-
-    scanParamArg(prmc, prmv, "pattern.bAppDataLSB_Enable", sizeof(pce_rule.pattern.bAppDataLSB_Enable), &pce_rule.pattern.bAppDataLSB_Enable);
-    scanParamArg(prmc, prmv, "pattern.nAppDataLSB", sizeof(pce_rule.pattern.nAppDataLSB), &pce_rule.pattern.nAppDataLSB);
-    scanParamArg(prmc, prmv, "pattern.bAppMaskRangeLSB_Select", sizeof(pce_rule.pattern.bAppMaskRangeLSB_Select), &pce_rule.pattern.bAppMaskRangeLSB_Select);
-    scanParamArg(prmc, prmv, "pattern.nAppMaskRangeLSB", sizeof(pce_rule.pattern.nAppMaskRangeLSB), &pce_rule.pattern.nAppMaskRangeLSB);
-    scanParamArg(prmc, prmv, "pattern.bAppLSB_Exclude", sizeof(pce_rule.pattern.bAppLSB_Exclude), &pce_rule.pattern.bAppLSB_Exclude);
-
-    scanParamArg(prmc, prmv, "pattern.eDstIP_Select", sizeof(pce_rule.pattern.eDstIP_Select), &pce_rule.pattern.eDstIP_Select);
-    if (pce_rule.pattern.eDstIP_Select == GSW_PCE_IP_V4)
-        scanIPv4_Arg(prmc, prmv, "pattern.nDstIP", &pce_rule.pattern.nDstIP.nIPv4);
-    else if (pce_rule.pattern.eDstIP_Select == GSW_PCE_IP_V6)
-        scanIPv6_Arg(prmc, prmv, "pattern.nDstIP", pce_rule.pattern.nDstIP.nIPv6);
-
-    scanParamArg(prmc, prmv, "pattern.nDstIP_Mask", sizeof(pce_rule.pattern.nDstIP_Mask), &pce_rule.pattern.nDstIP_Mask);
-    scanParamArg(prmc, prmv, "pattern.bDstIP_Exclude", sizeof(pce_rule.pattern.bDstIP_Exclude), &pce_rule.pattern.bDstIP_Exclude);
-
-    scanParamArg(prmc, prmv, "pattern.eInnerDstIP_Select", sizeof(pce_rule.pattern.eInnerDstIP_Select), &pce_rule.pattern.eInnerDstIP_Select);
-    if (pce_rule.pattern.eInnerDstIP_Select == GSW_PCE_IP_V4)
-        scanIPv4_Arg(prmc, prmv, "pattern.nInnerDstIP", &pce_rule.pattern.nInnerDstIP.nIPv4);
-    else if (pce_rule.pattern.eInnerDstIP_Select == GSW_PCE_IP_V6)
-        scanIPv6_Arg(prmc, prmv, "pattern.nInnerDstIP", pce_rule.pattern.nInnerDstIP.nIPv6);
-
-    scanParamArg(prmc, prmv, "pattern.nInnerDstIP_Mask", sizeof(pce_rule.pattern.nInnerDstIP_Mask), &pce_rule.pattern.nInnerDstIP_Mask);
-    scanParamArg(prmc, prmv, "pattern.bInnerDstIP_Exclude", sizeof(pce_rule.pattern.bInnerDstIP_Exclude), &pce_rule.pattern.bInnerDstIP_Exclude);
-
-    scanParamArg(prmc, prmv, "pattern.eSrcIP_Select", sizeof(pce_rule.pattern.eSrcIP_Select), &pce_rule.pattern.eSrcIP_Select);
-    if (pce_rule.pattern.eSrcIP_Select == GSW_PCE_IP_V4)
-        scanIPv4_Arg(prmc, prmv, "pattern.nSrcIP", &pce_rule.pattern.nSrcIP.nIPv4);
-    else if (pce_rule.pattern.eSrcIP_Select == GSW_PCE_IP_V6)
-        scanIPv6_Arg(prmc, prmv, "pattern.nSrcIP", pce_rule.pattern.nSrcIP.nIPv6);
-
-    scanParamArg(prmc, prmv, "pattern.nSrcIP_Mask", sizeof(pce_rule.pattern.nSrcIP_Mask), &pce_rule.pattern.nSrcIP_Mask);
-    scanParamArg(prmc, prmv, "pattern.bSrcIP_Exclude", sizeof(pce_rule.pattern.bSrcIP_Exclude), &pce_rule.pattern.bSrcIP_Exclude);
-
-    scanParamArg(prmc, prmv, "pattern.eInnerSrcIP_Select", sizeof(pce_rule.pattern.eInnerSrcIP_Select), &pce_rule.pattern.eInnerSrcIP_Select);
-    if (pce_rule.pattern.eInnerSrcIP_Select == GSW_PCE_IP_V4)
-        scanIPv4_Arg(prmc, prmv, "pattern.nInnerSrcIP", &pce_rule.pattern.nInnerSrcIP.nIPv4);
-    else if (pce_rule.pattern.eInnerSrcIP_Select == GSW_PCE_IP_V6)
-        scanIPv6_Arg(prmc, prmv, "pattern.nInnerSrcIP", pce_rule.pattern.nInnerSrcIP.nIPv6);
-
-    scanParamArg(prmc, prmv, "pattern.nInnerSrcIP_Mask", sizeof(pce_rule.pattern.nInnerSrcIP_Mask), &pce_rule.pattern.nInnerSrcIP_Mask);
-    scanParamArg(prmc, prmv, "pattern.bInnerSrcIP_Exclude", sizeof(pce_rule.pattern.bInnerSrcIP_Exclude), &pce_rule.pattern.bInnerSrcIP_Exclude);
-
-    scanParamArg(prmc, prmv, "pattern.bEtherTypeEnable", sizeof(pce_rule.pattern.bEtherTypeEnable), &pce_rule.pattern.bEtherTypeEnable);
-    scanParamArg(prmc, prmv, "pattern.nEtherType", sizeof(pce_rule.pattern.nEtherType), &pce_rule.pattern.nEtherType);
-    scanParamArg(prmc, prmv, "pattern.nEtherTypeMask", sizeof(pce_rule.pattern.nEtherTypeMask), &pce_rule.pattern.nEtherTypeMask);
-    scanParamArg(prmc, prmv, "pattern.bEtherType_Exclude", sizeof(pce_rule.pattern.bEtherType_Exclude), &pce_rule.pattern.bEtherType_Exclude);
-
-    scanParamArg(prmc, prmv, "pattern.bProtocolEnable", sizeof(pce_rule.pattern.bProtocolEnable), &pce_rule.pattern.bProtocolEnable);
-    scanParamArg(prmc, prmv, "pattern.nProtocol", sizeof(pce_rule.pattern.nProtocol), &pce_rule.pattern.nProtocol);
-    scanParamArg(prmc, prmv, "pattern.nProtocolMask", sizeof(pce_rule.pattern.nProtocolMask), &pce_rule.pattern.nProtocolMask);
-    scanParamArg(prmc, prmv, "pattern.bProtocol_Exclude", sizeof(pce_rule.pattern.bProtocol_Exclude), &pce_rule.pattern.bProtocol_Exclude);
-
-    scanParamArg(prmc, prmv, "pattern.bInnerProtocolEnable", sizeof(pce_rule.pattern.bInnerProtocolEnable), &pce_rule.pattern.bInnerProtocolEnable);
-    scanParamArg(prmc, prmv, "pattern.nInnerProtocol", sizeof(pce_rule.pattern.nInnerProtocol), &pce_rule.pattern.nInnerProtocol);
-    scanParamArg(prmc, prmv, "pattern.nInnerProtocolMask", sizeof(pce_rule.pattern.nInnerProtocolMask), &pce_rule.pattern.nInnerProtocolMask);
-    scanParamArg(prmc, prmv, "pattern.bInnerProtocol_Exclude", sizeof(pce_rule.pattern.bInnerProtocol_Exclude), &pce_rule.pattern.bInnerProtocol_Exclude);
-
-    scanParamArg(prmc, prmv, "pattern.bSessionIdEnable", sizeof(pce_rule.pattern.bSessionIdEnable), &pce_rule.pattern.bSessionIdEnable);
-    scanParamArg(prmc, prmv, "pattern.nSessionId", sizeof(pce_rule.pattern.nSessionId), &pce_rule.pattern.nSessionId);
-    scanParamArg(prmc, prmv, "pattern.bSessionId_Exclude", sizeof(pce_rule.pattern.bSessionId_Exclude), &pce_rule.pattern.bSessionId_Exclude);
-
-    scanParamArg(prmc, prmv, "pattern.bPPP_ProtocolEnable", sizeof(pce_rule.pattern.bPPP_ProtocolEnable), &pce_rule.pattern.bPPP_ProtocolEnable);
-    scanParamArg(prmc, prmv, "pattern.nPPP_Protocol", sizeof(pce_rule.pattern.nPPP_Protocol), &pce_rule.pattern.nPPP_Protocol);
-    scanParamArg(prmc, prmv, "pattern.nPPP_ProtocolMask", sizeof(pce_rule.pattern.nPPP_ProtocolMask), &pce_rule.pattern.nPPP_ProtocolMask);
-    scanParamArg(prmc, prmv, "pattern.bPPP_Protocol_Exclude", sizeof(pce_rule.pattern.bPPP_Protocol_Exclude), &pce_rule.pattern.bPPP_Protocol_Exclude);
-
-    scanParamArg(prmc, prmv, "pattern.bVid", sizeof(pce_rule.pattern.bVid), &pce_rule.pattern.bVid);
-    scanParamArg(prmc, prmv, "pattern.nVid", sizeof(pce_rule.pattern.nVid), &pce_rule.pattern.nVid);
-    scanParamArg(prmc, prmv, "pattern.bVidRange_Select", sizeof(pce_rule.pattern.bVidRange_Select), &pce_rule.pattern.bVidRange_Select);
-    scanParamArg(prmc, prmv, "pattern.nVidRange", sizeof(pce_rule.pattern.nVidRange), &pce_rule.pattern.nVidRange);
-    scanParamArg(prmc, prmv, "pattern.bVid_Exclude", sizeof(pce_rule.pattern.bVid_Exclude), &pce_rule.pattern.bVid_Exclude);
-
-    scanParamArg(prmc, prmv, "pattern.bSLAN_Vid", sizeof(pce_rule.pattern.bSLAN_Vid), &pce_rule.pattern.bSLAN_Vid);
-    scanParamArg(prmc, prmv, "pattern.nSLAN_Vid", sizeof(pce_rule.pattern.nSLAN_Vid), &pce_rule.pattern.nSLAN_Vid);
-    scanParamArg(prmc, prmv, "pattern.bSLANVid_Exclude", sizeof(pce_rule.pattern.bSLANVid_Exclude), &pce_rule.pattern.bSLANVid_Exclude);
-
-    scanParamArg(prmc, prmv, "pattern.bPayload1_SrcEnable", sizeof(pce_rule.pattern.bPayload1_SrcEnable), &pce_rule.pattern.bPayload1_SrcEnable);
-    scanParamArg(prmc, prmv, "pattern.nPayload1", sizeof(pce_rule.pattern.nPayload1), &pce_rule.pattern.nPayload1);
-    scanParamArg(prmc, prmv, "pattern.bPayload1MaskRange_Select", sizeof(pce_rule.pattern.bPayload1MaskRange_Select), &pce_rule.pattern.bPayload1MaskRange_Select);
-    scanParamArg(prmc, prmv, "pattern.nPayload1_Mask", sizeof(pce_rule.pattern.nPayload1_Mask), &pce_rule.pattern.nPayload1_Mask);
-    scanParamArg(prmc, prmv, "pattern.bPayload1_Exclude", sizeof(pce_rule.pattern.bPayload1_Exclude), &pce_rule.pattern.bPayload1_Exclude);
-
-    scanParamArg(prmc, prmv, "pattern.bPayload2_SrcEnable", sizeof(pce_rule.pattern.bPayload2_SrcEnable), &pce_rule.pattern.bPayload2_SrcEnable);
-    scanParamArg(prmc, prmv, "pattern.nPayload2", sizeof(pce_rule.pattern.nPayload2), &pce_rule.pattern.nPayload2);
-    scanParamArg(prmc, prmv, "pattern.bPayload2MaskRange_Select", sizeof(pce_rule.pattern.bPayload2MaskRange_Select), &pce_rule.pattern.bPayload2MaskRange_Select);
-    scanParamArg(prmc, prmv, "pattern.nPayload2_Mask", sizeof(pce_rule.pattern.nPayload2_Mask), &pce_rule.pattern.nPayload2_Mask);
-    scanParamArg(prmc, prmv, "pattern.bPayload2_Exclude", sizeof(pce_rule.pattern.bPayload2_Exclude), &pce_rule.pattern.bPayload2_Exclude);
-
-    scanParamArg(prmc, prmv, "pattern.bParserFlagLSB_Enable", sizeof(pce_rule.pattern.bParserFlagLSB_Enable), &pce_rule.pattern.bParserFlagLSB_Enable);
-    scanParamArg(prmc, prmv, "pattern.nParserFlagLSB", sizeof(pce_rule.pattern.nParserFlagLSB), &pce_rule.pattern.nParserFlagLSB);
-    scanParamArg(prmc, prmv, "pattern.nParserFlagLSB_Mask", sizeof(pce_rule.pattern.nParserFlagLSB_Mask), &pce_rule.pattern.nParserFlagLSB_Mask);
-    scanParamArg(prmc, prmv, "pattern.bParserFlagLSB_Exclude", sizeof(pce_rule.pattern.bParserFlagLSB_Exclude), &pce_rule.pattern.bParserFlagLSB_Exclude);
-
-    scanParamArg(prmc, prmv, "pattern.bParserFlagMSB_Enable", sizeof(pce_rule.pattern.bParserFlagMSB_Enable), &pce_rule.pattern.bParserFlagMSB_Enable);
-    scanParamArg(prmc, prmv, "pattern.nParserFlagMSB", sizeof(pce_rule.pattern.nParserFlagMSB), &pce_rule.pattern.nParserFlagMSB);
-    scanParamArg(prmc, prmv, "pattern.nParserFlagMSB_Mask", sizeof(pce_rule.pattern.nParserFlagMSB_Mask), &pce_rule.pattern.nParserFlagMSB_Mask);
-    scanParamArg(prmc, prmv, "pattern.bParserFlagMSB_Exclude", sizeof(pce_rule.pattern.bParserFlagMSB_Exclude), &pce_rule.pattern.bParserFlagMSB_Exclude);
-
-    scanParamArg(prmc, prmv, "pattern.bParserFlag1LSB_Enable", sizeof(pce_rule.pattern.bParserFlag1LSB_Enable), &pce_rule.pattern.bParserFlag1LSB_Enable);
-    scanParamArg(prmc, prmv, "pattern.nParserFlag1LSB", sizeof(pce_rule.pattern.nParserFlag1LSB), &pce_rule.pattern.nParserFlag1LSB);
-    scanParamArg(prmc, prmv, "pattern.nParserFlag1LSB_Mask", sizeof(pce_rule.pattern.nParserFlag1LSB_Mask), &pce_rule.pattern.nParserFlag1LSB_Mask);
-    scanParamArg(prmc, prmv, "pattern.bParserFlag1LSB_Exclude", sizeof(pce_rule.pattern.bParserFlag1LSB_Exclude), &pce_rule.pattern.bParserFlag1LSB_Exclude);
-
-    scanParamArg(prmc, prmv, "pattern.bParserFlag1MSB_Enable", sizeof(pce_rule.pattern.bParserFlag1MSB_Enable), &pce_rule.pattern.bParserFlag1MSB_Enable);
-    scanParamArg(prmc, prmv, "pattern.nParserFlag1MSB", sizeof(pce_rule.pattern.nParserFlag1MSB), &pce_rule.pattern.nParserFlag1MSB);
-    scanParamArg(prmc, prmv, "pattern.nParserFlag1MSB_Mask", sizeof(pce_rule.pattern.nParserFlag1MSB_Mask), &pce_rule.pattern.nParserFlag1MSB_Mask);
-    scanParamArg(prmc, prmv, "pattern.bParserFlag1MSB_Exclude", sizeof(pce_rule.pattern.bParserFlag1MSB_Exclude), &pce_rule.pattern.bParserFlag1MSB_Exclude);
-
-    scanParamArg(prmc, prmv, "pattern.bVid_Original", sizeof(pce_rule.pattern.bVid_Original), &pce_rule.pattern.bVid_Original);
-    scanParamArg(prmc, prmv, "pattern.nOuterVidRange", sizeof(pce_rule.pattern.nOuterVidRange), &pce_rule.pattern.nOuterVidRange);
-    scanParamArg(prmc, prmv, "pattern.bSVidRange_Select", sizeof(pce_rule.pattern.bSVidRange_Select), &pce_rule.pattern.bSVidRange_Select);
-    scanParamArg(prmc, prmv, "pattern.bOuterVid_Original", sizeof(pce_rule.pattern.bOuterVid_Original), &pce_rule.pattern.bOuterVid_Original);
-
-    scanParamArg(prmc, prmv, "action.eTrafficClassAction", sizeof(pce_rule.action.eTrafficClassAction), &pce_rule.action.eTrafficClassAction);
-    scanParamArg(prmc, prmv, "action.nTrafficClassAlternate", sizeof(pce_rule.action.nTrafficClassAlternate), &pce_rule.action.nTrafficClassAlternate);
-    scanParamArg(prmc, prmv, "action.eSnoopingTypeAction", sizeof(pce_rule.action.eSnoopingTypeAction), &pce_rule.action.eSnoopingTypeAction);
-    scanParamArg(prmc, prmv, "action.eLearningAction", sizeof(pce_rule.action.eLearningAction), &pce_rule.action.eLearningAction);
-    scanParamArg(prmc, prmv, "action.eIrqAction", sizeof(pce_rule.action.eIrqAction), &pce_rule.action.eIrqAction);
-    scanParamArg(prmc, prmv, "action.eCrossStateAction", sizeof(pce_rule.action.eCrossStateAction), &pce_rule.action.eCrossStateAction);
-    scanParamArg(prmc, prmv, "action.eCritFrameAction", sizeof(pce_rule.action.eCritFrameAction), &pce_rule.action.eCritFrameAction);
-    scanParamArg(prmc, prmv, "action.eTimestampAction", sizeof(pce_rule.action.eTimestampAction), &pce_rule.action.eTimestampAction);
-    scanParamArg(prmc, prmv, "action.ePortMapAction", sizeof(pce_rule.action.ePortMapAction), &pce_rule.action.ePortMapAction);
-    scanParamArg(prmc, prmv, "action.nForwardPortMap", sizeof(pce_rule.action.nForwardPortMap[0]), &pce_rule.action.nForwardPortMap[0]);
-    scanParamArg(prmc, prmv, "action.nForwardPortMap[1]", sizeof(pce_rule.action.nForwardPortMap[1]), &pce_rule.action.nForwardPortMap[1]);
-    scanParamArg(prmc, prmv, "action.nForwardPortMap[2]", sizeof(pce_rule.action.nForwardPortMap[2]), &pce_rule.action.nForwardPortMap[2]);
-    scanParamArg(prmc, prmv, "action.nForwardPortMap[3]", sizeof(pce_rule.action.nForwardPortMap[3]), &pce_rule.action.nForwardPortMap[3]);
-    scanParamArg(prmc, prmv, "action.nForwardPortMap[4]", sizeof(pce_rule.action.nForwardPortMap[4]), &pce_rule.action.nForwardPortMap[4]);
-    scanParamArg(prmc, prmv, "action.nForwardPortMap[5]", sizeof(pce_rule.action.nForwardPortMap[5]), &pce_rule.action.nForwardPortMap[5]);
-    scanParamArg(prmc, prmv, "action.nForwardPortMap[6]", sizeof(pce_rule.action.nForwardPortMap[6]), &pce_rule.action.nForwardPortMap[6]);
-    scanParamArg(prmc, prmv, "action.nForwardPortMap[7]", sizeof(pce_rule.action.nForwardPortMap[7]), &pce_rule.action.nForwardPortMap[7]);
-    scanParamArg(prmc, prmv, "action.bRemarkAction", sizeof(pce_rule.action.bRemarkAction), &pce_rule.action.bRemarkAction);
-    scanParamArg(prmc, prmv, "action.bRemarkPCP", sizeof(pce_rule.action.bRemarkAction), &pce_rule.action.bRemarkPCP);
-    scanParamArg(prmc, prmv, "action.bRemarkSTAG_PCP", sizeof(pce_rule.action.bRemarkSTAG_PCP), &pce_rule.action.bRemarkSTAG_PCP);
-    scanParamArg(prmc, prmv, "action.bRemarkSTAG_DEI", sizeof(pce_rule.action.bRemarkSTAG_DEI), &pce_rule.action.bRemarkSTAG_DEI);
-    scanParamArg(prmc, prmv, "action.bRemarkDSCP", sizeof(pce_rule.action.bRemarkDSCP), &pce_rule.action.bRemarkDSCP);
-    scanParamArg(prmc, prmv, "action.bRemarkClass", sizeof(pce_rule.action.bRemarkClass), &pce_rule.action.bRemarkClass);
-    scanParamArg(prmc, prmv, "action.eMeterAction", sizeof(pce_rule.action.eMeterAction), &pce_rule.action.eMeterAction);
-    scanParamArg(prmc, prmv, "action.nMeterId", sizeof(pce_rule.action.nMeterId), &pce_rule.action.nMeterId);
-    scanParamArg(prmc, prmv, "action.bRMON_Action", sizeof(pce_rule.action.bRMON_Action), &pce_rule.action.bRMON_Action);
-    scanParamArg(prmc, prmv, "action.nRMON_Id", sizeof(pce_rule.action.nRMON_Id), &pce_rule.action.nRMON_Id);
-    scanParamArg(prmc, prmv, "action.eVLAN_Action", sizeof(pce_rule.action.eVLAN_Action), &pce_rule.action.eVLAN_Action);
-    scanParamArg(prmc, prmv, "action.nVLAN_Id", sizeof(pce_rule.action.nVLAN_Id), &pce_rule.action.nVLAN_Id);
-    scanParamArg(prmc, prmv, "action.nFId", sizeof(pce_rule.action.nFId), &pce_rule.action.nFId);
-    scanParamArg(prmc, prmv, "action.bFidEnable", sizeof(pce_rule.action.bFidEnable), &pce_rule.action.bFidEnable);
-
-    scanParamArg(prmc, prmv, "action.eSVLAN_Action", sizeof(pce_rule.action.eSVLAN_Action), &pce_rule.action.eSVLAN_Action);
-    scanParamArg(prmc, prmv, "action.nSVLAN_Id", sizeof(pce_rule.action.nSVLAN_Id), &pce_rule.action.nSVLAN_Id);
-    scanParamArg(prmc, prmv, "action.eVLAN_CrossAction", sizeof(pce_rule.action.eVLAN_CrossAction), &pce_rule.action.eVLAN_CrossAction);
-    scanParamArg(prmc, prmv, "action.bPortBitMapMuxControl", sizeof(pce_rule.action.bPortBitMapMuxControl), &pce_rule.action.bPortBitMapMuxControl);
-    scanParamArg(prmc, prmv, "action.bCVLAN_Ignore_Control", sizeof(pce_rule.action.bCVLAN_Ignore_Control), &pce_rule.action.bCVLAN_Ignore_Control);
-    scanParamArg(prmc, prmv, "action.bPortLinkSelection", sizeof(pce_rule.action.bPortLinkSelection), &pce_rule.action.bPortLinkSelection);
-    scanParamArg(prmc, prmv, "action.bPortTrunkAction", sizeof(pce_rule.action.bPortTrunkAction), &pce_rule.action.bPortTrunkAction);
-
-    scanParamArg(prmc, prmv, "action.bFlowID_Action", sizeof(pce_rule.action.bFlowID_Action), &pce_rule.action.bFlowID_Action);
-    scanParamArg(prmc, prmv, "action.nFlowID", sizeof(pce_rule.action.nFlowID), &pce_rule.action.nFlowID);
-
-    scanParamArg(prmc, prmv, "action.bRoutExtId_Action", sizeof(pce_rule.action.bRoutExtId_Action), &pce_rule.action.bRoutExtId_Action);
-    scanParamArg(prmc, prmv, "action.nRoutExtId", sizeof(pce_rule.action.nRoutExtId), &pce_rule.action.nRoutExtId);
-
-    scanParamArg(prmc, prmv, "action.bRtDstPortMaskCmp_Action", sizeof(pce_rule.action.bRtDstPortMaskCmp_Action), &pce_rule.action.bRtDstPortMaskCmp_Action);
-    scanParamArg(prmc, prmv, "action.bRtSrcPortMaskCmp_Action", sizeof(pce_rule.action.bRtSrcPortMaskCmp_Action), &pce_rule.action.bRtSrcPortMaskCmp_Action);
-    scanParamArg(prmc, prmv, "action.bRtDstIpMaskCmp_Action", sizeof(pce_rule.action.bRtDstIpMaskCmp_Action), &pce_rule.action.bRtDstIpMaskCmp_Action);
-    scanParamArg(prmc, prmv, "action.bRtSrcIpMaskCmp_Action", sizeof(pce_rule.action.bRtSrcIpMaskCmp_Action), &pce_rule.action.bRtSrcIpMaskCmp_Action);
-    scanParamArg(prmc, prmv, "action.bRtInnerIPasKey_Action", sizeof(pce_rule.action.bRtInnerIPasKey_Action), &pce_rule.action.bRtInnerIPasKey_Action);
-
-    scanParamArg(prmc, prmv, "action.bRtAccelEna_Action", sizeof(pce_rule.action.bRtAccelEna_Action), &pce_rule.action.bRtAccelEna_Action);
-    scanParamArg(prmc, prmv, "action.bRtCtrlEna_Action", sizeof(pce_rule.action.bRtCtrlEna_Action), &pce_rule.action.bRtCtrlEna_Action);
-    scanParamArg(prmc, prmv, "action.eProcessPath_Action", sizeof(pce_rule.action.eProcessPath_Action), &pce_rule.action.eProcessPath_Action);
-    scanParamArg(prmc, prmv, "action.ePortFilterType_Action", sizeof(pce_rule.action.ePortFilterType_Action), &pce_rule.action.ePortFilterType_Action);
-
-    scanParamArg(prmc, prmv, "action.bOamEnable", sizeof(pce_rule.action.bOamEnable), &pce_rule.action.bOamEnable);
-    scanParamArg(prmc, prmv, "action.nRecordId", sizeof(pce_rule.action.nRecordId), &pce_rule.action.nRecordId);
-    scanParamArg(prmc, prmv, "action.bExtractEnable", sizeof(pce_rule.action.bExtractEnable), &pce_rule.action.bExtractEnable);
-    scanParamArg(prmc, prmv, "action.eColorFrameAction", sizeof(pce_rule.action.eColorFrameAction), &pce_rule.action.eColorFrameAction);
-    scanParamArg(prmc, prmv, "action.bExtendedVlanEnable", sizeof(pce_rule.action.bExtendedVlanEnable), &pce_rule.action.bExtendedVlanEnable);
-    scanParamArg(prmc, prmv, "action.nExtendedVlanBlockId", sizeof(pce_rule.action.nExtendedVlanBlockId), &pce_rule.action.nExtendedVlanBlockId);
-
-    /*Aplicable for GSWIP 3.2*/
-    scanParamArg(prmc, prmv, "pattern.bFlexibleField4Enable",
-                 sizeof(pce_rule.pattern.bFlexibleField4Enable), &pce_rule.pattern.bFlexibleField4Enable);
-    scanParamArg(prmc, prmv, "pattern.bFlexibleField4_ExcludeEnable",
-                 sizeof(pce_rule.pattern.bFlexibleField4_ExcludeEnable), &pce_rule.pattern.bFlexibleField4_ExcludeEnable);
-    scanParamArg(prmc, prmv, "pattern.bFlexibleField4_RangeEnable",
-                 sizeof(pce_rule.pattern.bFlexibleField4_RangeEnable), &pce_rule.pattern.bFlexibleField4_RangeEnable);
-    scanParamArg(prmc, prmv, "pattern.nFlexibleField4_ParserIndex",
-                 sizeof(pce_rule.pattern.nFlexibleField4_ParserIndex), &pce_rule.pattern.nFlexibleField4_ParserIndex);
-    scanParamArg(prmc, prmv, "pattern.nFlexibleField4_Value",
-                 sizeof(pce_rule.pattern.nFlexibleField4_Value), &pce_rule.pattern.nFlexibleField4_Value);
-    scanParamArg(prmc, prmv, "pattern.nFlexibleField4_MaskOrRange",
-                 sizeof(pce_rule.pattern.nFlexibleField4_MaskOrRange), &pce_rule.pattern.nFlexibleField4_MaskOrRange);
-
-    scanParamArg(prmc, prmv, "pattern.bFlexibleField3Enable",
-                 sizeof(pce_rule.pattern.bFlexibleField3Enable), &pce_rule.pattern.bFlexibleField3Enable);
-    scanParamArg(prmc, prmv, "pattern.bFlexibleField3_ExcludeEnable",
-                 sizeof(pce_rule.pattern.bFlexibleField3_ExcludeEnable), &pce_rule.pattern.bFlexibleField3_ExcludeEnable);
-    scanParamArg(prmc, prmv, "pattern.bFlexibleField3_RangeEnable",
-                 sizeof(pce_rule.pattern.bFlexibleField3_RangeEnable), &pce_rule.pattern.bFlexibleField3_RangeEnable);
-    scanParamArg(prmc, prmv, "pattern.nFlexibleField3_ParserIndex",
-                 sizeof(pce_rule.pattern.nFlexibleField3_ParserIndex), &pce_rule.pattern.nFlexibleField3_ParserIndex);
-    scanParamArg(prmc, prmv, "pattern.nFlexibleField3_Value",
-                 sizeof(pce_rule.pattern.nFlexibleField3_Value), &pce_rule.pattern.nFlexibleField3_Value);
-    scanParamArg(prmc, prmv, "pattern.nFlexibleField3_MaskOrRange",
-                 sizeof(pce_rule.pattern.nFlexibleField3_MaskOrRange), &pce_rule.pattern.nFlexibleField3_MaskOrRange);
-
-    scanParamArg(prmc, prmv, "pattern.bFlexibleField2Enable",
-                 sizeof(pce_rule.pattern.bFlexibleField2Enable), &pce_rule.pattern.bFlexibleField2Enable);
-    scanParamArg(prmc, prmv, "pattern.bFlexibleField2_ExcludeEnable",
-                 sizeof(pce_rule.pattern.bFlexibleField2_ExcludeEnable), &pce_rule.pattern.bFlexibleField2_ExcludeEnable);
-    scanParamArg(prmc, prmv, "pattern.bFlexibleField2_RangeEnable",
-                 sizeof(pce_rule.pattern.bFlexibleField2_RangeEnable), &pce_rule.pattern.bFlexibleField2_RangeEnable);
-    scanParamArg(prmc, prmv, "pattern.nFlexibleField2_ParserIndex",
-                 sizeof(pce_rule.pattern.nFlexibleField2_ParserIndex), &pce_rule.pattern.nFlexibleField2_ParserIndex);
-    scanParamArg(prmc, prmv, "pattern.nFlexibleField2_Value",
-                 sizeof(pce_rule.pattern.nFlexibleField2_Value), &pce_rule.pattern.nFlexibleField2_Value);
-    scanParamArg(prmc, prmv, "pattern.nFlexibleField2_MaskOrRange",
-                 sizeof(pce_rule.pattern.nFlexibleField2_MaskOrRange), &pce_rule.pattern.nFlexibleField2_MaskOrRange);
-
-    scanParamArg(prmc, prmv, "pattern.bFlexibleField1Enable",
-                 sizeof(pce_rule.pattern.bFlexibleField1Enable), &pce_rule.pattern.bFlexibleField1Enable);
-    scanParamArg(prmc, prmv, "pattern.bFlexibleField1_ExcludeEnable",
-                 sizeof(pce_rule.pattern.bFlexibleField1_ExcludeEnable), &pce_rule.pattern.bFlexibleField1_ExcludeEnable);
-    scanParamArg(prmc, prmv, "pattern.bFlexibleField1_RangeEnable",
-                 sizeof(pce_rule.pattern.bFlexibleField1_RangeEnable), &pce_rule.pattern.bFlexibleField1_RangeEnable);
-    scanParamArg(prmc, prmv, "pattern.nFlexibleField1_ParserIndex",
-                 sizeof(pce_rule.pattern.nFlexibleField1_ParserIndex), &pce_rule.pattern.nFlexibleField1_ParserIndex);
-    scanParamArg(prmc, prmv, "pattern.nFlexibleField1_Value",
-                 sizeof(pce_rule.pattern.nFlexibleField1_Value), &pce_rule.pattern.nFlexibleField1_Value);
-    scanParamArg(prmc, prmv, "pattern.nFlexibleField1_MaskOrRange",
-                 sizeof(pce_rule.pattern.nFlexibleField1_MaskOrRange), &pce_rule.pattern.nFlexibleField1_MaskOrRange);
-
-    scanParamArg(prmc, prmv, "action.bPBB_Action_Enable", sizeof(pce_rule.action.bPBB_Action_Enable), &pce_rule.action.bPBB_Action_Enable);
-    scanParamArg(prmc, prmv, "action.sPBB_Action.bIheaderActionEnable",
-                 sizeof(pce_rule.action.sPBB_Action.bIheaderActionEnable), &pce_rule.action.sPBB_Action.bIheaderActionEnable);
-    scanParamArg(prmc, prmv, "action.sPBB_Action.eIheaderOpMode",
-                 sizeof(pce_rule.action.sPBB_Action.eIheaderOpMode), &pce_rule.action.sPBB_Action.eIheaderOpMode);
-    scanParamArg(prmc, prmv, "action.sPBB_Action.bTunnelIdKnownTrafficEnable",
-                 sizeof(pce_rule.action.sPBB_Action.bTunnelIdKnownTrafficEnable), &pce_rule.action.sPBB_Action.bTunnelIdKnownTrafficEnable);
-    scanParamArg(prmc, prmv, "action.sPBB_Action.nTunnelIdKnownTraffic",
-                 sizeof(pce_rule.action.sPBB_Action.nTunnelIdKnownTraffic), &pce_rule.action.sPBB_Action.nTunnelIdKnownTraffic);
-    scanParamArg(prmc, prmv, "action.sPBB_Action.bTunnelIdUnKnownTrafficEnable",
-                 sizeof(pce_rule.action.sPBB_Action.bTunnelIdUnKnownTrafficEnable), &pce_rule.action.sPBB_Action.bTunnelIdUnKnownTrafficEnable);
-    scanParamArg(prmc, prmv, "action.sPBB_Action.nTunnelIdUnKnownTraffic",
-                 sizeof(pce_rule.action.sPBB_Action.nTunnelIdUnKnownTraffic), &pce_rule.action.sPBB_Action.nTunnelIdUnKnownTraffic);
-    scanParamArg(prmc, prmv, "action.sPBB_Action.bB_DstMac_FromMacTableEnable",
-                 sizeof(pce_rule.action.sPBB_Action.bB_DstMac_FromMacTableEnable), &pce_rule.action.sPBB_Action.bB_DstMac_FromMacTableEnable);
-    scanParamArg(prmc, prmv, "action.sPBB_Action.bReplace_B_SrcMacEnable",
-                 sizeof(pce_rule.action.sPBB_Action.bReplace_B_SrcMacEnable), &pce_rule.action.sPBB_Action.bReplace_B_SrcMacEnable);
-    scanParamArg(prmc, prmv, "action.sPBB_Action.bReplace_B_DstMacEnable",
-                 sizeof(pce_rule.action.sPBB_Action.bReplace_B_DstMacEnable), &pce_rule.action.sPBB_Action.bReplace_B_DstMacEnable);
-    scanParamArg(prmc, prmv, "action.sPBB_Action.bReplace_I_TAG_ResEnable",
-                 sizeof(pce_rule.action.sPBB_Action.bReplace_I_TAG_ResEnable), &pce_rule.action.sPBB_Action.bReplace_I_TAG_ResEnable);
-    scanParamArg(prmc, prmv, "action.sPBB_Action.bReplace_I_TAG_UacEnable",
-                 sizeof(pce_rule.action.sPBB_Action.bReplace_I_TAG_UacEnable), &pce_rule.action.sPBB_Action.bReplace_I_TAG_UacEnable);
-    scanParamArg(prmc, prmv, "action.sPBB_Action.bReplace_I_TAG_DeiEnable",
-                 sizeof(pce_rule.action.sPBB_Action.bReplace_I_TAG_DeiEnable), &pce_rule.action.sPBB_Action.bReplace_I_TAG_DeiEnable);
-    scanParamArg(prmc, prmv, "action.sPBB_Action.bReplace_I_TAG_PcpEnable",
-                 sizeof(pce_rule.action.sPBB_Action.bReplace_I_TAG_PcpEnable), &pce_rule.action.sPBB_Action.bReplace_I_TAG_PcpEnable);
-    scanParamArg(prmc, prmv, "action.sPBB_Action.bReplace_I_TAG_SidEnable",
-                 sizeof(pce_rule.action.sPBB_Action.bReplace_I_TAG_SidEnable), &pce_rule.action.sPBB_Action.bReplace_I_TAG_SidEnable);
-    scanParamArg(prmc, prmv, "action.sPBB_Action.bReplace_I_TAG_TpidEnable",
-                 sizeof(pce_rule.action.sPBB_Action.bReplace_I_TAG_TpidEnable), &pce_rule.action.sPBB_Action.bReplace_I_TAG_TpidEnable);
-    scanParamArg(prmc, prmv, "action.sPBB_Action.bBtagActionEnable",
-                 sizeof(pce_rule.action.sPBB_Action.bBtagActionEnable), &pce_rule.action.sPBB_Action.bBtagActionEnable);
-    scanParamArg(prmc, prmv, "action.sPBB_Action.eBtagOpMode",
-                 sizeof(pce_rule.action.sPBB_Action.eBtagOpMode), &pce_rule.action.sPBB_Action.eBtagOpMode);
-    scanParamArg(prmc, prmv, "action.sPBB_Action.bProcessIdKnownTrafficEnable",
-                 sizeof(pce_rule.action.sPBB_Action.bProcessIdKnownTrafficEnable), &pce_rule.action.sPBB_Action.bProcessIdKnownTrafficEnable);
-    scanParamArg(prmc, prmv, "action.sPBB_Action.nProcessIdKnownTraffic",
-                 sizeof(pce_rule.action.sPBB_Action.nProcessIdKnownTraffic), &pce_rule.action.sPBB_Action.nProcessIdKnownTraffic);
-    scanParamArg(prmc, prmv, "action.sPBB_Action.bProcessIdUnKnownTrafficEnable",
-                 sizeof(pce_rule.action.sPBB_Action.bProcessIdUnKnownTrafficEnable), &pce_rule.action.sPBB_Action.bProcessIdUnKnownTrafficEnable);
-    scanParamArg(prmc, prmv, "action.sPBB_Action.nProcessIdUnKnownTraffic",
-                 sizeof(pce_rule.action.sPBB_Action.nProcessIdUnKnownTraffic), &pce_rule.action.sPBB_Action.nProcessIdUnKnownTraffic);
-    scanParamArg(prmc, prmv, "action.sPBB_Action.bReplace_B_TAG_DeiEnable",
-                 sizeof(pce_rule.action.sPBB_Action.bReplace_B_TAG_DeiEnable), &pce_rule.action.sPBB_Action.bReplace_B_TAG_DeiEnable);
-    scanParamArg(prmc, prmv, "action.sPBB_Action.bReplace_B_TAG_PcpEnable",
-                 sizeof(pce_rule.action.sPBB_Action.bReplace_B_TAG_PcpEnable), &pce_rule.action.sPBB_Action.bReplace_B_TAG_PcpEnable);
-    scanParamArg(prmc, prmv, "action.sPBB_Action.bReplace_B_TAG_VidEnable",
-                 sizeof(pce_rule.action.sPBB_Action.bReplace_B_TAG_VidEnable), &pce_rule.action.sPBB_Action.bReplace_B_TAG_VidEnable);
-    scanParamArg(prmc, prmv, "action.sPBB_Action.bReplace_B_TAG_TpidEnable",
-                 sizeof(pce_rule.action.sPBB_Action.bReplace_B_TAG_TpidEnable), &pce_rule.action.sPBB_Action.bReplace_B_TAG_TpidEnable);
-
-    scanParamArg(prmc, prmv, "action.sPBB_Action.bMacTableMacinMacActionEnable",
-                 sizeof(pce_rule.action.sPBB_Action.bMacTableMacinMacActionEnable), &pce_rule.action.sPBB_Action.bMacTableMacinMacActionEnable);
-    scanParamArg(prmc, prmv, "action.sPBB_Action.eMacTableMacinMacSelect",
-                 sizeof(pce_rule.action.sPBB_Action.eMacTableMacinMacSelect), &pce_rule.action.sPBB_Action.eMacTableMacinMacSelect);
-
-    scanParamArg(prmc, prmv, "action.bDestSubIf_Action_Enable",
-                 sizeof(pce_rule.action.bDestSubIf_Action_Enable), &pce_rule.action.bDestSubIf_Action_Enable);
-    scanParamArg(prmc, prmv, "action.sDestSubIF_Action.bDestSubIFIDActionEnable",
-                 sizeof(pce_rule.action.sDestSubIF_Action.bDestSubIFIDActionEnable), &pce_rule.action.sDestSubIF_Action.bDestSubIFIDActionEnable);
-    scanParamArg(prmc, prmv, "action.sDestSubIF_Action.bDestSubIFIDAssignmentEnable",
-                 sizeof(pce_rule.action.sDestSubIF_Action.bDestSubIFIDAssignmentEnable), &pce_rule.action.sDestSubIF_Action.bDestSubIFIDAssignmentEnable);
-    scanParamArg(prmc, prmv, "action.sDestSubIF_Action.nDestSubIFGrp_Field",
-                 sizeof(pce_rule.action.sDestSubIF_Action.nDestSubIFGrp_Field), &pce_rule.action.sDestSubIF_Action.nDestSubIFGrp_Field);
+	gsw_pce_rule_scan_write_params(prmc, prmv, &pce_rule);
 
     gsw_dev = gsw_get_struc(lif_id, 0);
     ret = GSW_PceRuleWrite(gsw_dev, &pce_rule);
@@ -4782,20 +4901,14 @@ GSW_return_t fapi_GSW_PceRuleDelete(int prmc, char *prmv[])
 
     memset(&pce_rule, 0, sizeof(GSW_PCE_ruleEntry_t));
 
-    rret = scanParamArg(prmc, prmv, "nLogicalPortId", sizeof(pce_rule.logicalportid), &pce_rule.logicalportid);
-    if (rret < 1)
-    {
-        printf("Parameter not Found: nLogicalPortId\n");
-        return OS_ERROR;
-    }
-
     rret = scanParamArg(prmc, prmv, "pattern.nIndex", sizeof(pce_rule.nIndex), &pce_rule.nIndex);
     if (rret < 1)
     {
         printf("Parameter not Found: pattern.nIndex\n");
-        return OS_ERROR;
+        return GSW_statusErr;
     }
 
+    scanParamArg(prmc, prmv, "nLogicalPortId", sizeof(pce_rule.logicalportid), &pce_rule.logicalportid);
     scanParamArg(prmc, prmv, "nSubIfIdGroup", sizeof(pce_rule.subifidgroup), &pce_rule.subifidgroup);
     scanParamArg(prmc, prmv, "region", sizeof(pce_rule.region), &pce_rule.region);
 
@@ -4822,7 +4935,7 @@ GSW_return_t fapi_GSW_PceRuleAlloc(int prmc, char *prmv[])
     if (rret < 1)
     {
         printf("Parameter not Found: num_of_rules\n");
-        return OS_ERROR;
+        return GSW_statusErr;
     }
 
     gsw_dev = gsw_get_struc(lif_id, 0);
@@ -4851,7 +4964,7 @@ GSW_return_t fapi_GSW_PceRuleFree(int prmc, char *prmv[])
     if (rret < 1)
     {
         printf("Parameter not Found: blockid\n");
-        return OS_ERROR;
+        return GSW_statusErr;
     }
 
     gsw_dev = gsw_get_struc(lif_id, 0);
@@ -4874,7 +4987,6 @@ GSW_return_t fapi_GSW_PceRuleEnable(int prmc, char *prmv[])
     GSW_PCE_ruleEntry_t pce_rule = {0};
     GSW_Device_t *gsw_dev;
     GSW_return_t ret;
-    int rret;
 
     scanParamArg(prmc, prmv, "nLogicalPortId", sizeof(pce_rule.logicalportid), &pce_rule.logicalportid);
     scanParamArg(prmc, prmv, "nSubIfIdGroup", sizeof(pce_rule.subifidgroup), &pce_rule.subifidgroup);
@@ -4901,7 +5013,6 @@ GSW_return_t fapi_GSW_PceRuleDisable(int prmc, char *prmv[])
     GSW_PCE_ruleEntry_t pce_rule = {0};
     GSW_Device_t *gsw_dev;
     GSW_return_t ret;
-    int rret;
 
     scanParamArg(prmc, prmv, "nLogicalPortId", sizeof(pce_rule.logicalportid), &pce_rule.logicalportid);
     scanParamArg(prmc, prmv, "nSubIfIdGroup", sizeof(pce_rule.subifidgroup), &pce_rule.subifidgroup);
@@ -4920,6 +5031,242 @@ GSW_return_t fapi_GSW_PceRuleDisable(int prmc, char *prmv[])
         printf("\n");
     }
 
+    return ret;
+}
+
+GSW_return_t fapi_GSW_PceRuleMove(int prmc, char *prmv[])
+{
+
+    GSW_Device_t *gsw_dev;
+    GSW_return_t ret;
+    GSW_PCE_rule_move_t param = {0};
+
+    memset(&param, 0, sizeof(GSW_PCE_rule_move_t));
+	scanParamArg(prmc, prmv, "cur.nLogicalPortId", sizeof(param.cur.logicalportid), &param.cur.logicalportid);
+	scanParamArg(prmc, prmv, "cur.nSubIfIdGroup", sizeof(param.cur.subifidgroup), &param.cur.subifidgroup);
+	scanParamArg(prmc, prmv, "cur.region", sizeof(param.cur.region), &param.cur.region);
+	scanParamArg(prmc, prmv, "cur.pattern.nIndex", sizeof(param.cur.nIndex), &param.cur.nIndex);
+	scanParamArg(prmc, prmv, "new.nLogicalPortId", sizeof(param.new.logicalportid), &param.new.logicalportid);
+	scanParamArg(prmc, prmv, "new.nSubIfIdGroup", sizeof(param.new.subifidgroup), &param.new.subifidgroup);
+	scanParamArg(prmc, prmv, "new.region", sizeof(param.new.region), &param.new.region);
+	scanParamArg(prmc, prmv, "new.pattern.nIndex", sizeof(param.new.nIndex), &param.new.nIndex);
+
+    gsw_dev = gsw_get_struc(lif_id, 0);
+    ret = GSW_PceRuleMove(gsw_dev, &param);
+
+    if (ret < 0)
+    {
+        printf("GSW_PceRuleMove failed with ret code: %d\n", ret);
+    }
+    else
+    {
+        printf("GSW_PceRuleMove success with ret code: %d\n", ret);
+    }
+    return ret;
+}
+
+GSW_return_t fapi_GSW_PceRuleBlockSize(int prmc, char *prmv[])
+{
+    GSW_Device_t *gsw_dev;
+    GSW_return_t ret = 0;
+    GSW_PCE_rule_alloc_t param = {0};
+    int rret;
+
+    memset(&param, 0, sizeof(GSW_PCE_rule_alloc_t));
+    rret = scanParamArg(prmc, prmv, "blockid", sizeof(param.blockid), &param.blockid);
+    if (rret < 1)
+    {
+        printf("Parameter not Found: blockid\n");
+        return GSW_statusErr;
+    }
+
+    gsw_dev = gsw_get_struc(lif_id, 0);
+    ret = GSW_PceRuleBlockSize(gsw_dev, &param);
+
+    if (ret < 0)
+        printf("GSW_PceRuleBlockSize failed with ret code %d\n", ret);
+    else
+    {
+        printf("ret          = %d\n", ret);
+        printf("blockid      = %u\n", param.blockid);
+        printf("num_of_rules = %u\n", param.num_of_rules);
+        printf("GSW_PceRuleBlockSize done\n");
+    }
+
+    return ret;
+}
+
+GSW_return_t fapi_GSW_PceRuleLogicRead(int prmc, char *prmv[])
+{
+    GSW_PCE_rule_t pce_rule = {0};
+    GSW_Device_t *gsw_dev;
+    GSW_return_t ret;
+    int rret;
+
+    rret = scanParamArg(prmc, prmv, "pattern.nIndex", sizeof(pce_rule.pattern.nIndex), &pce_rule.pattern.nIndex);
+    if (rret < 1)
+    {
+        printf("Parameter not Found: pattern.nIndex\n");
+        return GSW_statusErr;
+    }
+
+    scanParamArg(prmc, prmv, "nLogicalPortId", sizeof(pce_rule.logicalportid), &pce_rule.logicalportid);
+    scanParamArg(prmc, prmv, "nSubIfIdGroup", sizeof(pce_rule.subifidgroup), &pce_rule.subifidgroup);
+    scanParamArg(prmc, prmv, "region", sizeof(pce_rule.region), &pce_rule.region);
+
+    gsw_dev = gsw_get_struc(lif_id, 0);
+    ret = GSW_PceRuleLogicRead(gsw_dev, &pce_rule);
+    if (ret < 0)
+        printf("\t%40s:\t0x%x\n", "fapi_GSW_PceRuleLogicRead failed with ret code", ret);
+    else
+    {
+        printf("fapi_GSW_PceRuleLogicRead done\n");
+        gsw_pce_rule_display(&pce_rule);
+    }
+    return ret;
+}
+
+GSW_return_t fapi_GSW_PceRuleLogicWrite(int prmc, char *prmv[])
+{
+    GSW_PCE_rule_t pce_rule = {0};
+    GSW_Device_t *gsw_dev;
+    GSW_return_t ret;
+    int rret;
+
+    memset(&pce_rule, 0, sizeof(GSW_PCE_rule_t));
+
+    rret = scanParamArg(prmc, prmv, "pattern.nIndex", sizeof(pce_rule.pattern.nIndex), &pce_rule.pattern.nIndex);
+    if (rret < 1)
+    {
+        printf("Parameter not Found: pattern.nIndex\n");
+        return GSW_statusErr;
+    }
+
+	gsw_pce_rule_scan_write_params(prmc, prmv, &pce_rule);
+
+    gsw_dev = gsw_get_struc(lif_id, 0);
+    ret = GSW_PceRuleLogicWrite(gsw_dev, &pce_rule);
+    if (ret < 0)
+        printf("\t%40s:\t0x%x\n", "fapi_GSW_PceRuleLogicWrite failed with ret code", ret);
+    else
+    {
+        printf("fapi_GSW_PceRuleLogicWrite done\n");
+    }
+
+    return ret;
+}
+
+GSW_return_t fapi_GSW_PceRuleLogicDelete(int prmc, char *prmv[])
+{
+    GSW_PCE_ruleEntry_t pce_rule;
+    GSW_Device_t *gsw_dev;
+    GSW_return_t ret;
+    int rret;
+
+    memset(&pce_rule, 0, sizeof(GSW_PCE_ruleEntry_t));
+
+    rret = scanParamArg(prmc, prmv, "pattern.nIndex", sizeof(pce_rule.nIndex), &pce_rule.nIndex);
+    if (rret < 1)
+    {
+        printf("Parameter not Found: pattern.nIndex\n");
+        return GSW_statusErr;
+    }
+
+    scanParamArg(prmc, prmv, "nLogicalPortId", sizeof(pce_rule.logicalportid), &pce_rule.logicalportid);
+    scanParamArg(prmc, prmv, "nSubIfIdGroup", sizeof(pce_rule.subifidgroup), &pce_rule.subifidgroup);
+    scanParamArg(prmc, prmv, "region", sizeof(pce_rule.region), &pce_rule.region);
+
+    gsw_dev = gsw_get_struc(lif_id, 0);
+    ret = GSW_PceRuleLogicDelete(gsw_dev, &pce_rule);
+    if (ret < 0)
+        printf("\t%40s:\t0x%x\n", "fapi_GSW_PceRuleLogicDelete failed with ret code", ret);
+    else
+    {
+        printf("fapi_GSW_PceRuleLogicDelete done\n");
+    }
+
+    return ret;
+}
+
+GSW_return_t fapi_GSW_PceRuleLogicEnable(int prmc, char *prmv[])
+{
+    GSW_PCE_ruleEntry_t pce_rule = {0};
+    GSW_Device_t *gsw_dev;
+    GSW_return_t ret;
+
+    scanParamArg(prmc, prmv, "nLogicalPortId", sizeof(pce_rule.logicalportid), &pce_rule.logicalportid);
+    scanParamArg(prmc, prmv, "nSubIfIdGroup", sizeof(pce_rule.subifidgroup), &pce_rule.subifidgroup);
+    scanParamArg(prmc, prmv, "region", sizeof(pce_rule.subifidgroup), &pce_rule.region);
+    scanParamArg(prmc, prmv, "pattern.nIndex", sizeof(pce_rule.nIndex), &pce_rule.nIndex);
+
+    gsw_dev = gsw_get_struc(lif_id, 0);
+    ret = GSW_PceRuleLogicEnable(gsw_dev, &pce_rule);
+    if (ret < 0)
+        printf("\t%40s:\t0x%x\n", "fapi_GSW_PceRuleLogicEnable failed with ret code", ret);
+    else
+    {
+        printf("\n\tret            = %d", ret);
+        printf("\n\tregion         = %u", pce_rule.region);
+        printf("\n\tpattern.nIndex = %u", pce_rule.nIndex);
+        printf("\n");
+    }
+
+    return ret;
+}
+
+GSW_return_t fapi_GSW_PceRuleLogicDisable(int prmc, char *prmv[])
+{
+    GSW_PCE_ruleEntry_t pce_rule = {0};
+    GSW_Device_t *gsw_dev;
+    GSW_return_t ret;
+
+    scanParamArg(prmc, prmv, "nLogicalPortId", sizeof(pce_rule.logicalportid), &pce_rule.logicalportid);
+    scanParamArg(prmc, prmv, "nSubIfIdGroup", sizeof(pce_rule.subifidgroup), &pce_rule.subifidgroup);
+    scanParamArg(prmc, prmv, "region", sizeof(pce_rule.subifidgroup), &pce_rule.region);
+    scanParamArg(prmc, prmv, "pattern.nIndex", sizeof(pce_rule.nIndex), &pce_rule.nIndex);
+
+    gsw_dev = gsw_get_struc(lif_id, 0);
+    ret = GSW_PceRuleLogicDisable(gsw_dev, &pce_rule);
+    if (ret < 0)
+        printf("\t%40s:\t0x%x\n", "fapi_GSW_PceRuleLogicDisable failed with ret code", ret);
+    else
+    {
+        printf("\n\tret            = %d", ret);
+        printf("\n\tregion         = %u", pce_rule.region);
+        printf("\n\tpattern.nIndex = %u", pce_rule.nIndex);
+        printf("\n");
+    }
+
+    return ret;
+}
+
+GSW_return_t fapi_GSW_PceRuleLogicMove(int prmc, char *prmv[])
+{
+    GSW_Device_t *gsw_dev;
+    GSW_return_t ret;
+    GSW_PCE_rule_move_t param = {0};
+
+    memset(&param, 0, sizeof(GSW_PCE_rule_move_t));
+	scanParamArg(prmc, prmv, "cur.nLogicalPortId", sizeof(param.cur.logicalportid), &param.cur.logicalportid);
+	scanParamArg(prmc, prmv, "cur.nSubIfIdGroup", sizeof(param.cur.subifidgroup), &param.cur.subifidgroup);
+	scanParamArg(prmc, prmv, "cur.region", sizeof(param.cur.region), &param.cur.region);
+	scanParamArg(prmc, prmv, "cur.pattern.nIndex", sizeof(param.cur.nIndex), &param.cur.nIndex);
+	scanParamArg(prmc, prmv, "new.nLogicalPortId", sizeof(param.new.logicalportid), &param.new.logicalportid);
+	scanParamArg(prmc, prmv, "new.nSubIfIdGroup", sizeof(param.new.subifidgroup), &param.new.subifidgroup);
+	scanParamArg(prmc, prmv, "new.region", sizeof(param.new.region), &param.new.region);
+	scanParamArg(prmc, prmv, "new.pattern.nIndex", sizeof(param.new.nIndex), &param.new.nIndex);
+
+    gsw_dev = gsw_get_struc(lif_id, 0);
+    ret = GSW_PceRuleLogicMove(gsw_dev, &param);
+
+    if (ret < 0)
+    {
+        printf("GSW_PceRuleLogicMove failed with ret code: %d\n", ret);
+    }
+    else
+    {
+        printf("GSW_PceRuleLogicMove success with ret code: %d\n", ret);
+    }
     return ret;
 }
 
@@ -4989,7 +5336,7 @@ GSW_return_t fapi_GSW_MulticastRouterPortAdd(int prmc, char *prmv[])
     if (rret < 1)
     {
         printf("Parameter not Found: nPortId\n");
-        return OS_ERROR;
+        return GSW_statusErr;
     }
 
     gsw_dev = gsw_get_struc(lif_id, 0);
@@ -5015,7 +5362,7 @@ GSW_return_t fapi_GSW_MulticastRouterPortRemove(int prmc, char *prmv[])
     if (rret < 1)
     {
         printf("Parameter not Found: nPortId\n");
-        return OS_ERROR;
+        return GSW_statusErr;
     }
 
     gsw_dev = gsw_get_struc(lif_id, 0);
@@ -5032,6 +5379,8 @@ GSW_return_t fapi_GSW_MulticastRouterPortRemove(int prmc, char *prmv[])
 
 GSW_return_t fapi_GSW_MulticastSnoopCfgGet(int prmc, char *prmv[])
 {
+    (void)prmc;
+    (void)prmv;
     GSW_multicastSnoopCfg_t param = {0};
     GSW_Device_t *gsw_dev;
     GSW_return_t ret;
@@ -5086,6 +5435,8 @@ GSW_return_t fapi_GSW_MulticastSnoopCfgSet(int prmc, char *prmv[])
 
 GSW_return_t fapi_GSW_MulticastRouterPortRead(int prmc, char *prmv[])
 {
+    (void)prmc;
+    (void)prmv;
     GSW_multicastRouterRead_t multicastRouterRead = {0};
     GSW_Device_t *gsw_dev;
     GSW_return_t ret;
@@ -5137,6 +5488,8 @@ GSW_return_t fapi_GSW_MulticastTableEntryAdd(int prmc, char *prmv[])
 
 GSW_return_t fapi_GSW_MulticastTableEntryRead(int prmc, char *prmv[])
 {
+    (void)prmc;
+    (void)prmv;
     GSW_multicastTableRead_t multicastTableRead;
     GSW_Device_t *gsw_dev;
     GSW_return_t ret;
@@ -5192,7 +5545,7 @@ GSW_return_t fapi_GSW_MulticastTableEntryRead(int prmc, char *prmv[])
                     valid = 1;
             }
 
-            for (k = 0; k < ARRAY_SIZE(multicastTableRead.nPortMap); k++)
+            for (k = 0; k < (int)ARRAY_SIZE(multicastTableRead.nPortMap); k++)
             {
                 if (multicastTableRead.nPortMap[k] != 0)
                     valid = 1;
@@ -5276,6 +5629,8 @@ GSW_return_t fapi_GSW_MulticastTableEntryRemove(int prmc, char *prmv[])
 
 GSW_return_t fapi_GSW_FW_Update(int prmc, char *prmv[])
 {
+    (void)prmc;
+    (void)prmv;
     GSW_Device_t *gsw_dev;
     GSW_return_t ret;
 
@@ -5293,6 +5648,8 @@ GSW_return_t fapi_GSW_FW_Update(int prmc, char *prmv[])
 
 GSW_return_t fapi_GSW_FW_Version(int prmc, char *prmv[])
 {
+    (void)prmc;
+    (void)prmv;
     GSW_Device_t *gsw_dev;
     GSW_return_t ret;
     struct sys_fw_image_version sys_img_ver = {0};
@@ -5314,6 +5671,8 @@ GSW_return_t fapi_GSW_FW_Version(int prmc, char *prmv[])
 
 GSW_return_t fapi_GSW_PVT_Meas(int prmc, char *prmv[])
 {
+    (void)prmc;
+    (void)prmv;
     GSW_Device_t *gsw_dev;
     GSW_return_t ret;
     struct sys_sensor_value sensor_value_temp = {0};
@@ -5344,7 +5703,7 @@ GSW_return_t fapi_GSW_Delay(int prmc, char *prmv[])
     if (rret < 1)
     {
         printf("Parameter not Found: nMsec\n");
-        return OS_ERROR;
+        return GSW_statusErr;
     }
 
     gsw_dev = gsw_get_struc(lif_id, 0);
@@ -5363,7 +5722,6 @@ GSW_return_t fapi_GSW_GPIO_Configure(int prmc, char *prmv[])
 {
     GSW_Device_t *gsw_dev;
     GSW_return_t ret;
-    int rret;
     struct sys_gpio_config param = {0};
 
     scanParamArg(prmc, prmv, "nEnableMaskIndex0", sizeof(param.enable_mask[0]), &param.enable_mask[0]);
@@ -5397,6 +5755,8 @@ GSW_return_t fapi_GSW_GPIO_Configure(int prmc, char *prmv[])
 
 GSW_return_t fapi_GSW_Reboot(int prmc, char *prmv[])
 {
+    (void)prmc;
+    (void)prmv;
     GSW_Device_t *gsw_dev;
     GSW_return_t ret;
 
@@ -5423,7 +5783,7 @@ GSW_return_t fapi_GSW_SysReg_Rd(int prmc, char *prmv[])
     if (rret < 1)
     {
         printf("Parameter not Found: addr\n");
-        return OS_ERROR;
+        return GSW_statusErr;
     }
 
     gsw_dev = gsw_get_struc(lif_id, 0);
@@ -5447,14 +5807,14 @@ GSW_return_t fapi_GSW_SysReg_Wr(int prmc, char *prmv[])
     if (rret < 1)
     {
         printf("Parameter not Found: addr\n");
-        return OS_ERROR;
+        return GSW_statusErr;
     }
 
     rret = scanParamArg(prmc, prmv, "val", sizeof(sys_reg.val), &sys_reg.val);
     if (rret < 1)
     {
         printf("parameter not Found: val\n");
-        return OS_ERROR;
+        return GSW_statusErr;
     }
 
     gsw_dev = gsw_get_struc(lif_id, 0);
@@ -5480,21 +5840,21 @@ GSW_return_t fapi_GSW_SysReg_Mod(int prmc, char *prmv[])
     if (rret < 1)
     {
         printf("Parameter not Found: addr\n");
-        return OS_ERROR;
+        return GSW_statusErr;
     }
 
     rret = scanParamArg(prmc, prmv, "val", sizeof(sys_reg.val), &sys_reg.val);
     if (rret < 1)
     {
         printf("parameter not Found: val\n");
-        return OS_ERROR;
+        return GSW_statusErr;
     }
 
     rret = scanParamArg(prmc, prmv, "mask", sizeof(sys_reg.mask), &sys_reg.mask);
     if (rret < 1)
     {
         printf("parameter not Found: mask\n");
-        return OS_ERROR;
+        return GSW_statusErr;
     }
 
     gsw_dev = gsw_get_struc(lif_id, 0);
@@ -5521,7 +5881,7 @@ GSW_return_t fapi_GSW_Cml_Clk_Get(int prmc, char *prmv[])
     if (rret < 1)
     {
         printf("Parameter not Found: nClk\n");
-        return OS_ERROR;
+        return GSW_statusErr;
     }
 
     param.clk = nClk;
@@ -5556,7 +5916,7 @@ GSW_return_t fapi_GSW_Cml_Clk_Set(int prmc, char *prmv[])
     if (rret < 1)
     {
         printf("Parameter not Found: nClk\n");
-        return OS_ERROR;
+        return GSW_statusErr;
     }
 
     scanParamArg(prmc, prmv, "bEn", sizeof(bEn), &bEn);
@@ -5595,13 +5955,13 @@ GSW_return_t fapi_GSW_Sfp_Get(int prmc, char *prmv[])
     if (rret < 1)
     {
         printf("Parameter not Found: nPortId\n");
-        return OS_ERROR;
+        return GSW_statusErr;
     }
     rret = scanParamArg(prmc, prmv, "nOption", sizeof(nOption), &nOption);
     if (rret < 1)
     {
         printf("Parameter not Found: nOption\n");
-        return OS_ERROR;
+        return GSW_statusErr;
     }
 
     cfg.port_id = nPort;
@@ -5642,7 +6002,7 @@ GSW_return_t fapi_GSW_Sfp_Set(int prmc, char *prmv[])
     if (rret < 1)
     {
         printf("Parameter not Found: nPortId\n");
-        return OS_ERROR;
+        return GSW_statusErr;
     }
     cfg.port_id = val;
 
@@ -5658,7 +6018,7 @@ GSW_return_t fapi_GSW_Sfp_Set(int prmc, char *prmv[])
     if (rret < 1)
     {
         printf("Parameter not Found: nOption\n");
-        return OS_ERROR;
+        return GSW_statusErr;
     }
 
     cfg.option = val;
@@ -5698,14 +6058,14 @@ GSW_return_t fapi_GSW_Debug_RMON_Port_Get(int prmc, char *prmv[])
     if (rret < 1)
     {
         printf("Parameter not Found: nPortId\n");
-        return OS_ERROR;
+        return GSW_statusErr;
     }
 
     rret = scanParamArg(prmc, prmv, "ePortType", sizeof(sVar.ePortType), &sVar.ePortType);
     if (rret < 1)
     {
         printf("Parameter not Found: ePortType\n");
-        return OS_ERROR;
+        return GSW_statusErr;
     }
 
     gsw_dev = gsw_get_struc(lif_id, 0);
@@ -6065,7 +6425,7 @@ GSW_return_t fapi_GSW_CPU_PortCfgGet(int prmc, char *prmv[])
     if (rret < 1)
     {
         printf("Parameter not Found: nPortId\n");
-        return OS_ERROR;
+        return GSW_statusErr;
     }
 
     gsw_dev = gsw_get_struc(lif_id, 0);
@@ -6093,11 +6453,12 @@ GSW_return_t fapi_GSW_CPU_PortCfgGet(int prmc, char *prmv[])
 
 GSW_return_t fapi_GSW_CPU_PortGet(int prmc, char *prmv[])
 {
+    (void)prmc;
+    (void)prmv;
 
     GSW_Device_t *gsw_dev;
     GSW_return_t ret;
     GSW_CPU_Port_t param = {0};
-    int rret;
 
     memset(&param, 0, sizeof(GSW_CPU_Port_t));
 
@@ -6120,7 +6481,6 @@ GSW_return_t fapi_GSW_CPU_PortSet(int prmc, char *prmv[])
     GSW_return_t ret;
     GSW_CPU_Port_t param = {0};
     int rret;
-    uint8_t nEntryIndex = 0, nVal = 0, index;
 
     memset(&param, 0, sizeof(GSW_CPU_Port_t));
 
@@ -6128,7 +6488,7 @@ GSW_return_t fapi_GSW_CPU_PortSet(int prmc, char *prmv[])
     if (rret < 1)
     {
         printf("Parameter not Found: nPortId\n");
-        return OS_ERROR;
+        return GSW_statusErr;
     }
     gsw_dev = gsw_get_struc(lif_id, 0);
     ret = GSW_CPU_PortSet(gsw_dev, &param);
@@ -6152,7 +6512,7 @@ GSW_return_t fapi_GSW_CPU_PortCfgSet(int prmc, char *prmv[])
     if (rret < 1)
     {
         printf("Parameter not Found: nPortId\n");
-        return OS_ERROR;
+        return GSW_statusErr;
     }
 
     gsw_dev = gsw_get_struc(lif_id, 0);
@@ -6199,7 +6559,7 @@ GSW_return_t fapi_GSW_VlanCounterMapSet(int prmc, char *prmv[])
     if (rret < 1)
     {
         printf("Parameter not Found: nCounterIndex\n");
-        return OS_ERROR;
+        return GSW_statusErr;
     }
 
     scanParamArg(prmc, prmv, "nCtpPortId", sizeof(sVar.nCtpPortId), &sVar.nCtpPortId);
@@ -6234,14 +6594,14 @@ GSW_return_t fapi_GSW_VlanCounterMapGet(int prmc, char *prmv[])
     if (rret < 1)
     {
         printf("Parameter not Found: nCounterIndex\n");
-        return OS_ERROR;
+        return GSW_statusErr;
     }
 
     rret = scanParamArg(prmc, prmv, "eVlanCounterMappingType", sizeof(sVar.eVlanCounterMappingType), &sVar.eVlanCounterMappingType);
     if (rret < 1)
     {
         printf("Parameter not Found: eVlanCounterMappingType\n");
-        return OS_ERROR;
+        return GSW_statusErr;
     }
     gsw_dev = gsw_get_struc(lif_id, 0);
     ret = GSW_VlanCounterMapGet(gsw_dev, &sVar);
@@ -6275,14 +6635,14 @@ GSW_return_t fapi_GSW_Vlan_RMON_Get(int prmc, char *prmv[])
     if (rret < 1)
     {
         printf("Parameter not Found: nVlanCounterIndex\n");
-        return OS_ERROR;
+        return GSW_statusErr;
     }
 
     rret = scanParamArg(prmc, prmv, "eVlanRmonType", sizeof(sVar.eVlanRmonType), &sVar.eVlanRmonType);
     if (rret < 1)
     {
         printf("Parameter not Found: eVlanRmonType\n");
-        return OS_ERROR;
+        return GSW_statusErr;
     }
 
     gsw_dev = gsw_get_struc(lif_id, 0);
@@ -6291,7 +6651,7 @@ GSW_return_t fapi_GSW_Vlan_RMON_Get(int prmc, char *prmv[])
         printf("\t%40s:\t0x%x\n", "fapi_GSW_Vlan_RMON_Get failed with ret code", ret);
     else
     {
-        printf("\t%40s:\t%lu\n", "nByteCount", (sVar.nByteCount));
+        printf("\t%40s:\t%llu\n", "nByteCount", (unsigned long long)(sVar.nByteCount));
         printf("\t%40s:\t%u\n", "nTotalPktCount", (sVar.nTotalPktCount));
         printf("\t%40s:\t%u\n", "nMulticastPktCount", (sVar.nMulticastPktCount));
         printf("\t%40s:\t%u\n", "nDropPktCount", (sVar.nDropPktCount));
@@ -6311,14 +6671,14 @@ GSW_return_t fapi_GSW_Vlan_RMON_Clear(int prmc, char *prmv[])
     if (rret < 1)
     {
         printf("Parameter not Found: nVlanCounterIndex\n");
-        return OS_ERROR;
+        return GSW_statusErr;
     }
 
     rret = scanParamArg(prmc, prmv, "eVlanRmonType", sizeof(sVar.eVlanRmonType), &sVar.eVlanRmonType);
     if (rret < 1)
     {
         printf("Parameter not Found: eVlanRmonType\n");
-        return OS_ERROR;
+        return GSW_statusErr;
     }
 
     scanParamArg(prmc, prmv, "eClearAll", sizeof(sVar.eVlanRmonType), &sVar.clear_all);
@@ -6359,6 +6719,8 @@ GSW_return_t fapi_GSW_Vlan_RMONControl_Set(int prmc, char *prmv[])
 
 GSW_return_t fapi_GSW_Vlan_RMONControl_Get(int prmc, char *prmv[])
 {
+    (void)prmc;
+    (void)prmv;
     GSW_Device_t *gsw_dev;
     GSW_return_t ret;
     GSW_VLAN_RMON_control_t sVar = {0};
@@ -6388,7 +6750,7 @@ GSW_return_t fapi_GSW_PBB_TunnelTempate_Config_Set(int prmc, char *prmv[])
     if (rret < 1)
     {
         printf("Parameter not Found: nTunnelTemplateId\n");
-        return OS_ERROR;
+        return GSW_statusErr;
     }
 
     scanParamArg(prmc, prmv, "bIheaderDstMACEnable", sizeof(sVar.bIheaderDstMACEnable), &sVar.bIheaderDstMACEnable);
@@ -6443,7 +6805,7 @@ GSW_return_t fapi_GSW_PBB_TunnelTempate_Config_Get(int prmc, char *prmv[])
     if (rret < 1)
     {
         printf("Parameter not Found: nTunnelTemplateId\n");
-        return OS_ERROR;
+        return GSW_statusErr;
     }
 
     gsw_dev = gsw_get_struc(lif_id, 0);
@@ -6485,7 +6847,7 @@ GSW_return_t fapi_GSW_PBB_TunnelTempate_Free(int prmc, char *prmv[])
     if (rret < 1)
     {
         printf("Parameter not Found: nTunnelTemplateId\n");
-        return OS_ERROR;
+        return GSW_statusErr;
     }
 
     gsw_dev = gsw_get_struc(lif_id, 0);
@@ -6502,10 +6864,11 @@ GSW_return_t fapi_GSW_PBB_TunnelTempate_Free(int prmc, char *prmv[])
 
 GSW_return_t fapi_GSW_PBB_TunnelTempate_Alloc(int prmc, char *prmv[])
 {
+    (void)prmc;
+    (void)prmv;
     GSW_Device_t *gsw_dev;
     GSW_return_t ret;
     GSW_PBB_Tunnel_Template_Config_t sVar = {0};
-    int rret;
 
     gsw_dev = gsw_get_struc(lif_id, 0);
     ret = GSW_PBB_TunnelTempate_Alloc(gsw_dev, &sVar);
@@ -6524,7 +6887,6 @@ GSW_return_t fapi_GSW_RMON_FlowGet(int prmc, char *prmv[])
     GSW_RMON_flowGet_t param = {0};
     GSW_Device_t *gsw_dev;
     GSW_return_t ret;
-    int rret;
 
     scanParamArg(prmc, prmv, "bIndex", sizeof(param.bIndex), &param.bIndex);
     scanParamArg(prmc, prmv, "nIndex", sizeof(param.nIndex), &param.nIndex);
@@ -6647,14 +7009,14 @@ GSW_return_t fapi_GSW_RMON_ModeSet(int prmc, char *prmv[])
     if (rret < 1)
     {
         printf("Parameter not Found: eRmonType\n");
-        return OS_ERROR;
+        return GSW_statusErr;
     }
 
     rret = scanParamArg(prmc, prmv, "eCountMode", sizeof(param.eCountMode), &param.eCountMode);
     if (rret < 1)
     {
         printf("Parameter not Found: eCountMode\n");
-        return OS_ERROR;
+        return GSW_statusErr;
     }
 
     gsw_dev = gsw_get_struc(lif_id, 0);
@@ -6727,7 +7089,7 @@ GSW_return_t fapi_GSW_BridgePortFree(int prmc, char *prmv[])
     if (rret < 1)
     {
         printf("Parameter not Found: nBridgePortId\n");
-        return OS_ERROR;
+        return GSW_statusErr;
     }
 
     gsw_dev = gsw_get_struc(lif_id, 0);
@@ -6748,6 +7110,8 @@ GSW_return_t fapi_GSW_BridgePortAlloc(int prmc, char *prmv[])
     GSW_Device_t *gsw_dev;
     GSW_return_t ret;
 
+    scanParamArg(prmc, prmv, "nBridgePortId", sizeof(param.nBridgePortId), &param.nBridgePortId);
+
     gsw_dev = gsw_get_struc(lif_id, 0);
     ret = GSW_BridgePortAlloc(gsw_dev, &param);
     if (ret < 0)
@@ -6762,6 +7126,8 @@ GSW_return_t fapi_GSW_BridgePortAlloc(int prmc, char *prmv[])
 
 GSW_return_t fapi_GSW_Freeze(int prmc, char *prmv[])
 {
+    (void)prmc;
+    (void)prmv;
     GSW_Device_t *gsw_dev;
     GSW_return_t ret;
 
@@ -6779,6 +7145,8 @@ GSW_return_t fapi_GSW_Freeze(int prmc, char *prmv[])
 
 GSW_return_t fapi_GSW_UnFreeze(int prmc, char *prmv[])
 {
+    (void)prmc;
+    (void)prmv;
     GSW_Device_t *gsw_dev;
     GSW_return_t ret;
 
@@ -6796,6 +7164,8 @@ GSW_return_t fapi_GSW_UnFreeze(int prmc, char *prmv[])
 
 GSW_return_t fapi_GSW_QoS_MeterAlloc(int prmc, char *prmv[])
 {
+    (void)prmc;
+    (void)prmv;
     GSW_Device_t *gsw_dev;
     GSW_return_t ret;
     GSW_QoS_meterCfg_t param = {0};
@@ -6823,7 +7193,7 @@ GSW_return_t fapi_GSW_QoS_MeterFree(int prmc, char *prmv[])
     if (rret < 1)
     {
         printf("Parameter not Found: nMeterId\n");
-        return OS_ERROR;
+        return GSW_statusErr;
     }
 
     gsw_dev = gsw_get_struc(lif_id, 0);
@@ -6849,7 +7219,7 @@ GSW_return_t fapi_GSW_PMAC_RMON_Get(int prmc, char *prmv[])
     if (rret < 1)
     {
         printf("Parameter not Found: nPmacId\n");
-        return OS_ERROR;
+        return GSW_statusErr;
     }
 
     scanParamArg(prmc, prmv, "nPortId", sizeof(sVar.nTxDmaChanId), &sVar.nTxDmaChanId);
@@ -7011,7 +7381,7 @@ GSW_return_t fapi_GSW_SS_Sptag_Get(int prmc, char *prmv[])
     if (rret < 1)
     {
         printf("Parameter not Found: pid\n");
-        return OS_ERROR;
+        return GSW_statusErr;
     }
 
     gsw_dev = gsw_get_struc(lif_id, 0);
@@ -7042,14 +7412,14 @@ GSW_return_t fapi_GSW_SS_Sptag_Set(int prmc, char *prmv[])
     if (rret < 1)
     {
         printf("Parameter not Found: pid\n");
-        return OS_ERROR;
+        return GSW_statusErr;
     }
 
     rret = scanParamArg(prmc, prmv, "mask", sizeof(param.mask), &param.mask);
     if (rret < 1)
     {
         printf("Parameter not Found: mask\n");
-        return OS_ERROR;
+        return GSW_statusErr;
     }
 
     scanParamArg(prmc, prmv, "rx", sizeof(param.rx), &param.rx);
@@ -7069,6 +7439,7 @@ GSW_return_t fapi_GSW_SS_Sptag_Set(int prmc, char *prmv[])
     return ret;
 }
 
+#ifdef SUPPORT_DSCP_DROP_PRECEDENCE
 GSW_return_t fapi_GSW_QoS_DSCP_DropPrecedenceCfgGet(int prmc, char *prmv[])
 {
     GSW_Device_t *gsw_dev;
@@ -7108,19 +7479,19 @@ GSW_return_t fapi_GSW_QoS_DSCP_DropPrecedenceCfgSet(int prmc, char *prmv[])
     if (rret < 1)
     {
         printf("Parameter not Found: nIndex\n");
-        return OS_ERROR;
+        return GSW_statusErr;
     }
     rret = scanParamArg(prmc, prmv, "nVal", 1, &Val);
     if (rret < 1)
     {
         printf("Parameter not Found: nVal\n");
-        return OS_ERROR;
+        return GSW_statusErr;
     }
 
     if (index >= 64)
     {
         printf("Wrong nIndex value: %d, should be in range [0 : 63]\n", index);
-        return OS_ERROR;
+        return GSW_statusErr;
     }
 
     gsw_dev = gsw_get_struc(lif_id, 0);
@@ -7142,6 +7513,7 @@ GSW_return_t fapi_GSW_QoS_DSCP_DropPrecedenceCfgSet(int prmc, char *prmv[])
     }
     return ret;
 }
+#endif /* SUPPORT_DSCP_DROP_PRECEDENCE */
 
 GSW_return_t fapi_GSW_QoS_ColorMarkingTableGet(int prmc, char *prmv[])
 {
@@ -7159,7 +7531,7 @@ GSW_return_t fapi_GSW_QoS_ColorMarkingTableGet(int prmc, char *prmv[])
     if (rret < 1)
     {
         printf("Parameter not Found: eMode\n");
-        return OS_ERROR;
+        return GSW_statusErr;
     }
     gsw_dev = gsw_get_struc(lif_id, 0);
     ret = GSW_QOS_ColorMarkingTableGet(gsw_dev, &param);
@@ -7192,6 +7564,7 @@ GSW_return_t fapi_GSW_QoS_ColorMarkingTableGet(int prmc, char *prmv[])
         case GSW_MARKING_DSCP_AF:
             printf("\tDSCP Index : Priority : Color\n");
             max_index = 64;
+            break;
         default:
             printf("Not Supported Mode (%d) of Color.\n", param.eMode);
             break;
@@ -7222,25 +7595,25 @@ GSW_return_t fapi_GSW_QoS_ColorMarkingTableSet(int prmc, char *prmv[])
     if (rret < 1)
     {
         printf("Parameter not Found: eMode\n");
-        return OS_ERROR;
+        return GSW_statusErr;
     }
     rret = scanParamArg(prmc, prmv, "nIndex", 1, &index);
     if (rret < 1)
     {
         printf("Parameter not Found: nIndex\n");
-        return OS_ERROR;
+        return GSW_statusErr;
     }
     rret = scanParamArg(prmc, prmv, "nPriority", 1, &priority);
     if (rret < 1)
     {
         printf("Parameter not Found: nPriority\n");
-        return OS_ERROR;
+        return GSW_statusErr;
     }
     rret = scanParamArg(prmc, prmv, "nColor", 1, &color);
     if (rret < 1)
     {
         printf("Parameter not Found: nColor\n");
-        return OS_ERROR;
+        return GSW_statusErr;
     }
 
     gsw_dev = gsw_get_struc(lif_id, 0);
@@ -7259,7 +7632,7 @@ GSW_return_t fapi_GSW_QoS_ColorMarkingTableSet(int prmc, char *prmv[])
             if (index >= 16)
             {
                 printf("nIndex (%d) is out of range (0~15)\n", index);
-                return OS_ERROR;
+                return GSW_statusErr;
             }
         }
         else
@@ -7267,7 +7640,7 @@ GSW_return_t fapi_GSW_QoS_ColorMarkingTableSet(int prmc, char *prmv[])
             if (index >= 64)
             {
                 printf("nIndex (%d) is out of range (0~63)\n", index);
-                return OS_ERROR;
+                return GSW_statusErr;
             }
         }
         priority &= 0x7;
@@ -7296,7 +7669,6 @@ GSW_return_t fapi_GSW_QoS_ColorReMarkingTableGet(int prmc, char *prmv[])
     GSW_return_t ret;
     GSW_QoS_colorRemarkingEntry_t param = {0};
     int rret;
-    uint8_t mode = GSW_REMARKING_NONE;
     uint8_t dei = 0, pcp = 0;
     uint8_t dscp = 0;
 
@@ -7306,7 +7678,7 @@ GSW_return_t fapi_GSW_QoS_ColorReMarkingTableGet(int prmc, char *prmv[])
     if (rret < 1)
     {
         printf("Parameter not Found: eMode\n");
-        return OS_ERROR;
+        return GSW_statusErr;
     }
     gsw_dev = gsw_get_struc(lif_id, 0);
     ret = GSW_QOS_ColorReMarkingTableGet(gsw_dev, &param);
@@ -7399,7 +7771,7 @@ GSW_return_t fapi_GSW_QoS_DSCP2_PCPTableGet(int prmc, char *prmv[])
     if (rret < 1)
     {
         printf("Parameter not Found: nIndex\n");
-        return OS_ERROR;
+        return GSW_statusErr;
     }
     gsw_dev = gsw_get_struc(lif_id, 0);
     ret = GSW_QOS_Dscp2PcpTableGet(gsw_dev, &param);
@@ -7433,31 +7805,31 @@ GSW_return_t fapi_GSW_QoS_DSCP2_PCPTableSet(int prmc, char *prmv[])
     if (rret < 1)
     {
         printf("Parameter not Found: nIndex\n");
-        return OS_ERROR;
+        return GSW_statusErr;
     }
     if (param.nIndex > 7)
     {
         printf("nIndex (%d) is out of range (0~7)\n", param.nIndex);
-        return OS_ERROR;
+        return GSW_statusErr;
     }
 
     rret = scanParamArg(prmc, prmv, "nDscpIndex", 1, &nDscpIndex);
     if (rret < 1)
     {
         printf("Parameter not Found: nDscpIndex\n");
-        return OS_ERROR;
+        return GSW_statusErr;
     }
     if (nDscpIndex > 63)
     {
         printf("nDscpIndex (%d) is out of range (0~64)\n", nDscpIndex);
-        return OS_ERROR;
+        return GSW_statusErr;
     }
 
     rret = scanParamArg(prmc, prmv, "nVal", 1, &nVal);
     if (rret < 1)
     {
         printf("Parameter not Found: nVal\n");
-        return OS_ERROR;
+        return GSW_statusErr;
     }
 
     gsw_dev = gsw_get_struc(lif_id, 0);
@@ -7489,9 +7861,7 @@ GSW_return_t fapi_GSW_QoS_ColorReMarkingTableSet(int prmc, char *prmv[])
     GSW_return_t ret = 0;
     GSW_QoS_colorRemarkingEntry_t param = {0};
     int rret;
-    uint8_t dei = 0, pcp = 0;
     uint8_t index = 0;
-    uint8_t mode = GSW_REMARKING_NONE;
 
     memset(&param, 0, sizeof(GSW_QoS_colorRemarkingEntry_t));
 
@@ -7499,13 +7869,13 @@ GSW_return_t fapi_GSW_QoS_ColorReMarkingTableSet(int prmc, char *prmv[])
     if (rret < 1)
     {
         printf("Parameter not Found: eMode\n");
-        return OS_ERROR;
+        return GSW_statusErr;
     }
     rret = scanParamArg(prmc, prmv, "nIndex", 1, &index);
     if (rret < 1)
     {
         printf("Parameter not Found: nIndex\n");
-        return OS_ERROR;
+        return GSW_statusErr;
     }
 
     gsw_dev = gsw_get_struc(lif_id, 0);
@@ -7525,7 +7895,7 @@ GSW_return_t fapi_GSW_QoS_ColorReMarkingTableSet(int prmc, char *prmv[])
         if (rret < 1)
         {
             printf("Parameter not Found: dscp\n");
-            return OS_ERROR;
+            return GSW_statusErr;
         }
 
         scanParamArg(prmc, prmv, "dscp_val", 1, &dscp_val);
@@ -7547,13 +7917,13 @@ GSW_return_t fapi_GSW_QoS_ColorReMarkingTableSet(int prmc, char *prmv[])
         if (rret < 1)
         {
             printf("Parameter not Found: dei\n");
-            return OS_ERROR;
+            return GSW_statusErr;
         }
         rret = scanParamArg(prmc, prmv, "pcp", 1, &pcp);
         if (rret < 1)
         {
             printf("Parameter not Found: pcp\n");
-            return OS_ERROR;
+            return GSW_statusErr;
         }
 
         dei &= 0x1; // DEI is 1 bit value at bit 0
@@ -7590,7 +7960,7 @@ GSW_return_t fapi_GSW_QoS_PortReMarkingCfgGet(int prmc, char *prmv[])
     if (rret < 1)
     {
         printf("Parameter not Found: nPortId\n");
-        return OS_ERROR;
+        return GSW_statusErr;
     }
 
     gsw_dev = gsw_get_struc(lif_id, 0);
@@ -7675,7 +8045,7 @@ GSW_return_t fapi_GSW_QoS_PortReMarkingCfgSet(int prmc, char *prmv[])
     if (rret < 1)
     {
         printf("Parameter not Found: nPortId\n");
-        return OS_ERROR;
+        return GSW_statusErr;
     }
 
     /* TODO check agains total number of ports including vitual ports would require gsw_data from gsw_priv.h */
@@ -7689,19 +8059,19 @@ GSW_return_t fapi_GSW_QoS_PortReMarkingCfgSet(int prmc, char *prmv[])
     if (rret < 1)
     {
         printf("Parameter not Found: nIndex\n");
-        return OS_ERROR;
+        return GSW_statusErr;
     }
     rret = scanParamArg(prmc, prmv, "bDscpEgrEn", sizeof(param.bDSCP_EgressRemarkingEnable), &param.bDSCP_EgressRemarkingEnable);
     if (rret < 1)
     {
         printf("Parameter not Found: bDscpEgrEn\n");
-        return OS_ERROR;
+        return GSW_statusErr;
     }
     rret = scanParamArg(prmc, prmv, "bPcpIngrEn", sizeof(param.bPCP_IngressRemarkingEnable), &param.bPCP_IngressRemarkingEnable);
     if (rret < 1)
     {
         printf("Parameter not Found: bPcpIngrEn\n");
-        return OS_ERROR;
+        return GSW_statusErr;
     }
 
     param.eDSCP_IngressRemarkingEnable = param.eDSCP_IngressRemarkingEnable % 2;
@@ -7723,6 +8093,8 @@ GSW_return_t fapi_GSW_QoS_PortReMarkingCfgSet(int prmc, char *prmv[])
 
 GSW_return_t fapi_GSW_QoS_StormCfgGet(int prmc, char *prmv[])
 {
+    (void)prmc;
+    (void)prmv;
     GSW_Device_t *gsw_dev;
     GSW_return_t ret;
     GSW_QoS_stormCfg_t param;
@@ -7757,7 +8129,7 @@ GSW_return_t fapi_GSW_QoS_StormCfgSet(int prmc, char *prmv[])
     if (rret < 1)
     {
         printf("Parameter not Found: bEn\n");
-        return OS_ERROR;
+        return GSW_statusErr;
     }
 
     en_flg &= 0x1;
@@ -7793,12 +8165,12 @@ GSW_return_t fapi_GSW_QoS_PmapperTableGet(int prmc, char *prmv[])
     if (rret < 1)
     {
         printf("Parameter not Found: nPmapperId\n");
-        return OS_ERROR;
+        return GSW_statusErr;
     }
     if (param.nPmapperId > 31)
     {
         printf("nPmapperId (%d) is out of range (0~31)\n", param.nPmapperId);
-        return OS_ERROR;
+        return GSW_statusErr;
     }
     gsw_dev = gsw_get_struc(lif_id, 0);
     ret = GSW_QOS_PmapperTableGet(gsw_dev, &param);
@@ -7832,31 +8204,31 @@ GSW_return_t fapi_GSW_QoS_PmapperTableSet(int prmc, char *prmv[])
     if (rret < 1)
     {
         printf("Parameter not Found: nPmapperId\n");
-        return OS_ERROR;
+        return GSW_statusErr;
     }
     if (param.nPmapperId > 31)
     {
         printf("nPmapperId (%d) is out of range (0~31)\n", param.nPmapperId);
-        return OS_ERROR;
+        return GSW_statusErr;
     }
 
     rret = scanParamArg(prmc, prmv, "nEntryIndex", 1, &nEntryIndex);
     if (rret < 1)
     {
         printf("Parameter not Found: nEntryIndex\n");
-        return OS_ERROR;
+        return GSW_statusErr;
     }
     if (nEntryIndex > 72)
     {
         printf("nEntryIndex (%d) is out of range (0~72)\n", nEntryIndex);
-        return OS_ERROR;
+        return GSW_statusErr;
     }
 
     rret = scanParamArg(prmc, prmv, "nVal", 1, &nVal);
     if (rret < 1)
     {
         printf("Parameter not Found: nVal\n");
-        return OS_ERROR;
+        return GSW_statusErr;
     }
 
     gsw_dev = gsw_get_struc(lif_id, 0);
@@ -7899,37 +8271,6 @@ GSW_return_t fapi_GSW_QoS_PmapperTableSet(int prmc, char *prmv[])
     }
 }
 
-GSW_return_t fapi_GSW_Pce_RuleBlockSize(int prmc, char *prmv[])
-{
-    GSW_Device_t *gsw_dev;
-    GSW_return_t ret = 0;
-    GSW_PCE_rule_alloc_t param = {0};
-    int rret;
-
-    memset(&param, 0, sizeof(GSW_PCE_rule_alloc_t));
-    rret = scanParamArg(prmc, prmv, "blockid", sizeof(param.blockid), &param.blockid);
-    if (rret < 1)
-    {
-        printf("Parameter not Found: blockid\n");
-        return OS_ERROR;
-    }
-
-    gsw_dev = gsw_get_struc(lif_id, 0);
-    ret = GSW_PceRuleBlockSize(gsw_dev, &param);
-
-    if (ret < 0)
-        printf("GSW_PceRuleBlockSize failed with ret code %d\n", ret);
-    else
-    {
-        printf("ret          = %d\n", ret);
-        printf("blockid      = %u\n", param.blockid);
-        printf("num_of_rules = %u\n", param.num_of_rules);
-        printf("GSW_PceRuleBlockSize done\n");
-    }
-
-    return ret;
-}
-
 GSW_return_t fapi_GSW_BridgePort_LoopRead(int prmc, char *prmv[])
 {
     GSW_Device_t *gsw_dev;
@@ -7942,7 +8283,7 @@ GSW_return_t fapi_GSW_BridgePort_LoopRead(int prmc, char *prmv[])
     if (rret < 1)
     {
         printf("Parameter not Found: nBridgePortId\n");
-        return OS_ERROR;
+        return GSW_statusErr;
     }
 
     gsw_dev = gsw_get_struc(lif_id, 0);
@@ -7972,12 +8313,12 @@ GSW_return_t fapi_GSW_TflowCountModeGet(int prmc, char *prmv[])
     if (rret < 1)
     {
         printf("Parameter not Found: eCntType\n");
-        return OS_ERROR;
+        return GSW_statusErr;
     }
     if (param.eCountType > GSW_TFLOW_COUNTER_PCE_BP_Tx)
     {
         printf("eCntType (%d) is out of range (0~3)\n", param.eCountType);
-        return OS_ERROR;
+        return GSW_statusErr;
     }
     gsw_dev = gsw_get_struc(lif_id, 0);
     ret = GSW_TflowCountModeGet(gsw_dev, &param);
@@ -8042,45 +8383,45 @@ GSW_return_t fapi_GSW_TflowCountModeSet(int prmc, char *prmv[])
     if (rret < 1)
     {
         printf("Parameter not Found: eCntType\n");
-        return OS_ERROR;
+        return GSW_statusErr;
     }
     if (param.eCountType > GSW_TFLOW_COUNTER_PCE_BP_Tx)
     {
         printf("eCntType (%d) is out of range (0~3)\n", param.eCountType);
-        return OS_ERROR;
+        return GSW_statusErr;
     }
 
     rret = scanParamArg(prmc, prmv, "eCntMode", sizeof(param.eCountMode), &param.eCountMode);
     if (rret < 1)
     {
         printf("Parameter not Found: eCntMode\n");
-        return OS_ERROR;
+        return GSW_statusErr;
     }
     if (param.eCountMode > 3)
     {
         printf("eCountMode (%d) is out of range (0~3)\n", param.eCountMode);
-        return OS_ERROR;
+        return GSW_statusErr;
     }
 
     rret = scanParamArg(prmc, prmv, "nPortMsb", sizeof(param.nPortMsb), &param.nPortMsb);
     if (rret < 1)
     {
         printf("Parameter not Found: nPortMsb\n");
-        return OS_ERROR;
+        return GSW_statusErr;
     }
 
     rret = scanParamArg(prmc, prmv, "nCtpLsb", sizeof(param.nCtpLsb), &param.nCtpLsb);
     if (rret < 1)
     {
         printf("Parameter not Found: nCtpLsb\n");
-        return OS_ERROR;
+        return GSW_statusErr;
     }
 
     rret = scanParamArg(prmc, prmv, "nBrpLsb", sizeof(param.nBrpLsb), &param.nBrpLsb);
     if (rret < 1)
     {
         printf("Parameter not Found: nBrpLsb\n");
-        return OS_ERROR;
+        return GSW_statusErr;
     }
 
     gsw_dev = gsw_get_struc(lif_id, 0);
@@ -8105,7 +8446,6 @@ GSW_return_t fapi_GSW_Mac_TableLoopDetect(int prmc, char *prmv[])
     GSW_return_t ret;
     GSW_MAC_tableLoopDetect_t param = {0};
     int rret;
-    size_t index;
 
     memset(&param, 0, sizeof(GSW_MAC_tableLoopDetect_t));
 
@@ -8117,7 +8457,7 @@ GSW_return_t fapi_GSW_Mac_TableLoopDetect(int prmc, char *prmv[])
     if (rret < 1)
     {
         printf("Parameter: bp_map_in[] not found or incorrect\n");
-        return OS_ERROR;
+        return GSW_statusErr;
     }
 
     gsw_dev = gsw_get_struc(lif_id, 0);
@@ -8129,67 +8469,252 @@ GSW_return_t fapi_GSW_Mac_TableLoopDetect(int prmc, char *prmv[])
     {
         for (size_t index = 0; index < ARRAY_SIZE(param.bp_map_in); index++)
         {
-            printf("  bp_map_in[%lu]  = 0x%08x\n", index, param.bp_map_in[index]);
+            printf("  bp_map_in[%zu]  = 0x%08x\n", index, param.bp_map_in[index]);
         }
         for (size_t index = 0; index < ARRAY_SIZE(param.bp_map_out); index++)
         {
-            printf("  bp_map_out[%lu] = 0x%08x\n", index, param.bp_map_out[index]);
+            printf("  bp_map_out[%zu] = 0x%08x\n", index, param.bp_map_out[index]);
         }
     }
     return ret;
 }
 
-GSW_return_t fapi_GSW_PCE_RuleMove(int prmc, char *prmv[])
+int fapi_Mac_RmonGet(int prmc, char *prmv[])
 {
-
     GSW_Device_t *gsw_dev;
-    GSW_return_t ret;
-    GSW_PCE_rule_move_t param = {0};
+    int ret;
+    host_mac_rmon_t param = {0};
     int rret;
-    size_t index;
 
-    memset(&param, 0, sizeof(GSW_PCE_rule_move_t));
-
-    rret = scanParamArg(prmc, prmv, "cur.nLogicalPortId", sizeof(param.cur.logicalportid), &param.cur.logicalportid);
+    rret = scanParamArg(prmc, prmv, "idx", sizeof(param.mac_idx), &param.mac_idx);
     if (rret < 1)
     {
-        printf("Parameter: cur.nLogicalPortId not found\n");
-        return OS_ERROR;
+        printf("parameter not Found: idx\n");
+        return GSW_statusErr;
     }
-    rret = scanParamArg(prmc, prmv, "cur.pattern.nIndex", sizeof(param.cur.nIndex), &param.cur.nIndex);
-    if (rret < 1)
-    {
-        printf("Parameter: cur.nIndex not found\n");
-        return OS_ERROR;
-    }
-    scanParamArg(prmc, prmv, "cur.nSubIfIdGroup", sizeof(param.cur.subifidgroup), &param.cur.subifidgroup);
-    scanParamArg(prmc, prmv, "cur.region", sizeof(param.cur.region), &param.cur.region);
-
-    rret = scanParamArg(prmc, prmv, "new.nLogicalPortId", sizeof(param.new.logicalportid), &param.new.logicalportid);
-    if (rret < 1)
-    {
-        printf("Parameter: new.nLogicalPortId not found\n");
-        return OS_ERROR;
-    }
-    rret = scanParamArg(prmc, prmv, "new.pattern.nIndex", sizeof(param.new.nIndex), &param.new.nIndex);
-    if (rret < 1)
-    {
-        printf("Parameter: new.nIndex not found\n");
-        return OS_ERROR;
-    }
-    scanParamArg(prmc, prmv, "new.nSubIfIdGroup", sizeof(param.new.subifidgroup), &param.new.subifidgroup);
-    scanParamArg(prmc, prmv, "new.region", sizeof(param.new.region), &param.new.region);
 
     gsw_dev = gsw_get_struc(lif_id, 0);
-    ret = GSW_PceRuleMove(gsw_dev, &param);
+    ret = host_mac_rmon_get(gsw_dev, &param);
 
     if (ret < 0)
-    {
-        printf("GSW_PceRuleMove failed with ret code: %d\n", ret);
-    }
+        printf("\t%40s:\t0x%x\n", "fapi_mac_rmon_get failed with ret code", ret);
     else
     {
-        printf("GSW_PceRuleMove success with ret code: %d\n", ret);
+        printf("\t%40s:\t%d\n", "MAC", param.mac_idx);
+        printf("\n");
+        printf("\t%40s:\t%llu\n", "Rx_Packets", (unsigned long long)param.cnt[RMON_RX_PKTS]);
+        printf("\t%40s:\t%llu\n", "Rx_Bytes", (unsigned long long)param.cnt[RMON_RX_BYTES]);
+        printf("\t%40s:\t%llu\n", "Rx_Byte_errors", (unsigned long long)(param.cnt[RMON_RX_BYTES] -
+		     param.cnt[RMON_RX_GOOD_BYTES]));
+        printf("\t%40s:\t%llu\n", "Rx_Pauseframe", (unsigned long long)param.cnt[RMON_RX_PAUSE]);
+        printf("\t%40s:\t%llu\n", "Rx_Crc_Errors", (unsigned long long)param.cnt[RMON_RX_CRC_ERR]);
+        printf("\t%40s:\t%llu\n", "Rx_Fifo_Errors", (unsigned long long)param.cnt[RMON_RX_OVERFLOW]);
+        printf("\n");
+        printf("\t%40s:\t%llu\n", "Tx_Packets", (unsigned long long)param.cnt[RMON_TX_PKTS]);
+        printf("\t%40s:\t%llu\n", "Tx_Bytes", (unsigned long long)param.cnt[RMON_TX_BYTES]);
+        printf("\t%40s:\t%llu\n", "Tx_Packet_Errors", (unsigned long long)(param.cnt[RMON_TX_PKTS] -
+		     param.cnt[RMON_TX_GOOD_PKTS]));
+        printf("\t%40s:\t%llu\n", "Tx_Byte_Errors", (unsigned long long)(param.cnt[RMON_TX_BYTES] -
+		     param.cnt[RMON_TX_GOOD_BYTES]));
+        printf("\t%40s:\t%llu\n", "Tx_Pauseframe", (unsigned long long)param.cnt[RMON_TX_PAUSE]);
+        printf("\t%40s:\t%llu\n", "Tx_underflow_error", (unsigned long long)param.cnt[RMON_TX_UNDERFLOW]);
     }
+
+    return 0;
+}
+
+int fapi_Mac_RmonClear(int prmc, char *prmv[])
+{
+    GSW_Device_t *gsw_dev;
+    int ret;
+    uint8_t mac_idx = 0;
+    int rret;
+
+    rret = scanParamArg(prmc, prmv, "idx", sizeof(mac_idx), &mac_idx);
+    if (rret < 1)
+    {
+        printf("parameter not Found: idx\n");
+        return GSW_statusErr;
+    }
+
+    gsw_dev = gsw_get_struc(lif_id, 0);
+    ret = host_mac_rmon_clr(gsw_dev, &mac_idx);
+
+    if (ret < 0)
+        printf("\t%40s:\t0x%x\n", "fapi_mac_rmon_clear failed with ret code", ret);
+    else
+        printf("fapi_mac_rmon_clear mac_idx:%u done\n", mac_idx);
+    return 0;
+}
+
+GSW_return_t fapi_Mac_RegisterGet(int prmc, char *prmv[])
+{
+    GSW_Device_t *gsw_dev;
+    GSW_return_t ret;
+    host_mac_register_t param = {0};
+    int rret;
+
+    rret = scanParamArg(prmc, prmv, "idx", sizeof(param.mac_idx), &param.mac_idx);
+    if (rret < 1)
+    {
+        printf("parameter not Found: idx\n");
+        return GSW_statusErr;
+    }
+
+    rret = scanParamArg(prmc, prmv, "nRegAddr", sizeof(param.reg_off), &param.reg_off);
+    if (rret < 1)
+    {
+        printf("Parameter not Found: nRegAddr\n");
+        return GSW_statusErr;
+    }
+
+    gsw_dev = gsw_get_struc(lif_id, 0);
+    ret = host_mac_rd_reg(gsw_dev, &param);
+    if (ret < 0)
+        printf("\t%40s:\t0x%x\n", "fapi_Mac_RegisterGet failed with ret code", ret);
+    else
+        printf("fapi_Mac_RegisterGet:\n\t mac_idx:%u reg=0x%x val=0x%x\n", param.mac_idx, param.reg_off, param.reg_val);
+
+    return ret;
+}
+
+GSW_return_t fapi_Mac_RegisterSet(int prmc, char *prmv[])
+{
+    GSW_Device_t *gsw_dev;
+    GSW_return_t ret;
+    host_mac_register_t param = {0};
+    int rret;
+
+    rret = scanParamArg(prmc, prmv, "idx", sizeof(param.mac_idx), &param.mac_idx);
+    if (rret < 1)
+    {
+        printf("parameter not Found: idx\n");
+        return GSW_statusErr;
+    }
+
+    rret = scanParamArg(prmc, prmv, "nRegAddr", sizeof(param.reg_off), &param.reg_off);
+    if (rret < 1)
+    {
+        printf("Parameter not Found: nRegAddr\n");
+        return GSW_statusErr;
+    }
+
+    rret = scanParamArg(prmc, prmv, "nData", sizeof(param.reg_val), &param.reg_val);
+    if (rret < 1)
+    {
+        printf("Parameter not Found: nData\n");
+        return GSW_statusErr;
+    }
+
+    gsw_dev = gsw_get_struc(lif_id, 0);
+    ret = host_mac_wr_reg(gsw_dev, &param);
+    if (ret < 0)
+        printf("\t%40s:\t0x%x\n", "fapi_Mac_RegisterSet failed with ret code", ret);
+    else
+        printf("fapi_Mac_RegisterSet:\n\t mac_idx:%u reg=0x%x val=0x%x\n", param.mac_idx, param.reg_off, param.reg_val);
+
+    return ret;
+}
+
+static inline const char *daemon_name(enum daemon_id id)
+{
+	switch (id) {
+	case DAEMON_SBDIO_WA:
+		return "sbdio_wa";
+	case DAEMON_FDMA_WA:
+		return "fdma_wa";
+	case DAEMON_LAG_LINK_UPDATE:
+		return "lag_link_update";
+	case DAEMON_MAC_LINK_CLR:
+		return "mac_link_clr";
+	case DAEMON_CONGESTED_WRED:
+		return "congested_wred";
+	case DAEMON_CONNECTED_WRED:
+		return "connected_wred";
+	case DAEMON_PAUSE_FRAME:
+		return "pause_frame";
+	case DAEMON_LINK_DETECT:
+		return "link_detect";
+	case DAEMON_PVT:
+		return "pvt";
+	case DAEMON_USRA:
+		return "usra";
+	case DAEMON_SFP:
+		return "sfp";
+	case DAEMON_RX_DROP:
+		return "rx_drop";
+	case DAEMON_PHC_SYNC:
+		return "phc_sync";
+	case DAEMON_VIRT_IF_STS_SYNC:
+		return "vif_link_update";
+	case DAEMON_POE:
+		return "poe";
+	case DAEMON_HTOL:
+		return "htol";
+	case DAEMON_LINK_MGR:
+		return "link_mgr";
+	case DAEMON_PORTMAP_UPDATE:
+		return "portmap_update";
+	case DAEMON_ALWAYS_ON:
+		return "always_on";
+	default:
+		return "unknown";
+	}
+}
+
+GSW_return_t fapi_Sys_DaemonList(int prmc, char *prmv[])
+{
+    GSW_Device_t *gsw_dev;
+    GSW_return_t ret;
+    struct sys_daemon_cfg cfg = {0};
+
+    (void)prmc;
+    (void)prmv;
+
+    gsw_dev = gsw_get_struc(lif_id, 0);
+    printf("Daemon ID\t\tStatus\n");
+    for (uint32_t i = 0; i < DAEMON_ID_NUM; i++)
+    {
+        cfg.id = i;
+        ret = sys_misc_daemon_get(gsw_dev, &cfg);
+        if (ret < 0) {
+            printf("fapi_Sys_DaemonList failed with ret code: %d\n", ret);
+            break;
+        }
+        else
+        {
+            printf("%2u %-20s\t%s\n", cfg.id, daemon_name(cfg.id), cfg.state ? "running" : "suspended");
+        }
+    }
+    return ret;
+}
+
+GSW_return_t fapi_Sys_DaemonSet(int prmc, char *prmv[])
+{
+    GSW_Device_t *gsw_dev;
+    GSW_return_t ret;
+    struct sys_daemon_cfg cfg = {0};
+    int rret;
+
+    rret = scanParamArg(prmc, prmv, "id", sizeof(cfg.id), &cfg.id);
+    if (rret < 1)
+    {
+        printf("Parameter not Found: id\n");
+        return GSW_statusErr;
+    }
+    rret = scanParamArg(prmc, prmv, "state", sizeof(cfg.state), &cfg.state);
+    if (rret < 1)
+    {
+        printf("Parameter not Found: state\n");
+        return GSW_statusErr;
+    }
+
+    gsw_dev = gsw_get_struc(lif_id, 0);
+    ret = sys_misc_daemon_set(gsw_dev, &cfg);
+    if (ret < 0)
+        printf("\t%40s:\t0x%x\n", "fapi_Sys_DaemonSet failed with ret code", ret);
+    else
+        printf("fapi_Sys_DaemonSet:\n\t id:%u state:%s\n", cfg.id, cfg.state ? "running" : "suspended");
+
     return ret;
 }

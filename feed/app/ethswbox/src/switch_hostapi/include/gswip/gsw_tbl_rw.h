@@ -61,6 +61,11 @@ typedef enum {
 	METER_RMON_COUNTER				= 0x19,
 	ROUTING_RMON_COUNTER				= 0x1B,
 	PMAC_RMON_COUNTER				= 0x1C,
+
+	/** \cond INTERNAL */
+	/** \brief force 32-bit enum type */
+	GSW_BM_TABLE_TYPE_INTERNAL_SIZE = 0x7fffffff,
+	/** \endcond */
 } BM_Table_ID;
 
 /** \brief GSWIP BM Table Address */

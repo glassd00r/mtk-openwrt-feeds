@@ -201,7 +201,7 @@ static int copy_key_to_dst(char *key_adr_str, u8 size, char *key_adr_ptr)
 	uint32_t *out_key = (uint32_t *)key_adr_ptr;
 
 	if (strlen(key_adr_str) != (size_t)(size * 2)) {
-		printf("WARN: Len mismatch %ld != %ld!\n", strlen(in_key), (size_t)(size * 2));
+		printf("WARN: Len mismatch %zu != %zu!\n", strlen(in_key), (size_t)(size * 2));
 	}
 
 	for (i = 0; i < (size / 4); i++) {

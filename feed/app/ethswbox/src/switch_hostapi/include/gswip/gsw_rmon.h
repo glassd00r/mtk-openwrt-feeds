@@ -29,7 +29,12 @@ typedef enum {
 	GSW_CTP_PORT = 2,
 	/** Bridge Port
 	    Applicable only for GSWIP-3.1/3.2 */
-	GSW_BRIDGE_PORT = 3
+	GSW_BRIDGE_PORT = 3,
+
+	/** \cond INTERNAL */
+	/** \brief force 32-bit enum type */
+	GSW_PORT_TYPE_INTERNAL_SIZE = 0x7fffffff,
+	/** \endcond */
 } GSW_portType_t;
 
 /** \addtogroup GSW_RMON
@@ -57,6 +62,11 @@ typedef enum {
 	GSW_RMON_BRIDGE_TYPE	= 7,
 	/** CTP Port based RMON Counters */
 	GSW_RMON_CTP_TYPE	= 8,
+
+	/** \cond INTERNAL */
+	/** \brief force 32-bit enum type */
+	GSW_RMON_TYPE_INTERNAL_SIZE = 0x7fffffff,
+	/** \endcond */
 } GSW_RMON_type_t;
 
 /** \brief RMON Counters Data Structure for clearance of values.
@@ -71,16 +81,31 @@ typedef struct {
 /**Defined as per RMON counter table structure
   Applicable only for GSWIP 3.1*/
 typedef enum {
+	/** CTP Rx RMON Counters */
 	GSW_RMON_CTP_PORT_RX = 0,
+	/** CTP Tx RMON Counters */
 	GSW_RMON_CTP_PORT_TX = 1,
+	/** Bridge Port Rx RMON Counters */
 	GSW_RMON_BRIDGE_PORT_RX = 2,
+	/** Bridge Port Tx RMON Counters */
 	GSW_RMON_BRIDGE_PORT_TX = 3,
+	/** CTP Tx PCE Bypass RMON Counters */
 	GSW_RMON_CTP_PORT_PCE_BYPASS = 4,
+	/** Traffic Flow (PCE RUle) Rx RMON Counters */
 	GSW_RMON_TFLOW_RX = 5,
+	/** Traffic Flow (PCE RUle) Tx RMON Counters */
 	GSW_RMON_TFLOW_TX = 6,
+	/** reserved */
 	GSW_RMON_QMAP = 0x0E,
+	/** Meter RMON Counters */
 	GSW_RMON_METER = 0x19,
+	/** PMAC RMON Counters */
 	GSW_RMON_PMAC = 0x1C,
+
+	/** \cond INTERNAL */
+	/** \brief force 32-bit enum type */
+	GSW_RMON_PORT_TYPE_INTERNAL_SIZE = 0x7fffffff,
+	/** \endcond */
 } GSW_RMON_portType_t;
 
 /** TFLOW counter mode type */
@@ -93,6 +118,11 @@ typedef enum {
 	GSW_TFLOW_CMODE_CTP = 2,
 	/** Bridge port mode */
 	GSW_TFLOW_CMODE_BRIDGE = 3,
+
+	/** \cond INTERNAL */
+	/** \brief force 32-bit enum type */
+	GSW_TFLOW_CMODE_INTERNAL_SIZE = 0x7fffffff,
+	/** \endcond */
 } GSW_TflowCmodeType_t;
 
 /** TFLOW counter type */
@@ -105,6 +135,11 @@ typedef enum {
 	GSW_TFLOW_COUNTER_PCE_Tx = 2,
 	/** SEt PCE-Bypass Tx register config only */
 	GSW_TFLOW_COUNTER_PCE_BP_Tx = 3,
+
+	/** \cond INTERNAL */
+	/** \brief force 32-bit enum type */
+	GSW_TFLOW_COUNTER_TYPE_INTERNAL_SIZE = 0x7fffffff,
+	/** \endcond */
 } GSW_TflowCountConfType_t;
 
 /** TFLOW CTP counter LSB bits */
@@ -124,6 +159,11 @@ typedef enum {
 	GSW_TCM_CTP_VAL_BITS_5 = 5,
 	/** 6 valid bits  */
 	GSW_TCM_CTP_VAL_BITS_6 = 6,
+
+	/** \cond INTERNAL */
+	/** \brief force 32-bit enum type */
+	GSW_TCP_CTP_BITS_INTERNAL_SIZE = 0x7fffffff,
+	/** \endcond */
 } GSW_TflowCtpValBits_t;
 
 /** TFLOW bridge port counter LSB bits */
@@ -139,6 +179,11 @@ typedef enum {
 	GSW_TCM_BRP_VAL_BITS_5 = 5,
 	/** 6 valid bits  */
 	GSW_TCM_BRP_VAL_BITS_6 = 6,
+
+	/** \cond INTERNAL */
+	/** \brief force 32-bit enum type */
+	GSW_TCM_BRP_BITS_INTERNAL_SIZE = 0x7fffffff,
+	/** \endcond */
 } GSW_TflowBrpValBits_t;
 
 /**
@@ -273,6 +318,11 @@ typedef enum {
 	GSW_RMON_COUNT_BYTES	= 1,
 	/**  number of dropped frames, supported only for interface cunters */
 	GSW_RMON_DROP_COUNT	= 2,
+
+	/** \cond INTERNAL */
+	/** \brief force 32-bit enum type */
+	GSW_RMON_COUNT_MODE_INTERNAL_SIZE = 0x7fffffff,
+	/** \endcond */
 } GSW_RMON_CountMode_t;
 
 /** \brief RMON Counters Mode for different Elements.

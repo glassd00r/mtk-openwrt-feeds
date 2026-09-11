@@ -57,7 +57,12 @@ typedef enum {
 	/** PCE Rule Region for specific CTP */
 	GSW_PCE_RULE_CTP = 1,
 	/** PCE Rule Debug (HW direct mapping) */
-	GSW_PCE_RULE_DEBUG = 2
+	GSW_PCE_RULE_DEBUG = 2,
+
+	/** \cond INTERNAL */
+	/** \brief force 32-bit enum type */
+	GSW_PCE_RULE_REGION_INTERNAL_SIZE = 0x7fffffff,
+	/** \endcond */
 } GSW_PCE_RuleRegion_t;
 
 /** \brief Select Mode of Sub-Interface ID Field.
@@ -66,7 +71,12 @@ typedef enum {
 	/** Sub Interface ID group as defined by GSWIP-3.1. */
 	GSW_PCE_SUBIFID_TYPE_GROUP = 0,
 	/** Bridge Port ID as defined by GSWIP-3.1. */
-	GSW_PCE_SUBIFID_TYPE_BRIDGEPORT = 1
+	GSW_PCE_SUBIFID_TYPE_BRIDGEPORT = 1,
+
+	/** \cond INTERNAL */
+	/** \brief force 32-bit enum type */
+	GSW_PCE_SUBIFID_INTERNAL_SIZE = 0x7fffffff,
+	/** \endcond */
 } GSW_PCE_SUBIFID_TYPE_t;
 
 /** \brief Rule selection for IPv4/IPv6.
@@ -77,7 +87,12 @@ typedef enum {
 	/** Rule Pattern for IPv4. */
 	GSW_PCE_IP_V4	= 1,
 	/** Rule Pattern for IPv6. */
-	GSW_PCE_IP_V6	= 2
+	GSW_PCE_IP_V6	= 2,
+
+	/** \cond INTERNAL */
+	/** \brief force 32-bit enum type */
+	GSW_PCE_IP_INTERNAL_SIZE = 0x7fffffff,
+	/** \endcond */
 } GSW_PCE_IP_t;
 
 /** \brief Packet Classification Engine Pattern Configuration.
@@ -456,6 +471,11 @@ typedef enum {
 	/** Alternative Class. Traffic class action is enabled and the
 	    class of the 'nTrafficClassAlter' field is used. */
 	GSW_PCE_ACTION_TRAFFIC_CLASS_ALTERNATIVE	= 2,
+
+	/** \cond INTERNAL */
+	/** \brief force 32-bit enum type */
+	GSW_PCE_ACTION_TRAFFIC_CLASS_INTERNAL_SIZE = 0x7fffffff,
+	/** \endcond */
 } GSW_PCE_ActionTrafficClass_t;
 
 /** \brief IGMP Snooping Control.
@@ -476,7 +496,12 @@ typedef enum {
 	/** IGMP Group Specific Query Message. */
 	GSW_PCE_ACTION_IGMP_SNOOP_QUERY_GROUP	= 6,
 	/** IGMP General Query message without Router Solicitation. */
-	GSW_PCE_ACTION_IGMP_SNOOP_QUERY_NO_ROUTER = 7
+	GSW_PCE_ACTION_IGMP_SNOOP_QUERY_NO_ROUTER = 7,
+
+	/** \cond INTERNAL */
+	/** \brief force 32-bit enum type */
+	GSW_PCE_ACTION_IGMP_SNOOP_INTERNAL_SIZE = 0x7fffffff,
+	/** \endcond */
 } GSW_PCE_ActionIGMP_Snoop_t;
 
 /** \brief MAC Address Learning control.
@@ -495,7 +520,12 @@ typedef enum {
 	    Note: The MAC Learning Control signals delivered to Port-Map filtering
 	    and combined with Final Forwarding Decision. The result is used as a
 	    feedback for MAC Address learning in the Bridging Table. */
-	GSW_PCE_ACTION_LEARNING_FORCE	= 3
+	GSW_PCE_ACTION_LEARNING_FORCE	= 3,
+
+	/** \cond INTERNAL */
+	/** \brief force 32-bit enum type */
+	GSW_PCE_ACTION_LEARNING_INTERNAL_SIZE = 0x7fffffff,
+	/** \endcond */
 } GSW_PCE_ActionLearning_t;
 
 /** \brief Interrupt Control Action Selector.
@@ -508,7 +538,12 @@ typedef enum {
 	GSW_PCE_ACTION_IRQ_REGULAR	= 1,
 	/** Interrupt Event. The Interrupt Control Action is enabled and an
 	    interrupt event is generated. */
-	GSW_PCE_ACTION_IRQ_EVENT	= 2
+	GSW_PCE_ACTION_IRQ_EVENT	= 2,
+
+	/** \cond INTERNAL */
+	/** \brief force 32-bit enum type */
+	GSW_PCE_ACTION_IRQ_INTERNAL_SIZE = 0x7fffffff,
+	/** \endcond */
 } GSW_PCE_ActionIrq_t;
 
 /** \brief Cross State Action Selector.
@@ -523,7 +558,12 @@ typedef enum {
 	/** Cross-State packet. The Cross State Action is enabled and the packet is
 	    treated as a Cross-State packet. It ignores the Port-State
 	    filtering rules. */
-	GSW_PCE_ACTION_CROSS_STATE_CROSS	= 2
+	GSW_PCE_ACTION_CROSS_STATE_CROSS	= 2,
+
+	/** \cond INTERNAL */
+	/** \brief force 32-bit enum type */
+	GSW_PCE_ACTION_CROSS_INTERNAL_SIZE = 0x7fffffff,
+	/** \endcond */
 } GSW_PCE_ActionCrossState_t;
 
 /** \brief Critical Frame Action Selector.
@@ -536,7 +576,12 @@ typedef enum {
 	GSW_PCE_ACTION_CRITICAL_FRAME_REGULAR	= 1,
 	/** Critical Packet. The Critical Frame Action is enabled and the packet is
 	    treated as a Critical Frame. */
-	GSW_PCE_ACTION_CRITICAL_FRAME_CRITICAL	= 2
+	GSW_PCE_ACTION_CRITICAL_FRAME_CRITICAL	= 2,
+
+	/** \cond INTERNAL */
+	/** \brief force 32-bit enum type */
+	GSW_PCE_ACTION_CRITICAL_FRAME_INTERNAL_SIZE = 0x7fffffff,
+	/** \endcond */
 } GSW_PCE_ActionCriticalFrame_t;
 
 /** \brief Color Frame Action Selector.
@@ -554,7 +599,12 @@ typedef enum {
 	/** Change to yellow color. */
 	GSW_PCE_ACTION_COLOR_FRAME_YELLOW = 4,
 	/** Change to red color. */
-	GSW_PCE_ACTION_COLOR_FRAME_RED = 5
+	GSW_PCE_ACTION_COLOR_FRAME_RED = 5,
+
+	/** \cond INTERNAL */
+	/** \brief force 32-bit enum type */
+	GSW_PCE_ACTION_COLOR_FRAME_INTERNAL_SIZE = 0x7fffffff,
+	/** \endcond */
 } GSW_PCE_ActionColorFrame_t;
 
 /** \brief Timestamp Action Selector.
@@ -568,7 +618,12 @@ typedef enum {
 	GSW_PCE_ACTION_TIMESTAMP_REGULAR	= 1,
 	/** Receive/Transmit Timing packet. Ingress and Egress Timestamps for
 	    this packet should be stored. */
-	GSW_PCE_ACTION_TIMESTAMP_STORED	= 2
+	GSW_PCE_ACTION_TIMESTAMP_STORED		= 2,
+
+	/** \cond INTERNAL */
+	/** \brief force 32-bit enum type */
+	GSW_PCE_ACTION_TIMESTAMP_INTERNAL_SIZE = 0x7fffffff,
+	/** \endcond */
 } GSW_PCE_ActionTimestamp_t;
 
 /** \brief Forwarding Group Action Selector.
@@ -603,7 +658,12 @@ typedef enum {
 	GSW_PCE_ACTION_PORTMAP_ALTERNATIVE_VLAN	= 7,
 	/** Add STAG VLAN portmap 'nForwardPortMap' to the overall portmap
 	    classification result (AND'ed with the portmap). */
-	GSW_PCE_ACTION_PORTMAP_ALTERNATIVE_STAG_VLAN	= 8
+	GSW_PCE_ACTION_PORTMAP_ALTERNATIVE_STAG_VLAN	= 8,
+
+	/** \cond INTERNAL */
+	/** \brief force 32-bit enum type */
+	GSW_PCE_ACTION_PORTMAP_INTERNAL_SIZE = 0x7fffffff,
+	/** \endcond */
 } GSW_PCE_ActionPortmap_t;
 
 /** \brief Flow Meter Assignment control.
@@ -615,10 +675,15 @@ typedef enum {
 	    The action is enabled but no dedicated metering instance is assigned by the rule. */
 	GSW_PCE_ACTION_METER_REGULAR	= 1,
 	/** Action Enable. Assign one meter instance as given in parameter "nMeterId". */
-	GSW_PCE_ACTION_METER_1	= 2,
+	GSW_PCE_ACTION_METER_1		= 2,
 	/** Action Enable. Assign pair of meter instances.
 	    These instances are "nMeterId" and the next following meter instance index. */
-	GSW_PCE_ACTION_METER_1_2	= 3
+	GSW_PCE_ACTION_METER_1_2	= 3,
+
+	/** \cond INTERNAL */
+	/** \brief force 32-bit enum type */
+	GSW_PCE_ACTION_METER_INTERNAL_SIZE = 0x7fffffff,
+	/** \endcond */
 } GSW_PCE_ActionMeter_t;
 
 /** \brief VLAN Group Action Selector.
@@ -629,7 +694,12 @@ typedef enum {
 	/** Regular VLAN. VLAN Action enabled. Select Default VLAN ID. */
 	GSW_PCE_ACTION_VLAN_REGULAR	= 1,
 	/** Alternative VLAN. VLAN Action enabled. Reserved. */
-	GSW_PCE_ACTION_VLAN_ALTERNATIVE	= 2
+	GSW_PCE_ACTION_VLAN_ALTERNATIVE	= 2,
+
+	/** \cond INTERNAL */
+	/** \brief force 32-bit enum type */
+	GSW_PCE_ACTION_VLAN_INTERNAL_SIZE = 0x7fffffff,
+	/** \endcond */
 } GSW_PCE_ActionVLAN_t;
 
 /** \brief Cross VLAN Action Selector.
@@ -640,7 +710,12 @@ typedef enum {
 	/** Regular VLAN Packet. Do not ignore VLAN filtering rules. */
 	GSW_PCE_ACTION_CROSS_VLAN_REGULAR	= 1,
 	/** Cross-VLAN packet. Ignore VLAN filtering  rules.*/
-	GSW_PCE_ACTION_CROSS_VLAN_CROSS	= 2
+	GSW_PCE_ACTION_CROSS_VLAN_CROSS		= 2,
+
+	/** \cond INTERNAL */
+	/** \brief force 32-bit enum type */
+	GSW_PCE_ACTION_CROSS_VLAN_INTERNAL_SIZE = 0x7fffffff,
+	/** \endcond */
 } GSW_PCE_ActionCrossVLAN_t;
 
 /** \brief MPE Processing Path Assignment Selector - used for GSWIP-3.0 only.
@@ -654,6 +729,11 @@ typedef enum {
 	GSW_PCE_PROCESSING_PATH_2 = 2,
 	/** Processing Path-1 and -2 are used for MPE-1 & MPE-2. */
 	GSW_PCE_PROCESSING_PATH_BOTH = 3,
+
+	/** \cond INTERNAL */
+	/** \brief force 32-bit enum type */
+	GSW_PCE_PROCESSING_PATH_INTERNAL_SIZE = 0x7fffffff,
+	/** \endcond */
 } GSW_PCE_ProcessingPathAction_t;
 
 /** \brief Port Filter Action-1/2/3/4/5/6 Selector - used for GSWIP-3.0 only.
@@ -673,7 +753,12 @@ typedef enum {
 	/** Port Filter Action Type-5 (Unknown Unicast) is used. */
 	GSW_PCE_PORT_FILTER_ACTION_5	= 5,
 	/** Port Filter Action Type-6 (Unknown Multicast) is used. */
-	GSW_PCE_PORT_FILTER_ACTION_6	= 6
+	GSW_PCE_PORT_FILTER_ACTION_6	= 6,
+
+	/** \cond INTERNAL */
+	/** \brief force 32-bit enum type */
+	GSW_PCE_PORT_FILTER_ACTION_INTERNAL_SIZE = 0x7fffffff,
+	/** \endcond */
 } GSW_PCE_PortFilterAction_t;
 
 /** \brief Mac-in-Mac (PBB) I-Header operation mode.
@@ -688,6 +773,11 @@ typedef enum {
 	GSW_PCE_I_HEADER_OPERATION_REMOVE = 2,
 	/** Replace the I-Header Fields for PBB packet */
 	GSW_PCE_I_HEADER_OPERATION_REPLACE = 3,
+
+	/** \cond INTERNAL */
+	/** \brief force 32-bit enum type */
+	GSW_PCE_I_HEADER_OPERATION_INTERNAL_SIZE = 0x7fffffff,
+	/** \endcond */
 } GSW_PCE_IheaderOperationMode;
 
 /** \brief Mac-in-Mac (PBB) B-tag operation mode.
@@ -701,6 +791,11 @@ typedef enum {
 	GSW_PCE_B_TAG_OPERATION_REMOVE = 2,
 	/** Replace B-TAG fields for PBB packet */
 	GSW_PCE_B_TAG_OPERATION_REPLACE = 3,
+
+	/** \cond INTERNAL */
+	/** \brief force 32-bit enum type */
+	GSW_PCE_B_TAG_OPERATION_INTERNAL_SIZE = 0x7fffffff,
+	/** \endcond */
 } GSW_PCE_BtagOperationMode;
 
 /** \brief Mac-in-Mac (PBB) MAC selection.
@@ -712,6 +807,11 @@ typedef enum {
 	/** inner Mac address is selected for learning
 		PBB decapsulation*/
 	GSW_PCE_INNER_MAC_SELECTED = 1,
+
+	/** \cond INTERNAL */
+	/** \brief force 32-bit enum type */
+	GSW_PCE_MAC_IN_MAC_INTERNAL_SIZE = 0x7fffffff,
+	/** \endcond */
 } GSW_PCE_MacTableMacinMacSelect;
 
 /** \brief PBB Action.
@@ -1099,6 +1199,18 @@ typedef struct {
 	/** new PCE rule entry */
 	GSW_PCE_ruleEntry_t new;
 } GSW_PCE_rule_move_t;
+
+/** \brief Parameter to get pre-allocated PCE rule number.
+ *  This is not general GSW API. Instead it's pre-configuration which
+ *  can be changed later by application. This is used by
+ *  \ref GSW_MaxPceRuleEntryNumGet.
+ */
+typedef struct {
+	/** specify type of pre-allocated PCE rules. */
+	GSW_PCE_RuleRegion_t region;
+	/** output number of pre--allocated PCE rules for global or per CTP. */
+	uint8_t num;
+} GSW_PCE_rule_num_t;
 
 /** @}*/ /* GSW_PCE */
 
