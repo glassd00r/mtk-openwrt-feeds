@@ -1092,15 +1092,6 @@ static int mcu_ctrl_task(void *data)
 			continue;
 		}
 
-		/*
-		 * ensure that the act is submitted by either
-		 * mtk_npu_mcu_stall, mtk_npu_mcu_reset or mtk_npu_mcu_cold_boot
-		 * if mcu_act is ABNORMAL, it must be caused by the state transition
-		 * triggerred by above APIs
-		 * as a result, mcu_ctrl_lock must be held before mcu_ctrl_task start
-		 */
-		lockdep_assert_held(&mcu.mcu_ctrl_lock);
-
 		if (unlikely(!mcu.cur_state->state_trans)) {
 			NPU_ERR("cur state has no state_trans()\n");
 			WARN_ON(1);

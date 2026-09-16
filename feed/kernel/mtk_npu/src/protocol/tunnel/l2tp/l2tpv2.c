@@ -160,20 +160,36 @@ out:
 	return ret;
 }
 
-static inline bool l2tpv2_offload_valid(struct sk_buff *skb)
+static void l2tpv2_hdr_pull(struct sk_buff *skb, u16 hdrflags)
 {
-	struct udp_l2tp_data_hdr *l2tp;
-	struct udp_l2tp_data_hdr l2tph;
-	u16 hdrflags;
+	uint32_t len;
 
-	l2tp = skb_header_pointer(skb, 0, sizeof(struct udp_l2tp_data_hdr), &l2tph);
-	if (!l2tp)
-		return false;
+	len = sizeof(struct udp_l2tp_data_hdr) + sizeof(struct l2tp_flag_hdr);
 
-	hdrflags = ntohs(l2tp->flag_ver);
+	if (hdrflags & L2TP_HDRFLAG_L)
+		len += sizeof(struct l2tp_len_hdr);
 
+	skb_pull(skb, len);
+}
+
+static void l2tpv2_hdr_push(struct sk_buff *skb, u16 hdrflags)
+{
+	uint32_t len;
+
+	len = sizeof(struct udp_l2tp_data_hdr) + sizeof(struct l2tp_flag_hdr);
+
+	if (hdrflags & L2TP_HDRFLAG_L)
+		len += sizeof(struct l2tp_len_hdr);
+
+	skb_push(skb, len);
+}
+
+static inline bool l2tpv2_hdr_valid(struct sk_buff *skb, u16 hdrflags)
+{
 	return ((hdrflags & L2TP_HDR_VER_MASK) == L2TP_HDR_VER_2 &&
-		!(hdrflags & L2TP_HDRFLAG_T));
+		!(hdrflags & L2TP_HDRFLAG_T) &&
+		!(hdrflags & L2TP_HDRFLAG_S) &&
+		!(hdrflags & L2TP_HDRFLAG_O));
 }
 
 #if KERNEL_VERSION(6, 12, 0) <= LINUX_VERSION_CODE
@@ -207,10 +223,61 @@ static void l2tpv2_tnl_flow_param_setup(const struct net_device_path *path,
 }
 #endif
 
+static uint16_t l2tpv2_tnl_decap_param_valid(struct sk_buff *skb, uint16_t totlen)
+{
+	struct l2tp_flag_hdr *flag_hdr;
+	struct l2tp_len_hdr *len_hdr;
+	struct l2tp_flag_hdr flagh;
+	struct l2tp_len_hdr lenh;
+	u16 hdrflags;
+
+	/* Suppose L2TP header has length field first */
+	l2tpv2_hdr_push(skb, L2TP_HDRFLAG_L);
+	flag_hdr = skb_header_pointer(skb, 0, sizeof(flagh), &flagh);
+	len_hdr = skb_header_pointer(skb, sizeof(flagh), sizeof(lenh), &lenh);
+	if (unlikely(!flag_hdr || !len_hdr)) {
+		l2tpv2_hdr_pull(skb, L2TP_HDRFLAG_L);
+		return 0;
+	}
+
+	hdrflags = ntohs(flag_hdr->flag_ver);
+	if (l2tpv2_hdr_valid(skb, hdrflags) &&
+	    !(hdrflags & L2TP_HDRFLAG_RSVD) &&
+	    (hdrflags & L2TP_HDRFLAG_L) && (ntohs(len_hdr->length) - 0xc) == totlen) {
+		return hdrflags;
+	}
+
+	/* Failed to parse L2TP with length, recovery */
+	l2tpv2_hdr_pull(skb, L2TP_HDRFLAG_L);
+
+	/* Parse L2TP without length field */
+	l2tpv2_hdr_push(skb, 0);
+	flag_hdr = skb_header_pointer(skb, 0, sizeof(flagh), &flagh);
+	if (unlikely(!flag_hdr || !len_hdr)) {
+		l2tpv2_hdr_pull(skb, 0);
+		return 0;
+	}
+
+	hdrflags = ntohs(flag_hdr->flag_ver);
+	if (l2tpv2_hdr_valid(skb, hdrflags) &&
+	    !(hdrflags & L2TP_HDRFLAG_RSVD) &&
+	    !(hdrflags & L2TP_HDRFLAG_L)) {
+		return hdrflags;
+	}
+
+	l2tpv2_hdr_pull(skb, 0);
+
+	return 0;
+}
+
 static int l2tpv2_tnl_decap_param_setup(struct sk_buff *skb,
 					struct npu_params *params)
 {
+	struct iphdr *ip;
+	u16 hdrflags;
 	int ret = 0;
+
+	ip = ip_hdr(skb);
 
 	/* ppp */
 	skb_push(skb, sizeof(struct ppp_hdr));
@@ -221,11 +288,11 @@ static int l2tpv2_tnl_decap_param_setup(struct sk_buff *skb,
 	}
 
 	/* l2tp */
-	skb_push(skb, sizeof(struct udp_l2tp_data_hdr));
-	if (unlikely(!l2tpv2_offload_valid(skb))) {
+	hdrflags = l2tpv2_tnl_decap_param_valid(skb, ntohs(ip->tot_len));
+	if (!hdrflags) {
 		ret = -EINVAL;
 		inc_l2tpv2_statistic_decap_offload_invalid();
-		goto restore_l2tp;
+		goto restore_ppp;
 	}
 
 	params->tunnel.type = NPU_TUNNEL_L2TP_V2;
@@ -239,7 +306,9 @@ static int l2tpv2_tnl_decap_param_setup(struct sk_buff *skb,
 	ret = mtk_npu_transport_decap_param_setup(skb, params);
 
 restore_l2tp:
-	skb_pull(skb, sizeof(struct udp_l2tp_data_hdr));
+	skb_pull(skb, sizeof(struct l2tp_flag_hdr) + sizeof(struct udp_l2tp_data_hdr));
+	if (hdrflags & L2TP_HDRFLAG_L)
+		skb_pull(skb, sizeof(struct l2tp_len_hdr));
 
 restore_ppp:
 	skb_pull(skb, sizeof(struct ppp_hdr));
@@ -253,16 +322,32 @@ restore_ppp:
 static int l2tpv2_tnl_encap_param_setup(struct sk_buff *skb,
 					struct npu_params *params)
 {
-	struct npu_l2tp_params *l2tpp;
 	struct udp_l2tp_data_hdr *l2tp;
 	struct udp_l2tp_data_hdr l2tph;
+	struct npu_l2tp_params *l2tpp;
+	struct l2tp_flag_hdr *flag;
+	struct l2tp_flag_hdr flagh;
+	u16 hdrflags;
+	int offset;
 
-	if (unlikely(!l2tpv2_offload_valid(skb))) {
+	flag = skb_header_pointer(skb, 0, sizeof(struct l2tp_flag_hdr), &flagh);
+	if (unlikely(!flag)) {
 		inc_l2tpv2_statistic_encap_offload_invalid();
 		return -EINVAL;
 	}
 
-	l2tp = skb_header_pointer(skb, 0, sizeof(struct udp_l2tp_data_hdr), &l2tph);
+	hdrflags = ntohs(flag->flag_ver);
+
+	if (unlikely(!l2tpv2_hdr_valid(skb, hdrflags))) {
+		inc_l2tpv2_statistic_encap_offload_invalid();
+		return -EINVAL;
+	}
+
+	offset = sizeof(struct l2tp_flag_hdr);
+	if (hdrflags & L2TP_HDRFLAG_L)
+		offset += sizeof(struct l2tp_len_hdr);
+
+	l2tp = skb_header_pointer(skb, offset, sizeof(struct udp_l2tp_data_hdr), &l2tph);
 	if (unlikely(!l2tp)) {
 		inc_l2tpv2_statistic_encap_null_hdr_ptr();
 		return -EINVAL;
@@ -319,8 +404,12 @@ static int l2tpv2_tnl_l2_param_update(struct npu_params *params,
 
 static bool l2tpv2_tnl_decap_offloadable(struct sk_buff *skb)
 {
+	struct l2tp_flag_hdr *l2tp;
+	struct l2tp_flag_hdr l2tph;
 	struct iphdr *ip;
+	struct udphdr *udp;
 	bool ret = true;
+	u16 hdrflags;
 	u32 ip_len;
 
 	ip = ip_hdr(skb);
@@ -329,22 +418,41 @@ static bool l2tpv2_tnl_decap_offloadable(struct sk_buff *skb)
 
 	ip_len = ip_hdr(skb)->ihl * 4;
 
-	skb_pull(skb, ip_len + sizeof(struct udphdr));
-	if (!l2tpv2_offload_valid(skb)) {
+	skb_pull(skb, ip_len);
+
+	udp = udp_hdr(skb);
+	if (udp->dest != htons(UDP_L2TP_PORT) || udp->source != htons(UDP_L2TP_PORT)) {
 		ret = false;
-		goto restore_ip_udp;
+		goto restore_ip;
+	}
+	skb_pull(skb, sizeof(struct udphdr));
+
+	l2tp = skb_header_pointer(skb, 0, sizeof(struct l2tp_flag_hdr), &l2tph);
+	if (!l2tp) {
+		ret = false;
+		goto restore_udp;
+	}
+	hdrflags = ntohs(l2tp->flag_ver);
+	if (!l2tpv2_hdr_valid(skb, hdrflags)) {
+		ret = false;
+		goto restore_udp;
 	}
 
-	skb_pull(skb, sizeof(struct udp_l2tp_data_hdr));
+	l2tpv2_hdr_pull(skb, hdrflags);
+
 	if (!mtk_npu_ppp_valid(skb)) {
 		ret = false;
 		goto restore_l2tp;
 	}
 
 restore_l2tp:
-	skb_push(skb, sizeof(struct udp_l2tp_data_hdr));
-restore_ip_udp:
-	skb_push(skb, ip_len + sizeof(struct udphdr));
+	l2tpv2_hdr_push(skb, hdrflags);
+
+restore_udp:
+	skb_push(skb, sizeof(struct udphdr));
+
+restore_ip:
+	skb_push(skb, ip_len);
 
 	return ret;
 }

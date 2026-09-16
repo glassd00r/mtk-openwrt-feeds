@@ -11,6 +11,8 @@
 #include "npu/protocol/mac/eth.h"
 #include "npu/protocol/network/ip.h"
 
+#include <mtk_eth_soc.h>
+
 static inline void inc_eth_statistic_encap_success(enum npu_tunnel_type type)
 {
 	struct npu_tnl_type *tnl_type;
@@ -123,6 +125,9 @@ int mtk_npu_eth_decap_param_setup(struct sk_buff *skb, struct npu_params *params
 	int ret = 0;
 
 	skb_push(skb, sizeof(struct ethhdr));
+	if (skb_tnl_is_pppoe(skb))
+		skb_push(skb, PPPOE_SES_HLEN);
+
 	eth = skb_header_pointer(skb, 0, sizeof(struct ethhdr), &ethh);
 	if (unlikely(!eth)) {
 		ret = -EINVAL;
@@ -130,7 +135,8 @@ int mtk_npu_eth_decap_param_setup(struct sk_buff *skb, struct npu_params *params
 		goto out;
 	}
 
-	if (unlikely(ntohs(eth->h_proto) != ETH_P_IP)) {
+	if (unlikely(ntohs(eth->h_proto) != ETH_P_IP &&
+		     ntohs(eth->h_proto) != ETH_P_PPP_SES)) {
 		NPU_NOTICE("eth proto not support, proto: 0x%x\n",
 			    ntohs(eth->h_proto));
 		ret = -EINVAL;
@@ -142,10 +148,12 @@ int mtk_npu_eth_decap_param_setup(struct sk_buff *skb, struct npu_params *params
 
 	memcpy(&params->mac.eth.h_source, eth->h_dest, ETH_ALEN);
 	memcpy(&params->mac.eth.h_dest, eth->h_source, ETH_ALEN);
-	params->mac.eth.h_proto = htons(ETH_P_IP);
+	params->mac.eth.h_proto = eth->h_proto;
 
 out:
 	skb_pull(skb, sizeof(struct ethhdr));
+	if (skb_tnl_is_pppoe(skb))
+		skb_pull(skb, PPPOE_SES_HLEN);
 
 	if (!ret)
 		inc_eth_statistic_decap_success(params->tunnel.type);

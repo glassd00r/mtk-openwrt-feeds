@@ -338,7 +338,7 @@ static struct npu_mcast_grp *mtk_npu_mcast_grp_alloc(void)
 
 	if (i == NPU_MCAST_TBL_IDX_MAX) {
 		NPU_NOTICE("No available multicast group can be allocated\n");
-		return ERR_PTR(-ENOMEM);
+		return ERR_PTR(-ENOSPC);
 	}
 
 	set_bit(i, mcast.grp.used);
@@ -1191,6 +1191,29 @@ static void mtk_npu_mcast_hnat_params_convert(struct npu_mcast_client_params *c,
 	}
 }
 
+/**
+ * mtk_npu_mcast_client_insert_hnat() - insert a client into the group by hnat. The
+ * group is created on demand if it does not exist yet.
+ * @hnat_mcast_params: multicast offload info and client parameters to insert.
+ *
+ * Return:
+ * 0		on success.
+ * -EINVAL	invalid multicast offload info or client parameters (NULL client,
+ *		zero destination MAC, multicast destination MAC with m2u_en, or
+ *		a destination MAC that is not mapped from dst).
+ * -EPERM	invalid network parameters (src, dst, type).
+ * -ENOSPC	no free group entry, i.e. all NPU_MCAST_TBL_IDX_MAX group
+ *		entries are in use. Only possible when the group has to be
+ *		created.
+ * -EEXIST	the group parameters duplicate an existing group, or the client
+ *		is already present in the group.
+ * -ENOMEM	failed to allocate an extra client node. This can only happen when
+ *		the NPU cannot support the HW path for this group and the group has
+ *		fallen back to the SW path.
+ * others	the group parameters could not be submitted to the firmware
+ *		(mailbox error). The client is rolled back, and the group is
+ *		freed as well if it has no client left.
+ */
 static int mtk_npu_mcast_client_insert_hnat(struct mcast_offload_info *hnat_mcast_params)
 {
 	struct npu_mcast_client_params c;

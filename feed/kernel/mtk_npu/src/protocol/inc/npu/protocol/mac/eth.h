@@ -9,6 +9,7 @@
 #define _NPU_ETH_H_
 
 #include <linux/if_ether.h>
+#include <linux/if_pppox.h>
 
 #include "npu/npu_params.h"
 

@@ -388,8 +388,9 @@ static int mtk_npu_nf_hnat_tnl_info_setup(struct npu_tnl_input *tnl_input,
 
 static bool mtk_npu_tnl_decap_offloadable(struct sk_buff *skb)
 {
+	struct flow_offload_hw_path hw_path = { 0 };
 	struct npu_tnl_type *tnl_type;
-	struct ethhdr *eth;
+	struct iphdr *iph;
 	u32 offload_tnl_type_num;
 	u32 cnt;
 	u32 i;
@@ -409,12 +410,18 @@ static bool mtk_npu_tnl_decap_offloadable(struct sk_buff *skb)
 		return false;
 	}
 
-	eth = eth_hdr(skb);
-
-	/* TODO: currently decap only support ethernet IPv4 */
-	if (ntohs(eth->h_proto) != ETH_P_IP) {
-		inc_tnl_hnat_decap_offloadable_statistic_fail();
+	iph = ip_hdr(skb);
+	/* TODO: currently decap only support ipv4 */
+	if (iph->version != 4)
 		return false;
+
+	hw_path.dev = skb->dev;
+	hw_path.virt_dev = skb->dev;
+
+	if (skb->dev->netdev_ops->ndo_flow_offload_check) {
+		skb->dev->netdev_ops->ndo_flow_offload_check(&hw_path);
+		if (hw_path.flags & BIT(DEV_PATH_PPPOE))
+			skb_hnat_set_is_pppoe(skb, 1);
 	}
 
 	offload_tnl_type_num = mtk_npu_tnl_type_get_offload_num();
@@ -488,11 +495,12 @@ static int mtk_npu_tnl_decap_offload(struct sk_buff *skb)
 	if (tnl_type->has_inner_eth)
 		skb_pull(skb, sizeof(struct ethhdr));
 
-	if (unlikely(ret)) {
-		skb_mark_unbind(skb);
-		inc_tnl_hnat_decap_offload_statistic_fail();
+	/*
+	 * We don't need to mark unbind here
+	 * Since we may learn the tunnel info in next pre-routing
+	 */
+	if (unlikely(ret))
 		return ret;
-	}
 
 	tnl_params.npu_entry_proto = tnl_type->tnl_proto_type;
 	tnl_params.cdrt_idx = skb_hnat_cdrt(skb);
