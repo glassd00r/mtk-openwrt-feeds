@@ -416,16 +416,7 @@ Subject: [PATCH] net: ethernet: mtk_eth_soc: add hw lro support
  }
  
  static int mtk_free_dev(struct mtk_eth *eth)
-@@ -5203,7 +5350,7 @@ static int mtk_get_rxnfc(struct net_devi
- 	switch (cmd->cmd) {
- 	case ETHTOOL_GRXRINGS:
- 		if (dev->hw_features & NETIF_F_LRO) {
--			cmd->data = MTK_MAX_RX_RING_NUM;
-+			cmd->data = MTK_HW_LRO_RING_NUM;
- 			ret = 0;
- 		} else if (MTK_HAS_CAPS(eth->soc->caps, MTK_RSS)) {
- 			cmd->data = MTK_RX_RSS_NUM;
-@@ -6231,6 +6378,18 @@ static int mtk_probe(struct platform_dev
+@@ -6232,6 +6379,18 @@ static int mtk_probe(struct platform_dev
  						goto err_free_dev;
  				}
  			}
@@ -444,7 +435,7 @@ Subject: [PATCH] net: ethernet: mtk_eth_soc: add hw lro support
  		} else {
  			err = devm_request_irq(eth->dev, eth->irq_fe[MTK_FE_IRQ_RX],
  					       mtk_handle_irq_rx, 0,
-@@ -6307,6 +6466,13 @@ static int mtk_probe(struct platform_dev
+@@ -6308,6 +6467,13 @@ static int mtk_probe(struct platform_dev
  				       mtk_napi_rx);
  	}
  
@@ -458,7 +449,7 @@ Subject: [PATCH] net: ethernet: mtk_eth_soc: add hw lro support
  	for (i = 0; i < MTK_MAX_DEVS; i++) {
  		if (!eth->netdev[i])
  			continue;
-@@ -6540,7 +6706,7 @@ static const struct mtk_soc_data mt7981_
+@@ -6541,7 +6707,7 @@ static const struct mtk_soc_data mt7981_
  	},
  	.rx = {
  		DESC_SIZE(struct mtk_rx_dma),
@@ -467,7 +458,7 @@ Subject: [PATCH] net: ethernet: mtk_eth_soc: add hw lro support
  		.dma_max_len = MTK_TX_DMA_BUF_LEN,
  		.dma_len_offset = 16,
  		.dma_size = MTK_DMA_SIZE(512),
-@@ -6570,7 +6736,7 @@ static const struct mtk_soc_data mt7986_
+@@ -6571,7 +6737,7 @@ static const struct mtk_soc_data mt7986_
  	},
  	.rx = {
  		DESC_SIZE(struct mtk_rx_dma),
