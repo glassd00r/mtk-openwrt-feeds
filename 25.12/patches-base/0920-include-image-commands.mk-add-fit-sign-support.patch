@@ -15,7 +15,7 @@
  	$(call locked,PATH=$(LINUX_DIR)/scripts/dtc:$(PATH) mkimage $(if $(findstring external,$(word 3,$(1))),\
 -		-E -B 0x1000 $(if $(findstring static,$(word 3,$(1))),-p 0x1000)) -f $@.its $@.new, \
 +		-E -B 0x1000 $(if $(findstring static,$(word 3,$(1))),-p 0x1000)) \
-+		$(if $(CONFIG_MTK_SECURE_BOOT),-o $(CONFIG_FIT_SIGN_ALG) -k $(TOPDIR)/$(call qstrip,$(CONFIG_SBC_KEY_DIR))) -f $@.its $@.new, \
++		$(if $(CONFIG_MTK_SECURE_BOOT),-k $(TOPDIR)/$(call qstrip,$(CONFIG_SBC_KEY_DIR))) -f $@.its $@.new, \
  	  gen-cpio$(if $(TARGET_PER_DEVICE_ROOTFS),.$(ROOTFS_ID/$(DEVICE_NAME))))
  	@mv $@.new $@
  endef

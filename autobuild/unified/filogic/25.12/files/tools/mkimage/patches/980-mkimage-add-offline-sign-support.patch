@@ -8,7 +8,7 @@
  
  struct checksum_algo checksum_algos[] = {
  	{
-@@ -76,6 +77,27 @@ struct crypto_algo crypto_algos[] = {
+@@ -90,6 +91,27 @@ struct crypto_algo crypto_algos[] = {
  		.add_verify_data = ecdsa_add_verify_data,
  		.verify = ecdsa_verify,
  	},
@@ -38,16 +38,16 @@
  struct padding_algo padding_algos[] = {
 --- a/tools/Makefile
 +++ b/tools/Makefile
-@@ -84,6 +84,8 @@ RSA_OBJS-$(CONFIG_TOOLS_LIBCRYPTO) := $(
- 					rsa-sign.o rsa-verify.o \
- 					rsa-mod-exp.o)
+@@ -97,6 +97,8 @@ HOSTCFLAGS_ecdsa-libcrypto.o += \
+ AES_OBJS-$(CONFIG_TOOLS_LIBCRYPTO) := $(addprefix generated/lib/aes/, \
+ 					aes-encrypt.o aes-decrypt.o)
  
 +SIGNOFFLINE_OBJS-$(CONFIG_TOOLS_LIBCRYPTO) := signoffline.o
 +
- ECDSA_OBJS-$(CONFIG_TOOLS_LIBCRYPTO) := $(addprefix generated/lib/ecdsa/, ecdsa-libcrypto.o)
+ PRELOAD_OBJS-$(CONFIG_TOOLS_LIBCRYPTO) := generated/boot/image-pre-load.o
  
- AES_OBJS-$(CONFIG_TOOLS_LIBCRYPTO) := $(addprefix generated/lib/aes/, \
-@@ -149,7 +151,8 @@ dumpimage-mkimage-objs := aisimage.o \
+ # Cryptographic helpers and image types that depend on openssl/libcrypto
+@@ -160,7 +162,8 @@ dumpimage-mkimage-objs := aisimage.o \
  			mtk_nand_headers.o \
  			$(ECDSA_OBJS-y) \
  			$(RSA_OBJS-y) \
@@ -375,12 +375,44 @@
 +#endif /* SIGNOFFLINE_H_ */
 --- a/tools/image-host.c
 +++ b/tools/image-host.c
-@@ -157,7 +157,7 @@ static int fit_image_write_sig(void *fit
- 					  strdata, sizeof(strdata));
- 		}
- 	}
--	if (algo_name && !ret)
-+	if (algo_name && !strstr(algo_name, ",offline") && !ret)
- 		ret = fdt_setprop_string(fit, noffset, "algo", algo_name);
+@@ -1077,12 +1077,21 @@ static int fit_config_process_sig(const
+ 	struct image_sign_info info;
+ 	const char *node_name;
+ 	struct image_region *region;
++	bool offline = false;
++	char buf[64] = { 0 };
+ 	char *region_prop;
+ 	int region_proplen;
+ 	int region_count;
+ 	uint8_t *value;
+ 	uint value_len;
+ 	int ret;
++	int len;
++
++	if (fdt_getprop(fit, noffset, "sign-offline", NULL) != NULL) {
++		offline = true;
++		if (fdt_delprop(fit, noffset, "sign-offline"))
++			return -1;
++	}
  
- 	return ret;
+ 	node_name = fit_get_name(fit, noffset, NULL);
+ 	if (fit_config_get_regions(fit, conf_noffset, noffset, &region,
+@@ -1095,6 +1104,18 @@ static int fit_config_process_sig(const
+ 				algo_name))
+ 		return -1;
+ 
++	if (offline) {
++		len = snprintf(buf, sizeof(buf), "%s,offline", info.name);
++		if (len < 0 || len >= sizeof(buf))
++			return -1;
++
++		info.crypto = image_get_crypto_algo(buf);
++		if (!info.crypto) {
++			fprintf(stderr, "Unsupported offline algorithm (%s)\n", buf);
++			return -1;
++		}
++	}
++
+ 	ret = info.crypto->sign(&info, region, region_count, &value,
+ 				&value_len);
+ 	free(region);
