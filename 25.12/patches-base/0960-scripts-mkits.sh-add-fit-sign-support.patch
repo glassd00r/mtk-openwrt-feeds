@@ -27,7 +27,7 @@
  		* ) echo "Invalid option passed to '$0' (options:$*)"
  		usage;;
  	esac
-@@ -156,6 +160,49 @@ if [ -n "${ROOTFS}" ]; then
+@@ -160,6 +164,54 @@ if [ -n "${ROOTFS}" ]; then
  	LOADABLES="${LOADABLES:+$LOADABLES, }\"rootfs${REFERENCE_CHAR}${ROOTFSNUM}\""
  fi
  
@@ -39,6 +39,11 @@
 +
 +	if echo "${SIGN_ALG}" | grep -q "offline"; then
 +		SIGN_ALG=$(echo "${SIGN_ALG}" | sed "s/\(.*\),.*/\1/g")
++	fi
++
++	PADDING_PROP=""
++	if echo "${SIGN_ALG}" | grep -q "rsa"; then
++		PADDING_PROP="padding = \"pss\";"
 +	fi
 +
 +	SIGN_IMAGES="sign-images = \"fdt\", \"kernel\""
@@ -54,7 +59,7 @@
 +	SIGNATURE="
 +			signature {
 +				algo = \"${SIGN_ALG}\";
-+				padding = \"pss\";
++				${PADDING_PROP}
 +				key-name-hint = \"${SIGN_KEY_NAME}\";
 +				${SIGN_IMAGES}
 +			};
@@ -66,7 +71,7 @@
 +		OVSIGNATURE="
 +			signature {
 +				algo = \"${SIGN_ALG}\";
-+				padding = \"pss\";
++				${PADDING_PROP}
 +				key-name-hint = \"${SIGN_KEY_NAME}\";
 +				${OVSIGN_IMAGES}
 +			};
@@ -77,7 +82,7 @@
  # add DT overlay blobs
  FDTOVERLAY_NODE=""
  OVCONFIGS=""
-@@ -188,6 +235,7 @@ OVCONFIGS=""
+@@ -192,6 +244,7 @@ OVCONFIGS=""
  			description = \"OpenWrt ${DEVICE} overlay $ovname\";
  			fdt = \"$ovnode\";
  			${COMPATIBLE_PROP}
@@ -85,7 +90,7 @@
  		};
  	"
  done
-@@ -231,6 +279,7 @@ ${ROOTFS_NODE}
+@@ -235,6 +288,7 @@ ${ROOTFS_NODE}
  			${LOADABLES:+loadables = ${LOADABLES};}
  			${COMPATIBLE_PROP}
  			${INITRD_PROP}
