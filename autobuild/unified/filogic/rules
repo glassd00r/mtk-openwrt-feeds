@@ -8,6 +8,7 @@
 list_add_after $(hooks autobuild_prepare) platform_change_kernel_config filogic_change_kernel_config
 list_add_after $(hooks autobuild_prepare) filogic_change_kernel_config change_kernel_flowoffload_conf
 list_add_after $(hooks autobuild_prepare) filogic_change_kernel_config change_kernel_security_config
+list_add_after $(hooks autobuild_prepare) filogic_change_kernel_config change_kernel_kdb_config
 list_append $(hooks autobuild_prepare) airoha_firmware_install
 list_add_after $(hooks autobuild_prepare) airoha_firmware_install copy_phy_firmware
 
@@ -89,6 +90,39 @@ filogic_change_kernel_config() {
 	kernel_config_enable CONFIG_ZTS8232
 	kernel_config_enable CONFIG_PHY_MTK_PCIE
 	kernel_config_enable CONFIG_MTK_EMIMPU
+}
+
+# KDB (Kernel Debugger) is a built-in Linux kernel debugger
+# that allows developers to inspect and debug the kernel
+# directly from the console without a separate host machine.
+#
+# Enable KDB:
+# echo 0 > /proc/sys/kernel/panic
+# echo ttyS0,115200 > /sys/module/kgdboc/parameters/kgdboc
+# ubus call system watchdog '{"magicclose":true,"stop":true}'
+#
+# Disable KDB:
+# echo 3 > /proc/sys/kernel/panic
+# echo "" > /sys/module/kgdboc/parameters/kgdboc
+# ubus call system watchdog '{"stop":false}'
+change_kernel_kdb_config() {
+	kernel_config_enable CONFIG_TTY
+	kernel_config_enable CONFIG_VT
+	kernel_config_disable CONFIG_VT_CONSOLE
+	kernel_config_disable CONFIG_CONSOLE_TRANSLATIONS
+	kernel_config_disable CONFIG_VT_HW_CONSOLE_BINDING
+	kernel_config_enable CONFIG_KGDB
+	kernel_config_enable CONFIG_KGDB_HONOUR_BLOCKLIST
+	kernel_config_enable CONFIG_KGDB_KDB
+	kernel_config_enable CONFIG_KGDB_SERIAL_CONSOLE
+	kernel_config_disable CONFIG_SERIAL_KGDB_NMI
+	kernel_config_disable CONFIG_KGDB_TESTS
+	kernel_config_disable CONFIG_KDB_KEYBOARD
+	kernel_config_enable CONFIG_MAGIC_SYSRQ_SERIAL
+	kernel_config_disable CONFIG_KDB_DEFAULT_ENABLE
+	kernel_config_enable CONFIG_KDB_DEFAULT_ENABLE 0x1
+	kernel_config_disable CONFIG_KDB_CONTINUE_CATASTROPHIC
+	kernel_config_enable CONFIG_KDB_CONTINUE_CATASTROPHIC 0
 }
 
 change_kernel_flowoffload_conf () {
