@@ -65,10 +65,7 @@ typedef int64_t s64, ktime_t;
 
 static inline bool ether_addr_equal(const u8 *addr1, const u8 *addr2)
 {
-	const u16 *a = (const u16 *)addr1;
-	const u16 *b = (const u16 *)addr2;
-
-	return ((a[0] ^ b[0]) | (a[1] ^ b[1]) | (a[2] ^ b[2])) == 0;
+	return !memcmp(addr1, addr2, ETH_ALEN);
 }
 
 static inline bool is_broadcast_ether_addr(const u8 *addr)

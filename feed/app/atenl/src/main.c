@@ -98,8 +98,6 @@ static void usage(void)
 	       "  -p = specify the flash partition name and offset (<name>:<offs>)\n");
 	printf("examples:\n"
 	       "  %s -u -i phy0 -b br-lan\n", progname);
-
-	exit(EXIT_FAILURE);
 }
 
 static void atenl_handler_run(struct atenl *an)
@@ -130,10 +128,11 @@ static void atenl_handler_run(struct atenl *an)
 
 int main(int argc, char **argv)
 {
-	int opt, phy_idx, ret = 0;
 	char *phy = "phy0", *cmd = NULL;
-	char *token;
+	int opt, phy_idx, ret = 0;
 	struct atenl *an;
+	char *token;
+	pid_t pid;
 
 	progname = argv[0];
 
@@ -165,10 +164,18 @@ int main(int argc, char **argv)
 				break;
 			case 'p':
 				token = strtok(optarg, ":");
-				if (!token)
-					break;
+				if (!token) {
+					ret = -EINVAL;
+					goto out;
+				}
 				an->flash_part = token;
-				an->flash_offset = strtol(strtok(NULL, ":"), NULL, 0);
+
+				token = strtok(NULL, ":");
+				if (!token) {
+					ret = -EINVAL;
+					goto out;
+				}
+				an->flash_offset = strtol(token, NULL, 0);
 				break;
 			default:
 				atenl_err("Not supported option: %c\n", opt);
@@ -183,7 +190,7 @@ int main(int argc, char **argv)
 	}
 
 	if (cmd) {
-		atenl_eeprom_cmd_handler(an, phy_idx, cmd);
+		ret = atenl_eeprom_cmd_handler(an, phy_idx, cmd);
 		goto out;
 	}
 
@@ -197,13 +204,21 @@ int main(int argc, char **argv)
 			goto out;
 		}
 
-		atenl_info("Bridge name is not specified, use default bridge name: %s\n", an->bridge_name);
+		atenl_info("Bridge name is not specified, use default bridge name: %s\n",
+			   an->bridge_name);
 	} else {
 		atenl_info("Currently using bridge name: %s\n", an->bridge_name);
 	}
 
 	/* background ourself */
-	if (!fork()) {
+	pid = fork();
+	if (pid < 0) {
+		atenl_err("Failed to fork daemon: %s\n", strerror(errno));
+		ret = -errno;
+		goto out;
+	} else if (pid > 0) {
+		usleep(800000);
+	} else {
 		ret = atenl_eeprom_init(an, phy_idx);
 		if (ret)
 			goto out;
@@ -213,8 +228,6 @@ int main(int argc, char **argv)
 			goto out;
 
 		atenl_handler_run(an);
-	} else {
-		usleep(800000);
 	}
 
 	ret = 0;

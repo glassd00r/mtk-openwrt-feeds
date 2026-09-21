@@ -125,6 +125,11 @@ struct atenl {
 	u8 ibf_ant;
 };
 
+struct atenl_eeprom_cmd {
+	const char *name;
+	int (*handler)(struct atenl *an, const char *args);
+};
+
 struct atenl_cmd_hdr {
 	__be32 magic_no;
 	__be16 cmd_type;
@@ -510,7 +515,7 @@ void atenl_set_channel(struct atenl *an, u8 bw, u8 ch_band,
 int atenl_nl_process(struct atenl *an, struct atenl_data *data);
 int atenl_nl_process_many(struct atenl *an, struct atenl_data *data);
 int atenl_nl_check_flash(struct atenl *an);
-int atenl_nl_write_eeprom(struct atenl *an, u32 offset, u8 *val, int len);
+int atenl_nl_write_eeprom(struct atenl *an, u32 offset, u8 *val);
 int atenl_nl_write_efuse_all(struct atenl *an);
 int atenl_nl_write_ext_eeprom_all(struct atenl *an);
 int atenl_nl_update_buffer_mode(struct atenl *an);
@@ -518,12 +523,11 @@ int atenl_nl_set_state(struct atenl *an, u8 band,
 		       enum mt76_testmode_state state);
 int atenl_nl_set_aid(struct atenl *an, u8 band, u8 aid);
 int atenl_nl_get_wiphy(struct atenl *an);
-void atenl_get_ibf_cal_result(struct atenl *an);
-void atenl_get_rx_gain_cal_result(struct atenl *an);
+int atenl_get_ibf_cal_result(struct atenl *an);
 int atenl_eeprom_init(struct atenl *an, u8 phy_idx);
 void atenl_eeprom_close(struct atenl *an);
 int atenl_eeprom_read_from_driver(struct atenl *an, u32 offset, int len);
-void atenl_eeprom_cmd_handler(struct atenl *an, u8 phy_idx, char *cmd);
+int atenl_eeprom_cmd_handler(struct atenl *an, u8 phy_idx, char *cmd);
 u16 atenl_get_center_channel(u8 bw, u8 ch_band, u16 ctrl_ch);
 int atenl_reg_read(struct atenl *an, u32 offset, u32 *res);
 int atenl_reg_write(struct atenl *an, u32 offset, u32 val);

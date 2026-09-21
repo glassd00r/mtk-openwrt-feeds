@@ -827,7 +827,7 @@ out:
 	return ret;
 }
 
-void
+int
 atenl_get_ibf_cal_result(struct atenl *an)
 {
 	u16 offset, len = 40 * 9;
@@ -846,7 +846,7 @@ atenl_get_ibf_cal_result(struct atenl *an)
 			len = 46 * 9;
 	}
 
-	atenl_eeprom_read_from_driver(an, offset, len);
+	return atenl_eeprom_read_from_driver(an, offset, len);
 }
 
 static int
@@ -1044,26 +1044,6 @@ atenl_nl_ibf_profile_update_all(struct atenl *an, struct atenl_data *data,
 	return 0;
 }
 
-void
-atenl_get_rx_gain_cal_result(struct atenl *an)
-{
-	int band;
-
-	if (is_connac2(an))
-		return;
-
-	if (is_connac3(an)) {
-		atenl_eeprom_read_from_driver(an, MT_EE_DO_RX_GAIN_CAL, 1);
-		atenl_eeprom_read_from_driver(an, MT_EE_RX_GAIN_CAL, MT_EE_CAL_RX_GAIN_SIZE);
-		return;
-	}
-
-	for (band = 0; band < MAX_BAND_NUM; band++)
-		atenl_eeprom_read_from_driver(an, MT_EE_CONNAC5_DO_RX_GAIN_CAL(band), 1);
-	atenl_eeprom_read_from_driver(an, MT_EE_CONNAC5_RX_GAIN_CAL,
-				      MT_EE_CONNAC5_CAL_RX_GAIN_SIZE);
-}
-
 #define NL_OPS_GROUP(cmd, ...)	[HQA_CMD_##cmd] = { __VA_ARGS__ }
 static const struct atenl_nl_ops nl_ops[] = {
 	NL_OPS_GROUP(SET_TX_PATH, .set=MT76_TM_ATTR_TX_ANTENNA),
@@ -1236,14 +1216,14 @@ int atenl_nl_check_flash(struct atenl *an)
 	struct atenl_nl_priv nl_priv = { .an = an };
 	struct nl_msg *msg;
 
+	/* User has a specified flash partition */
+	if (an->flash_part)
+		return 0;
+
 	if (unl_genl_init(&nl_priv.unl, "nl80211") < 0) {
 		atenl_err("Failed to connect to nl80211\n");
 		return 2;
 	}
-
-	/* User has a specified flash partition */
-	if (an->flash_part)
-		return 0;
 
 	msg = unl_genl_msg(&nl_priv.unl, NL80211_CMD_TESTMODE, true);
 	nla_put_u32(msg, NL80211_ATTR_WIPHY, get_band_val(an, 0, phy_idx));
@@ -1255,39 +1235,43 @@ int atenl_nl_check_flash(struct atenl *an)
 	return 0;
 }
 
-int atenl_nl_write_eeprom(struct atenl *an, u32 offset, u8 *val, int len)
+int atenl_nl_write_eeprom(struct atenl *an, u32 offset, u8 *val)
 {
 	struct atenl_nl_priv nl_priv = {};
 	struct nl_msg *msg;
+	int i, ret = 0;
 	void *ptr, *a;
-	int i;
 
 	if (unl_genl_init(&nl_priv.unl, "nl80211") < 0) {
 		atenl_err("Failed to connect to nl80211\n");
 		return 2;
 	}
 
-	if (len > 16)
-		return -EINVAL;
-
 	msg = unl_genl_msg(&nl_priv.unl, NL80211_CMD_TESTMODE, false);
 	nla_put_u32(msg, NL80211_ATTR_WIPHY, get_band_val(an, 0, phy_idx));
 
 	ptr = nla_nest_start(msg, NL80211_ATTR_TESTDATA);
-	if (!ptr)
-		return -ENOMEM;
+	if (!ptr) {
+		ret = -ENOMEM;
+		goto out;
+	}
 
 	nla_put_u8(msg, MT76_TM_ATTR_EEPROM_ACTION,
 		   MT76_TM_EEPROM_ACTION_UPDATE_DATA);
 	nla_put_u32(msg, MT76_TM_ATTR_EEPROM_OFFSET, offset);
 
 	a = nla_nest_start(msg, MT76_TM_ATTR_EEPROM_VAL);
-	if (!a)
-		return -ENOMEM;
+	if (!a) {
+		ret = -ENOMEM;
+		goto out;
+	}
 
-	for (i = 0; i < len; i++)
-		if (nla_put_u8(msg, i, val[i]))
+	for (i = 0; i < MT76_TM_EEPROM_BLOCK_SIZE; i++) {
+		if (nla_put_u8(msg, i, val[i])) {
+			ret = -ENOBUFS;
 			goto out;
+		}
+	}
 
 	nla_nest_end(msg, a);
 
@@ -1295,10 +1279,10 @@ int atenl_nl_write_eeprom(struct atenl *an, u32 offset, u8 *val, int len)
 
 	unl_genl_request(&nl_priv.unl, msg, NULL, NULL);
 
+out:
 	unl_free(&nl_priv.unl);
 
-out:
-	return 0;
+	return ret;
 }
 
 int atenl_nl_write_efuse_all(struct atenl *an)
