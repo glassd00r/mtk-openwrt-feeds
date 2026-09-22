@@ -108,7 +108,7 @@ kernel_config_enabled() {
 update_ab_info() {
 	if test -z "${internal_build}"; then
 		if test -d "${openwrt_root}/../mtk-openwrt-feeds" -a -L "${openwrt_root}/../mtk-openwrt-feeds/.git"; then
-			local remote=$(git -C "${openwrt_root}/../mtk-openwrt-feeds" remote -v 2>/dev/null | sed -n 's|.*https://\([^/]*\).*|\1|p' | head -n 1 2>/dev/null)
+			local remote=$(get_git_repo_remote_host "${openwrt_root}/../mtk-openwrt-feeds")
 			if echo "${remote}" | grep -qE '^gerrit\.[^.]+\.[^.]+$'; then
 				log_dbg "Internal repo build mode"
 				internal_build=1
@@ -118,7 +118,7 @@ update_ab_info() {
 	fi
 
 	if test -z "${gerrit_host}" -a -n "${release_build}"; then
-		gerrit_host=$(git -C "${openwrt_root}" remote -v 2>/dev/null | sed -n 's|.*https://\([^/]*\).*|\1|p' | head -n 1 2>/dev/null)
+		gerrit_host=$(get_git_repo_remote_host "${openwrt_root}")
 	fi
 }
 
