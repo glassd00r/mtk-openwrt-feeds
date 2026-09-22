@@ -387,6 +387,12 @@ inherit_patch_file_group_hooks() {
 	done
 }
 
+# Get remote URL from a git repo
+# $1:	Git repo path
+get_git_repo_remote() {
+	git -C "${1}" remote -v 2>/dev/null | sed -n 's|^[^\t ]*[\t ]*\([^\t ]*\).*|\1|p' | head -n 1 2>/dev/null
+}
+
 # Get remote host from a git repo
 # $1:	Git repo path
 get_git_repo_remote_host() {
