@@ -1,0 +1,66 @@
+From 05cd6c5bbfaab1b32da66b3faa1b333a26d701b7 Mon Sep 17 00:00:00 2001
+From: StanleyYP Wang <StanleyYP.Wang@mediatek.com>
+Date: Tue, 27 Jan 2026 21:05:29 +0800
+Subject: [PATCH] mtk: mt76: mt7996: avoid to set ACK when wait_resp is not set
+
+When wait_resp is not set, but the ACK option is set in txd, the ACK event
+will be enqueued in the mcu event queue without being dequeuing by the
+original mcu command request.
+The previous orphan ACK event will only be dequeued when another mcu command request
+requires a response. Due to the mismatch in the sequence idx, these
+events will be discarded one by one until the command finds an event with a matching
+sequence idx.
+However, in this case, there is a possibility that several mcu command
+requests that do not require a response will fill up the queue.
+Then, a mcu command with wait_resp set is issued, it might dequeue the wrong
+event skb if the queue is full of events with all possible sequence
+indices.
+
+This situation occurs in testmode when tx_frame starts and several mcu command
+are issued wihtout waiting for a response.
+
+Signed-off-by: StanleyYP Wang <StanleyYP.Wang@mediatek.com>
+---
+ mcu.c        |  2 +-
+ mt7996/mcu.c | 11 +++++------
+ 2 files changed, 6 insertions(+), 7 deletions(-)
+
+diff --git a/mcu.c b/mcu.c
+index 05361e006..54c82891f 100644
+--- a/mcu.c
++++ b/mcu.c
+@@ -100,7 +100,7 @@ int mt76_mcu_skb_send_and_get_msg(struct mt76_dev *dev, struct sk_buff *skb,
+ 				cmd, seq);
+ 		}
+ 
+-		ret = dev->mcu_ops->mcu_skb_send_msg(dev, skb_tmp, cmd, &seq);
++		ret = dev->mcu_ops->mcu_skb_send_msg(dev, skb_tmp, cmd, wait_resp ? &seq : NULL);
+ 		if (ret < 0 && ret != -EAGAIN)
+ 			goto out;
+ 
+diff --git a/mt7996/mcu.c b/mt7996/mcu.c
+index 27a10fdc5..e1f18d51f 100644
+--- a/mt7996/mcu.c
++++ b/mt7996/mcu.c
+@@ -338,13 +338,12 @@ mt7996_mcu_send_message(struct mt76_dev *mdev, struct sk_buff *skb,
+ 		uni_txd->pkt_type = MCU_PKT_ID;
+ 		uni_txd->seq = seq;
+ 
+-		if (cmd & __MCU_CMD_FIELD_QUERY)
+-			uni_txd->option = MCU_CMD_UNI_QUERY_ACK;
+-		else
+-			uni_txd->option = MCU_CMD_UNI_EXT_ACK;
++		uni_txd->option = MCU_CMD_UNI;
++		if (!(cmd & __MCU_CMD_FIELD_QUERY))
++			uni_txd->option |= MCU_CMD_SET;
+ 
+-		if (mcu_cmd == MCU_UNI_CMD_SDO)
+-			uni_txd->option &= ~MCU_CMD_ACK;
++		if (wait_seq)
++			uni_txd->option |= MCU_CMD_ACK;
+ 
+ 		if ((cmd & __MCU_CMD_FIELD_WA) && (cmd & __MCU_CMD_FIELD_WM))
+ 			uni_txd->s2d_index = MCU_S2D_H2CN;
+-- 
+2.45.2
+
