@@ -1492,6 +1492,37 @@ static int hnat_bridge_flood_check(struct sk_buff *skb,
 	return 0;
 }
 
+/* In rule mode, bind a bridged PPPoE session only if it matches a rule. */
+static bool hnat_pppoe_bridge_allowed(struct sk_buff *skb, u16 sid)
+{
+	struct pppoe_br_rule rule = { .type = ETH_P_PPP_SES, .sid = sid };
+	struct net_device *in;
+
+	if (!READ_ONCE(pppoe_br_rule_mode))
+		return true;
+
+	in = dev_get_by_index_rcu(dev_net(skb->dev), skb->skb_iif);
+	if (!in)
+		return false;
+
+	if (!netif_is_bridge_port(in))
+		return true;
+
+	ether_addr_copy(rule.smac, eth_hdr(skb)->h_source);
+	ether_addr_copy(rule.dmac, eth_hdr(skb)->h_dest);
+	strscpy(rule.rx_dev, in->name, sizeof(rule.rx_dev));
+
+	if (pppoe_br_rule_exist(&rule))
+		return true;
+
+	if (debug_level >= 7)
+		printk_ratelimited(KERN_WARNING
+				   "Skip HNAT bind, no matching rule: SMAC=%pM => DMAC=%pM | rx_dev:%s | SID=0x%04x\n",
+				   rule.smac, rule.dmac, rule.rx_dev, rule.sid);
+
+	return false;
+}
+
 static unsigned int
 mtk_hnat_br_nf_local_in(void *priv, struct sk_buff *skb,
 			const struct nf_hook_state *state)
@@ -2386,6 +2417,8 @@ static int skb_to_hnat_info(struct sk_buff *skb,
 		/* Apply PPPoE Bridge packet info to hw_path for further PPE entry preparing */
 		hw_path->flags |= BIT(DEV_PATH_PPPOE);
 		hw_path->pppoe_sid = ntohs(pppoe_hdr(skb)->sid);
+		if (!hnat_pppoe_bridge_allowed(skb, hw_path->pppoe_sid))
+			return -1;
 		h_proto = hnat_get_hdr_protocol(skb, &h_offset);
 	} else if (ip_hdr(skb)->version == IPVERSION_V4)
 		h_proto = ETH_P_IP;

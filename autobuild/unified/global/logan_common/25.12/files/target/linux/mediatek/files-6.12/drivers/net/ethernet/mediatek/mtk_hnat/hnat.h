@@ -1049,6 +1049,15 @@ struct mcast_blist_data {
 	u32 mask;
 };
 
+struct pppoe_br_rule {
+	struct list_head list;
+	unsigned char smac[ETH_ALEN];
+	unsigned char dmac[ETH_ALEN];
+	char rx_dev[IFNAMSIZ];
+	u16 type;
+	u16 sid;
+};
+
 struct mtk_hnat {
 	struct device *dev;
 	struct mtk_eth *eth;
@@ -1101,9 +1110,11 @@ struct mtk_hnat {
 	bool nf_stat_en;
 	struct xlat_conf xlat;
 	struct list_head	mcast_blist_list;
+	struct list_head	pppoe_br_list;
 	spinlock_t		cah_lock;
 	spinlock_t		entry_lock;
 	spinlock_t		flow_entry_lock;
+	spinlock_t		pppoe_br_lock;
 	struct hlist_head *foe_flow[MAX_PPE_NUM];
 	struct hnat_prot_3t_cfg prot_3t[MAX_PPE_NUM]; /* for 3-tuple offload */
 	struct hnat_neigh_update neigh_update;
@@ -1523,6 +1534,7 @@ extern int qos_toggle;
 extern int l2br_toggle;
 extern int l4s_toggle;
 extern int tnl_toggle;
+extern bool pppoe_br_rule_mode;
 extern int (*mtk_tnl_encap_offload)(struct sk_buff *skb, struct ethhdr *eth);
 extern int (*mtk_tnl_decap_offload)(struct sk_buff *skb);
 extern bool (*mtk_tnl_decap_offloadable)(struct sk_buff *skb);
@@ -1568,6 +1580,12 @@ int entry_delete(u32 ppe_id, int index);
 void __entry_delete(struct foe_entry *entry);
 int entry_mac_cmp(struct foe_entry *entry, u8 *mac, enum entry_cmp_flags flags);
 int entry_ip_cmp(struct foe_entry *entry, bool is_ipv4, void *addr, enum entry_cmp_flags flags);
+bool pppoe_br_rule_exist(const struct pppoe_br_rule *rule);
+int pppoe_br_rule_add(const struct pppoe_br_rule *rule);
+int pppoe_br_rule_del(const struct pppoe_br_rule *rule);
+void pppoe_br_rule_flush(void);
+void pppoe_br_entry_invalidate(const struct pppoe_br_rule *rule);
+void pppoe_br_rule_dump(void);
 int hnat_warm_init(void);
 void hnat_hw_set_dft_cport(u32 ppe_id);
 void hnat_hw_set_prot_3t(u32 ppe_id);
