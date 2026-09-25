@@ -1,0 +1,60 @@
+From 4576eda93a5cd777a1766df882221ba18be0afe9 Mon Sep 17 00:00:00 2001
+From: Howard Hsu <howard-yh.hsu@mediatek.com>
+Date: Fri, 24 Jul 2026 11:30:12 +0800
+Subject: [PATCH] mtk: hostapd: fix out-of-bounds read in
+ hostapd_handle_mscs_req()
+
+fixup! mtk: hostapd: Add Triggered Uplink Access Optimization support
+
+hostapd_handle_mscs_req() cast the frame's variable field to a
+struct element and read elem->id, elem->datalen and elem->data[0]
+without checking the remaining frame length. Verify that at least an
+element header plus the extension ID is present and that datalen is
+non-zero before dereferencing the element.
+
+Signed-off-by: Howard Hsu <howard-yh.hsu@mediatek.com>
+---
+ src/ap/scs.c | 15 +++++++++------
+ 1 file changed, 9 insertions(+), 6 deletions(-)
+
+diff --git a/src/ap/scs.c b/src/ap/scs.c
+index 301b80c3b..ee26e869c 100644
+--- a/src/ap/scs.c
++++ b/src/ap/scs.c
+@@ -228,6 +228,7 @@ static void hostapd_handle_mscs_req(struct hostapd_data *hapd,
+ 	const struct ieee80211_mgmt *mgmt = (const struct ieee80211_mgmt *) buf;
+ 	const struct element *elem;
+ 	struct sta_info *sta;
++	const u8 *end = buf + len;
+ 	u8 token;
+ 
+ 	sta = ap_get_sta(hapd, mgmt->sa);
+@@ -240,17 +241,19 @@ static void hostapd_handle_mscs_req(struct hostapd_data *hapd,
+ 	token = mgmt->u.action.u.mscs.dialog_token;
+ 	elem = (const struct element *) mgmt->u.action.u.mscs.variable;
+ 
+-	if (elem->id != WLAN_EID_EXTENSION ||
+-	    elem->data[0] != WLAN_EID_EXT_MSCS_DESCRIPTOR) {
+-		wpa_printf(MSG_ERROR, "%s: no MSCS Descriptor element", __func__);
+-		return;
++	if (end - (const u8 *) elem < 3 || elem->id != WLAN_EID_EXTENSION ||
++	    elem->datalen < 1 || elem->data[0] != WLAN_EID_EXT_MSCS_DESCRIPTOR) {
++		wpa_printf(MSG_ERROR, "%s: no valid MSCS Descriptor element",
++			   __func__);
++		sta->mscs_assoc_setup_status = WLAN_STATUS_REQUEST_DECLINED;
++		goto out;
+ 	}
+ 
+ 	sta->mscs_assoc_setup_status =
+ 		hostapd_set_mscs(hapd, mgmt->sa, &elem->data[1], elem->datalen - 1);
+ 
+-	send_mscs_response(hapd, mgmt->sa, token,
+-			   sta->mscs_assoc_setup_status);
++out:
++	send_mscs_response(hapd, mgmt->sa, token, sta->mscs_assoc_setup_status);
+ }
+ 
+ void hostapd_del_mscs(struct hostapd_data *hapd, u8 *mac)
+-- 
+2.45.2
+
