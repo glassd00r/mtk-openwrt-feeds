@@ -1,0 +1,46 @@
+From e227596240c016ddcbbc95db40cb4bdcba8c9deb Mon Sep 17 00:00:00 2001
+From: Howard Hsu <howard-yh.hsu@mediatek.com>
+Date: Wed, 22 Jul 2026 10:15:37 +0800
+Subject: [PATCH] mtk: mt76: mt7996: Fix memory allocation failure handling in
+ MURU config
+
+Problem:
+Memory allocation failure for the MURU configuration structure can
+lead to unexpected behavior when setting MURU parameters, potentially
+causing system instability.
+
+Root Cause:
+The code does not check for successful memory allocation of the MURU
+structure, leading to potential null pointer dereference if allocation
+fails.
+
+Solution:
+Add a check for the result of kzalloc and return -ENOMEM if memory
+allocation for the MURU structure fails, preventing null pointer
+dereference and ensuring stable operation.
+
+Feature:
+Stability
+
+Signed-off-by: Howard Hsu <howard-yh.hsu@mediatek.com>
+---
+ mt7996/mtk_mcu.c | 3 +++
+ 1 file changed, 3 insertions(+)
+
+diff --git a/mt7996/mtk_mcu.c b/mt7996/mtk_mcu.c
+index f1a48ecfb..baa0eab24 100644
+--- a/mt7996/mtk_mcu.c
++++ b/mt7996/mtk_mcu.c
+@@ -1192,6 +1192,9 @@ int mt7996_set_muru_cfg(struct mt7996_dev *dev, u8 action, u8 val)
+ 	int ret = 0;
+ 
+ 	muru = kzalloc(sizeof(struct mt7996_muru), GFP_KERNEL);
++	if (!muru)
++		return -ENOMEM;
++
+ 	dl = &muru->dl;
+ 	ul = &muru->ul;
+ 	comm = &muru->comm;
+-- 
+2.45.2
+
