@@ -41,6 +41,11 @@ enable_kasan_kernel() {
 	kernel_config_enable CONFIG_DEBUG_WW_MUTEX_SLOWPATH
 	kernel_config_enable CONFIG_DEBUG_RWSEMS
 	kernel_config_enable CONFIG_WW_MUTEX_SELFTEST
+
+	# KGDB (in target config) selects KPROBES, which makes KPROBE_EVENTS a
+	# NEW option that stalls syncconfig in batch mode. Pin both explicitly.
+	kernel_config_enable CONFIG_KPROBES
+	kernel_config_enable CONFIG_KPROBE_EVENTS
 }
 
 # Source extra kernel_debug rules, EXTERNAL builds don't ship kernel_debug.sh
