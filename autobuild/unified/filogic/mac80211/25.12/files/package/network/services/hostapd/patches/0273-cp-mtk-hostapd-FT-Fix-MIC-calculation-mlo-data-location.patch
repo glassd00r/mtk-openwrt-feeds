@@ -1,0 +1,46 @@
+From 65e74cc853aab59d809203171b8ff709bde4cf00 Mon Sep 17 00:00:00 2001
+From: Allen Ye <allen.ye@mediatek.com>
+Date: Mon, 24 Aug 2026 15:38:15 +0800
+Subject: [PATCH] mtk: hostapd: FT: Fix MIC calculation mlo data location
+
+fixup! mtk: hostapd: FT: Add FT MIC calculation support mlo
+The extra data should be the last.
+
+Signed-off-by: Allen Ye <allen.ye@mediatek.com>
+---
+ src/common/wpa_common.c | 12 ++++++------
+ 1 file changed, 6 insertions(+), 6 deletions(-)
+
+diff --git a/src/common/wpa_common.c b/src/common/wpa_common.c
+index c9c0a34d1..ca006528d 100644
+--- a/src/common/wpa_common.c
++++ b/src/common/wpa_common.c
+@@ -1121,12 +1121,6 @@ int wpa_ft_mic(int key_mgmt, const u8 *kck, size_t kck_len, const u8 *sta_addr,
+ 		num_elem++;
+ 	}
+ 
+-	if (extra) {
+-		addr[num_elem] = wpabuf_head(extra);
+-		len[num_elem] = wpabuf_len(extra);
+-		num_elem++;
+-	}
+-
+ 	if (ft_links_data) {
+ 		for (i = 0; i < ft_links_data->link_count; i++) {
+ 			addr[num_elem] = ft_links_data->links[i].link_addr;
+@@ -1135,6 +1129,12 @@ int wpa_ft_mic(int key_mgmt, const u8 *kck, size_t kck_len, const u8 *sta_addr,
+ 		}
+ 	}
+ 
++	if (extra) {
++		addr[num_elem] = wpabuf_head(extra);
++		len[num_elem] = wpabuf_len(extra);
++		num_elem++;
++	}
++
+ 	for (i = 0; i < num_elem; i++)
+ 		wpa_hexdump(MSG_MSGDUMP, "FT: MIC data", addr[i], len[i]);
+ 	res = -1;
+-- 
+2.45.2
+
