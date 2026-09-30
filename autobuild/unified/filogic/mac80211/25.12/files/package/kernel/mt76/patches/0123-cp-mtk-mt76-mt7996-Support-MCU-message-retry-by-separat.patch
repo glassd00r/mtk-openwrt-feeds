@@ -1,0 +1,141 @@
+From e5ab703d02cf61b6d39369804bb9f9389b4f73ab Mon Sep 17 00:00:00 2001
+From: Peter Chiu <chui-hao.chiu@mediatek.com>
+Date: Thu, 24 Sep 2026 15:25:23 +0800
+Subject: [PATCH] mtk: mt76: mt7996: Support MCU message retry by separating
+ prepare and send
+
+Motivation:
+If L1 SER is ongoing, firmware temporarily cannot handle the
+MCU command. Dropping the message immediately would propagate an
+unnecessary error to the caller even though the command could
+succeed after the recovery completes. Retrying after the
+recovery avoids false failures.
+
+Problem:
+The generic retry path in mt76_mcu_skb_send_and_get_msg could not
+work correctly on mt7996.
+
+Root Cause:
+mt7996 did not implement mcu_skb_prepare_msg but the generic layer
+saves orig_skb when mcu_skb_prepare_msg is implemented.
+
+mt7996_mcu_send_message combined both message preparation (skb_push,
+TXD header fill, seq assignment) and actual transmission into a single
+function. The generic layer cannot retry directly because it cannot undo
+a skb_push, so retrying with the same skb always produces a malformed
+packet.
+
+Solution:
+Split mt7996_mcu_send_message into two functions:
+- mt7996_mcu_fill_message: handles skb_push, TXD header construction,
+  and seq assignment; registered as mcu_skb_prepare_msg and called once
+  before the retry loop.
+- mt7996_mcu_send_message: handles timeout setting, packet logging, and
+  actual transmission; registered as mcu_skb_send_msg and safe to call
+  multiple times on the same prepared skb.
+
+Also fix mt76_mcu_skb_send_and_get_msg to pass NULL instead of &seq to
+mcu_skb_prepare_msg when no response is expected, so seq is not consumed
+for fire-and-forget messages.
+
+Also remove the dev_kfree_skb() call in the l1_reset error path of
+mt7996_mcu_fill_message. Since the generic layer sets orig_skb before
+calling mcu_skb_prepare_msg and always frees it at the out label,
+freeing skb inside fill_message causes a double-free when -EPERM
+is returned.
+
+Feature:
+Stability
+
+Signed-off-by: Peter Chiu <chui-hao.chiu@mediatek.com>
+---
+ mt7996/mcu.c | 33 ++++++++++++++++++++-------------
+ 1 file changed, 20 insertions(+), 13 deletions(-)
+
+diff --git a/mt7996/mcu.c b/mt7996/mcu.c
+index 766e7ec96..25d7e9871 100644
+--- a/mt7996/mcu.c
++++ b/mt7996/mcu.c
+@@ -277,14 +277,13 @@ mt7996_mcu_set_timeout(struct mt76_dev *mdev, int cmd)
+ }
+ 
+ static int
+-mt7996_mcu_send_message(struct mt76_dev *mdev, struct sk_buff *skb,
++mt7996_mcu_fill_message(struct mt76_dev *mdev, struct sk_buff *skb,
+ 			int cmd, int *wait_seq)
+ {
+ 	struct mt7996_dev *dev = container_of(mdev, struct mt7996_dev, mt76);
+ 	int txd_len, mcu_cmd = FIELD_GET(__MCU_CMD_FIELD_ID, cmd);
+ 	struct mt76_connac2_mcu_uni_txd *uni_txd;
+ 	struct mt76_connac2_mcu_txd *mcu_txd;
+-	enum mt76_mcuq_id qid;
+ 	__le32 *txd;
+ 	u32 val;
+ 	u8 seq;
+@@ -293,27 +292,18 @@ mt7996_mcu_send_message(struct mt76_dev *mdev, struct sk_buff *skb,
+ 		dev_info(dev->mt76.dev,"\n%s L1 SER recovery overlap, drop message %08x.",
+ 			 wiphy_name(dev->mt76.hw->wiphy), cmd);
+ 
+-		dev_kfree_skb(skb);
+ 		return -EPERM;
+ 	}
+ 
+-	mt7996_mcu_set_timeout(mdev, cmd);
+-
+ 	seq = ++dev->mt76.mcu.msg_seq & 0xf;
+ 	if (!seq)
+ 		seq = ++dev->mt76.mcu.msg_seq & 0xf;
+ 
+-	if (cmd == MCU_CMD(FW_SCATTER)) {
+-		qid = MT_MCUQ_FWDL;
++	if (cmd == MCU_CMD(FW_SCATTER))
+ 		goto exit;
+-	}
+ 
+ 	txd_len = cmd & __MCU_CMD_FIELD_UNI ? sizeof(*uni_txd) : sizeof(*mcu_txd);
+ 	txd = (__le32 *)skb_push(skb, txd_len);
+-	if (test_bit(MT76_STATE_MCU_RUNNING, &dev->mphy.state) && mt7996_has_wa(dev))
+-		qid = MT_MCUQ_WA;
+-	else
+-		qid = MT_MCUQ_WM;
+ 
+ 	val = FIELD_PREP(MT_TXD0_TX_BYTES, skb->len) |
+ 	      FIELD_PREP(MT_TXD0_PKT_FMT, MT_TX_TYPE_CMD) |
+@@ -378,9 +368,25 @@ mt7996_mcu_send_message(struct mt76_dev *mdev, struct sk_buff *skb,
+ 	trace_mt7996_mcu_cmd(dev, 0, mcu_txd->cid, mcu_txd->ext_cid,
+ 			    skb->data, skb->len);
+ exit:
+-	mt7996_packet_log_to_host(dev, skb->data, skb->len, PKT_BIN_DEBUG_MCU, 0);
+ 	if (wait_seq)
+ 		*wait_seq = seq;
++	return 0;
++}
++
++static int
++mt7996_mcu_send_message(struct mt76_dev *mdev, struct sk_buff *skb,
++			int cmd, int *wait_seq)
++{
++	struct mt7996_dev *dev = container_of(mdev, struct mt7996_dev, mt76);
++	enum mt76_mcuq_id qid = MT_MCUQ_WM;
++
++	if (cmd == MCU_CMD(FW_SCATTER))
++		qid = MT_MCUQ_FWDL;
++	else if (test_bit(MT76_STATE_MCU_RUNNING, &dev->mphy.state) && mt7996_has_wa(dev))
++		qid = MT_MCUQ_WA;
++
++	mt7996_mcu_set_timeout(mdev, cmd);
++	mt7996_packet_log_to_host(dev, skb->data, skb->len, PKT_BIN_DEBUG_MCU, 0);
+ 
+ 	return mt76_tx_queue_skb_raw(dev, mdev->q_mcu[qid], skb, 0);
+ }
+@@ -5665,6 +5671,7 @@ int mt7996_mcu_init(struct mt7996_dev *dev)
+ 	static const struct mt76_mcu_ops mt7996_mcu_ops = {
+ 		.max_retry = 3,
+ 		.headroom = sizeof(struct mt76_connac2_mcu_txd), /* reuse */
++		.mcu_skb_prepare_msg = mt7996_mcu_fill_message,
+ 		.mcu_skb_send_msg = mt7996_mcu_send_message,
+ 		.mcu_parse_response = mt7996_mcu_parse_response,
+ 	};
+-- 
+2.45.2
+
