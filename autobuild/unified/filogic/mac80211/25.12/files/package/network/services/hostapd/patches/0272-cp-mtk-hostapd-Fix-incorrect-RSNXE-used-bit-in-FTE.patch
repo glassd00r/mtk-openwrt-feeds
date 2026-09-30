@@ -1,0 +1,120 @@
+From 195d08aa8d1cb09b919381c0dee1e3f06b6c54a1 Mon Sep 17 00:00:00 2001
+From: Allen Ye <allen.ye@mediatek.com>
+Date: Thu, 11 Jun 2026 14:24:12 +0800
+Subject: [PATCH] mtk: hostapd: Fix incorrect RSNXE used bit in FTE
+
+In a 11r reassoc response may not contain RSNXE if AP using FT-EAP key
+management. In the case, the rsnxe_used bit should not to be set in FTE.
+
+Follow IEEE Std 802.11, 13.8.5. The RSNXE used bit should depends on
+whether the rsnxe presents in beacon or probe response. If target FTR
+is a AP MLD the bit depends on all of the affiliated links with the
+target AP MLD.
+
+Feature:
+Security
+
+Signed-off-by: Allen Ye <allen.ye@mediatek.com>
+---
+ src/ap/wpa_auth.h      |  1 +
+ src/ap/wpa_auth_ft.c   | 14 ++++++++++----
+ src/ap/wpa_auth_glue.c | 25 +++++++++++++++++++++++++
+ 3 files changed, 36 insertions(+), 4 deletions(-)
+
+diff --git a/src/ap/wpa_auth.h b/src/ap/wpa_auth.h
+index a0ff0bfe1..c1194a624 100644
+--- a/src/ap/wpa_auth.h
++++ b/src/ap/wpa_auth.h
+@@ -437,6 +437,7 @@ struct wpa_auth_callbacks {
+ 	int (*send_ft_action)(void *ctx, const u8 *dst,
+ 			      const u8 *data, size_t data_len);
+ 	void (*remove_roamed_fto)(void *ctx, const u8 *sta_addr);
++	int (*get_rsnxe_used)(void *ctx, bool is_mld);
+ #endif /* CONFIG_IEEE80211R_AP */
+ #ifdef CONFIG_MESH
+ 	int (*start_ampe)(void *ctx, const u8 *sta_addr);
+diff --git a/src/ap/wpa_auth_ft.c b/src/ap/wpa_auth_ft.c
+index e3c36c7ea..540b282d4 100644
+--- a/src/ap/wpa_auth_ft.c
++++ b/src/ap/wpa_auth_ft.c
+@@ -700,6 +700,13 @@ static void wpa_ft_remove_roamed_sta(struct wpa_authenticator *wpa_auth,
+ 	return;
+ }
+ 
++static int wpa_ft_get_rsnxe_used(struct wpa_authenticator *wpa_auth,
++				 bool is_mld)
++{
++	if (wpa_auth->cb->get_rsnxe_used == NULL)
++		return 0;
++	return wpa_auth->cb->get_rsnxe_used(wpa_auth->cb_ctx, is_mld);
++}
+ 
+ static int wpa_ft_set_vlan(struct wpa_authenticator *wpa_auth,
+ 			   const u8 *sta_addr, struct vlan_description *vlan)
+@@ -2777,7 +2784,7 @@ u8 * wpa_sm_write_assoc_resp_ies(struct wpa_state_machine *sm, u8 *pos,
+ 	size_t mdie_len, ftie_len, rsnie_len = 0, r0kh_id_len, subelem_len = 0;
+ 	u8 rsnxe_buf[10], *rsnxe = rsnxe_buf;
+ 	size_t rsnxe_len;
+-	int rsnxe_used;
++	int rsnxe_used = 0;
+ 	int res;
+ 	struct wpa_auth_config *conf;
+ 	struct wpa_ft_ies parse;
+@@ -2954,9 +2961,8 @@ u8 * wpa_sm_write_assoc_resp_ies(struct wpa_state_machine *sm, u8 *pos,
+ 		anonce = NULL;
+ 		snonce = NULL;
+ 	}
+-	rsnxe_used = (auth_alg == WLAN_AUTH_FT) &&
+-		(conf->sae_pwe == SAE_PWE_HASH_TO_ELEMENT ||
+-		 conf->sae_pwe == SAE_PWE_BOTH);
++	if (auth_alg == WLAN_AUTH_FT)
++		rsnxe_used = wpa_ft_get_rsnxe_used(sm->wpa_auth, mld_sta);
+ #ifdef CONFIG_TESTING_OPTIONS
+ 	if (sm->wpa_auth->conf.ft_rsnxe_used) {
+ 		rsnxe_used = sm->wpa_auth->conf.ft_rsnxe_used == 1;
+diff --git a/src/ap/wpa_auth_glue.c b/src/ap/wpa_auth_glue.c
+index 2dbd9f406..41924dfb1 100644
+--- a/src/ap/wpa_auth_glue.c
++++ b/src/ap/wpa_auth_glue.c
+@@ -1368,6 +1368,30 @@ static void hostapd_wpa_auth_remove_roamed_fto(void *ctx, const u8 *sta_addr)
+ }
+ 
+ 
++static int hostapd_wpa_auth_get_rsnxe_used(void *ctx, bool is_mld)
++{
++	struct hostapd_data *hapd = ctx, *bss;
++	struct wpa_authenticator *wpa_auth;
++	const u8 *rsnxe;
++
++#ifdef CONFIG_IEEE80211BE
++	if (is_mld) {
++		for_each_mld_link(bss, hapd) {
++			wpa_auth = bss->wpa_auth;
++			rsnxe = get_ie(wpa_auth->wpa_ie, wpa_auth->wpa_ie_len,
++				       WLAN_EID_RSNX);
++			if (rsnxe)
++				return 1;
++		}
++		return 0;
++	}
++#endif /* CONFIG_IEEE80211BE */
++	wpa_auth = hapd->wpa_auth;
++	rsnxe = get_ie(wpa_auth->wpa_ie, wpa_auth->wpa_ie_len, WLAN_EID_RSNX);
++	return rsnxe != NULL;
++}
++
++
+ static int hostapd_wpa_auth_set_vlan(void *ctx, const u8 *sta_addr,
+ 				     struct vlan_description *vlan)
+ {
+@@ -1910,6 +1934,7 @@ int hostapd_setup_wpa(struct hostapd_data *hapd)
+ 		.set_session_timeout = hostapd_wpa_auth_set_session_timeout,
+ 		.get_session_timeout = hostapd_wpa_auth_get_session_timeout,
+ 		.remove_roamed_fto = hostapd_wpa_auth_remove_roamed_fto,
++		.get_rsnxe_used = hostapd_wpa_auth_get_rsnxe_used,
+ #endif /* CONFIG_IEEE80211R_AP */
+ #ifndef CONFIG_NO_RADIUS
+ 		.request_radius_psk = hostapd_request_radius_psk,
+-- 
+2.45.2
+
