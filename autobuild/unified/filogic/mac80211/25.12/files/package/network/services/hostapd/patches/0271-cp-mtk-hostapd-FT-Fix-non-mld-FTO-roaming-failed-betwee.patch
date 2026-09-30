@@ -1,0 +1,34 @@
+From 5a9dffb9487bbcccf0e0fc5e4c2b4664dd7f3ea9 Mon Sep 17 00:00:00 2001
+From: Allen Ye <allen.ye@mediatek.com>
+Date: Tue, 12 May 2026 16:29:45 +0800
+Subject: [PATCH] mtk: hostapd: FT: Fix non-mld FTO roaming failed between mld
+ FTR
+
+fixup! mtk: hostapd: FT: Use primary wpa_auth to handle rrb in ml sta connect
+Hostapd may failed to store the pmk r0 because the primary wpa_auth may
+not have the corresponding sta entry. Use the sm->wpa_auth to ensure get
+the vlan information successfully.
+Ths issue also happen with a mld FTO which didn't associated to the
+primary link.
+
+Signed-off-by: Allen Ye <allen.ye@mediatek.com>
+---
+ src/ap/wpa_auth_ft.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/src/ap/wpa_auth_ft.c b/src/ap/wpa_auth_ft.c
+index 005dd2aa1..e3c36c7ea 100644
+--- a/src/ap/wpa_auth_ft.c
++++ b/src/ap/wpa_auth_ft.c
+@@ -2239,7 +2239,7 @@ void wpa_auth_ft_store_keys(struct wpa_state_machine *sm, const u8 *pmk_r0,
+ 	if (psk_local && wpa_key_mgmt_ft_psk(sm->wpa_key_mgmt))
+ 		return;
+ 
+-	if (wpa_ft_get_vlan(wpa_auth, sm->addr, &vlan) < 0) {
++	if (wpa_ft_get_vlan(sm->wpa_auth, sm->addr, &vlan) < 0) {
+ 		wpa_printf(MSG_DEBUG, "FT: vlan not available for STA " MACSTR,
+ 			   MAC2STR(sm->addr));
+ 		return;
+-- 
+2.45.2
+
