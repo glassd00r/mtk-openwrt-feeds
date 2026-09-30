@@ -1,0 +1,50 @@
+From f05b83bbc578907c7280b1d6630ed536816ec372 Mon Sep 17 00:00:00 2001
+From: Allen Ye <allen.ye@mediatek.com>
+Date: Tue, 14 Apr 2026 17:50:01 +0800
+Subject: [PATCH] mtk: hostapd: Fix every link will calculate mlo FT mic
+
+Since the commit be438a2 will make non assoc link calculate the mlo ft
+mic. That is unnecessary for a mlo ft roaming. We can only calculate the
+mic when handling the assoc link.
+
+mtk: hostapd: Fix first_sta_seen is not correct set to non assoc links
+
+Fix the first_sta_seen should be set to all the associated links.
+The outer if condition have been changed, so we also need to change
+the logic.
+
+Signed-off-by: Allen Ye <allen.ye@mediatek.com>
+---
+ src/ap/ieee802_11.c | 8 ++++----
+ 1 file changed, 4 insertions(+), 4 deletions(-)
+
+diff --git a/src/ap/ieee802_11.c b/src/ap/ieee802_11.c
+index 591d73d51..5fa3733e3 100644
+--- a/src/ap/ieee802_11.c
++++ b/src/ap/ieee802_11.c
+@@ -4858,7 +4858,7 @@ static int __check_assoc_ies(struct hostapd_data *hapd, struct sta_info *sta,
+ 			sta->flags &= ~WLAN_STA_SPP_AMSDU;
+ 
+ #ifdef CONFIG_IEEE80211R_AP
+-		if (sta->auth_alg == WLAN_AUTH_FT) {
++		if (sta->auth_alg == WLAN_AUTH_FT && !assoc_wpa_sm) {
+ 			if (type != LINK_PARSE_REASSOC) {
+ 				wpa_printf(MSG_DEBUG, "FT: " MACSTR " tried "
+ 					   "to use association (not "
+@@ -4872,10 +4872,10 @@ static int __check_assoc_ies(struct hostapd_data *hapd, struct sta_info *sta,
+ 						       ies_len);
+ 			if (resp != WLAN_STATUS_SUCCESS)
+ 				goto out;
+-			/* prevent the group keys from being reset after other sta
+-			 * connect */
+-			hapd->wpa_auth->group->first_sta_seen = true;
+ 		}
++		/* prevent the group keys from being reset after other sta connect */
++		if (sta->auth_alg == WLAN_AUTH_FT)
++			hapd->wpa_auth->group->first_sta_seen = true;
+ #endif /* CONFIG_IEEE80211R_AP */
+ 
+ 		if (assoc_wpa_sm)
+-- 
+2.45.2
+
