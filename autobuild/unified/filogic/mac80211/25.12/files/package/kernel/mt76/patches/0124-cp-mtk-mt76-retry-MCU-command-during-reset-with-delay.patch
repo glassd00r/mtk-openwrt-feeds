@@ -1,0 +1,40 @@
+From 16fdf5069d88469033873376979bee274291a88d Mon Sep 17 00:00:00 2001
+From: Rex Lu <rex.lu@mediatek.com>
+Date: Thu, 24 Sep 2026 17:58:22 +0800
+Subject: [PATCH] mtk: mt76: retry MCU command during reset with delay
+
+Allow MCU command retry to proceed even when MT76_MCU_RESET is set,
+adding a sleep of 200-500ms between retries during reset to avoid
+hammering the MCU while it is recovering.
+
+Previously, the retry was skipped entirely if MT76_MCU_RESET was set,
+which could cause commands to fail immediately without giving the MCU
+time to recover.
+
+Feature:
+SER
+
+Signed-off-by: Rex Lu <rex.lu@mediatek.com>
+---
+ mcu.c | 5 +++--
+ 1 file changed, 3 insertions(+), 2 deletions(-)
+
+diff --git a/mcu.c b/mcu.c
+index cbfb3bbec..c91b914b5 100644
+--- a/mcu.c
++++ b/mcu.c
+@@ -111,8 +111,9 @@ retry:
+ 
+ 	do {
+ 		skb = mt76_mcu_get_response(dev, expires);
+-		if (!skb && !test_bit(MT76_MCU_RESET, &dev->phy.state) &&
+-		    orig_skb && retry++ < dev->mcu_ops->max_retry) {
++		if (!skb && orig_skb && retry++ < dev->mcu_ops->max_retry) {
++			if (test_bit(MT76_MCU_RESET, &dev->phy.state))
++				usleep_range(200000, 500000);
+ 			dev_err(dev->dev, "Retry message %08x (seq %d)\n",
+ 				cmd, seq);
+ 			skb = orig_skb;
+-- 
+2.45.2
+
