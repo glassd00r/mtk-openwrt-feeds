@@ -4120,7 +4120,7 @@ int hnat_init_debugfs(struct mtk_hnat *h)
 		debugfs_create_symlink(name, root, name_symlink);
 	}
 
-	for (i = 0; i < MTK_QDMA_NUM_QUEUES; i++) {
+	for (i = 0; i < HNAT_QDMA_NUM_QUEUES; i++) {
 		ret = snprintf(name, sizeof(name), "qdma_txq%ld", i);
 		if (ret != strlen(name)) {
 			ret = -ENOMEM;

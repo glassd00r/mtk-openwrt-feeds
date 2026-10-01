@@ -1317,16 +1317,12 @@ drop:
 	return NF_DROP;
 }
 
-bool is_eth_dev_speed_under(const struct net_device *dev, u32 speed)
+bool is_dev_speed_under(const struct net_device *dev, u32 speed)
 {
-	const struct mtk_mac *mac;
+	int link_speed = mtk_dev_link_speed(hnat_priv->eth,
+					   (struct net_device *)dev);
 
-	if (!dev || !IS_ETH_GRP(dev) || netdev_uses_dsa((struct net_device *)dev))
-		return false;
-
-	mac = netdev_priv(dev);
-
-	return mac->speed <= speed;
+	return link_speed > 0 && link_speed <= speed;
 }
 
 static inline bool mtk_tnl_foe_valid(struct sk_buff *skb)
@@ -2256,10 +2252,12 @@ hnat_skip_fill_inner:
 		entry.ipv6_5t_route.pppoe_id = hw_path.pppoe_sid;
 	}
 
-	if (IS_HQOS_MODE || (skb->mark & MTK_QDMA_QUEUE_MASK) >= MAX_PPPQ_QUEUE_NUM)
-		qid = skb->mark & (MTK_QDMA_QUEUE_MASK);
+	if (IS_HQOS_MODE || (skb->mark & HNAT_QDMA_QUEUE_MASK) >= MAX_PPPQ_QUEUE_NUM)
+		qid = skb->mark & (HNAT_QDMA_QUEUE_MASK);
 	else if (IS_PPPQ_MODE && IS_PPPQ_PATH(dev, skb))
-		qid = ((port_id >= 0) ? MTK_GMAC_ID_MAX + port_id : mac->id) & MTK_QDMA_QUEUE_MASK;
+		qid = (port_id >= 0 && port_id < MTK_DSA_USER_PORT_MAX) ?
+		      mac->dsa_queue_base + mac->dsa_port_rank[port_id] :
+		      mac->id;
 	else
 		qid = 0;
 
@@ -2898,14 +2896,17 @@ hnat_entry_bind:
 		return -1;
 	}
 
-	if (IS_HQOS_MODE || (skb->mark & MTK_QDMA_QUEUE_MASK) >= MAX_PPPQ_QUEUE_NUM)
-		qid = skb->mark & (MTK_QDMA_QUEUE_MASK);
+	if (IS_HQOS_MODE || (skb->mark & HNAT_QDMA_QUEUE_MASK) >= MAX_PPPQ_QUEUE_NUM)
+		qid = skb->mark & (HNAT_QDMA_QUEUE_MASK);
 	else if (IS_PPPQ_MODE && IS_PPPQ_PATH(dev, skb))
-		qid = ((port_id >= 0) ? MTK_GMAC_ID_MAX + port_id : mac->id) & MTK_QDMA_QUEUE_MASK;
+		qid = (port_id >= 0 && port_id < MTK_DSA_USER_PORT_MAX) ?
+		      mac->dsa_queue_base + mac->dsa_port_rank[port_id] :
+		      mac->id;
 	else
 		qid = 0;
 
-	if (IS_PPPQ_MODE && IS_PPPQ_PATH(dev, skb) && port_id >= 0) {
+	if (IS_PPPQ_MODE && IS_PPPQ_PATH(dev, skb) &&
+	    port_id >= 0 && qid < MAX_PPPQ_QUEUE_NUM) {
 		if (h_proto == ETH_P_IP) {
 			iph = (struct iphdr *)(skb_network_header(skb) + h_offset);
 			if (iph->protocol == IPPROTO_TCP) {
@@ -2913,8 +2914,9 @@ hnat_entry_bind:
 				payload_len = be16_to_cpu(iph->tot_len) -
 					      iph->ihl * 4 - __tcp_hdrlen(tcph);
 				/* Dispatch ACK packets to high priority queue */
-				if (payload_len == 0)
-					qid += MAX_SWITCH_PORT_NUM;
+				if (payload_len == 0 &&
+				    qid + PPPQ_DSA_QUEUE_NUM < HNAT_QDMA_NUM_QUEUES)
+					qid += PPPQ_DSA_QUEUE_NUM;
 			}
 		} else if (h_proto == ETH_P_IPV6) {
 			ip6h = (struct ipv6hdr *)(skb_network_header(skb) + h_offset);
@@ -2922,8 +2924,9 @@ hnat_entry_bind:
 				tcph = (struct tcphdr *)((u8 *)ip6h + sizeof(struct ipv6hdr));
 				payload_len = be16_to_cpu(ip6h->payload_len) - __tcp_hdrlen(tcph);
 				/* Dispatch ACK packets to high priority queue */
-				if (payload_len == 0)
-					qid += MAX_SWITCH_PORT_NUM;
+				if (payload_len == 0 &&
+				    qid + PPPQ_DSA_QUEUE_NUM < HNAT_QDMA_NUM_QUEUES)
+					qid += PPPQ_DSA_QUEUE_NUM;
 			}
 		}
 	}
