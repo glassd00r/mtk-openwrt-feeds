@@ -1,0 +1,32 @@
+From 2aeb782edd42e5951401329a824a35e1d632d1a0 Mon Sep 17 00:00:00 2001
+From: Michael-CY Lee <michael-cy.lee@mediatek.com>
+Date: Fri, 6 Feb 2026 08:55:37 +0800
+Subject: [PATCH] mtk: hostapd: fix neg-TTLM unset issue
+
+Because the neg_ttlm struct is cleared in the
+ieee802_11_parse_neg_ttlm() function, the neg_ttlm->dialog_token
+should be set after returning from the function.
+
+Signed-off-by: Michael-CY Lee <michael-cy.lee
+---
+ src/ap/ieee802_11_eht.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/src/ap/ieee802_11_eht.c b/src/ap/ieee802_11_eht.c
+index c7d8eb287..7aeeff66f 100644
+--- a/src/ap/ieee802_11_eht.c
++++ b/src/ap/ieee802_11_eht.c
+@@ -3157,9 +3157,9 @@ static void ieee802_11_rx_neg_ttlm_req(struct hostapd_data *hapd, const u8 *addr
+ 	}
+ 
+ 	neg_ttlm = &sta->neg_ttlm;
+-	neg_ttlm->dialog_token = neg_ttlm_req->dialog_token;
+ 	ret = ieee802_11_parse_neg_ttlm(hapd, elems.ttlm[0], elems.ttlm_len[0],
+ 					neg_ttlm, &direction);
++	neg_ttlm->dialog_token = neg_ttlm_req->dialog_token;
+ 
+ 	if (ret) {
+ 		wpa_printf(MSG_ERROR, "Invalid TTLM format");
+-- 
+2.45.2
+
