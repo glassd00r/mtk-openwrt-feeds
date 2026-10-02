@@ -1,0 +1,130 @@
+From fabab9301a01e59cf395bfe8802793a1f712dd0e Mon Sep 17 00:00:00 2001
+From: Michael-CY Lee <michael-cy.lee@mediatek.com>
+Date: Tue, 1 Sep 2026 15:30:39 +0800
+Subject: [PATCH] mtk: hostapd: fix Neg-TTLM request command handling
+
+fixup! mtk: hostapd: Align QCA's prpl hostapd Neg-TTLM commands format
+
+1. The length passed to os_strncmp() for "link_map_size=" was 15
+instead of 14, so the comparison included the terminating NUL and
+the branch never matched a token that carried a value.
+
+2. The TID-To-Link Mapping element length was computed with a fixed 2
+octets per TID, but only 1 octet per TID is written when the Link
+Mapping Size subfield is 1, so the element's Length field claimed 8
+octets more than the element carried. Derive it from the link map size.
+
+3. os_memset() was used to default all TIDs to the valid link bitmap.
+neg_ttlm->dlink[] and ulink[] are u16 arrays, and os_memset()
+replicates a single byte, so a bitmap of 0x3 became 0x0303 in every
+entry and any link index above 7 was dropped. Assign each element
+in a loop instead. The default should also be the STA's setup links,
+which is what an explicitly specified link map is validated against.
+
+4. The TID upper bound check accepted tid == IEEE80211_TTLM_NUM_TIDS,
+which writes one element past the end of dlink[]/ulink[]. Reject it.
+
+5. Return failure when hostapd_ctrl_iface_negotiated_ttlm() receives an
+invalid TTLM command.
+
+Signed-off-by: Michael-CY Lee <michael-cy.lee@mediatek.com>
+---
+ hostapd/ctrl_iface.c    | 25 ++++++++++++++-----------
+ src/ap/ieee802_11_eht.c |  3 ++-
+ 2 files changed, 16 insertions(+), 12 deletions(-)
+
+diff --git a/hostapd/ctrl_iface.c b/hostapd/ctrl_iface.c
+index de9b32e5d..d72dc791d 100644
+--- a/hostapd/ctrl_iface.c
++++ b/hostapd/ctrl_iface.c
+@@ -4274,7 +4274,6 @@ hostapd_ctrl_iface_negotiated_ttlm_request(struct hostapd_data *hapd,
+ 	struct ieee80211_neg_ttlm *neg_ttlm;
+ 	struct hostapd_data *assoc_hapd;
+ 	char *token;
+-	u16 valid_links = hapd->mld->valid_links;
+ 	int dir = -1, tmp;
+ 
+ 	/*
+@@ -4329,7 +4328,7 @@ hostapd_ctrl_iface_negotiated_ttlm_request(struct hostapd_data *hapd,
+ 
+ 		if (os_strncmp(token, "def_link_map=", 13) == 0) {
+ 			tmp = atoi(token + 13);
+-			if (tmp < 0 || tmp > 2) {
++			if (tmp < 0 || tmp > 1) {
+ 				wpa_printf(MSG_ERROR,
+ 					   "TTLM: Invalid def_link_map value: %d",
+ 					   tmp);
+@@ -4345,16 +4344,16 @@ hostapd_ctrl_iface_negotiated_ttlm_request(struct hostapd_data *hapd,
+ 			}
+ 
+ 			neg_ttlm->def_link_map = !!tmp;
+-		} else if (os_strncmp(token, "link_map_size=", 15) == 0) {
+-			tmp = atoi(token + 15);
+-			if (tmp < 0 || tmp > 2) {
++		} else if (os_strncmp(token, "link_map_size=", 14) == 0) {
++			tmp = atoi(token + 14);
++			if (tmp < 0 || tmp > 1) {
+ 				wpa_printf(MSG_ERROR,
+ 					   "TTLM: Invalid link_map_size value: %d",
+ 					   tmp);
+ 				return -1;
+ 			}
+ 
+-			neg_ttlm->link_map_size = tmp;
++			neg_ttlm->link_map_size = !!tmp;
+ 		} else if (os_strncmp(token, "num_tids=", 9) == 0) {
+ 			int num_tids = atoi(token + 9), i, tid, map;
+ 			char *tid_str, *map_str;
+@@ -4366,10 +4365,13 @@ hostapd_ctrl_iface_negotiated_ttlm_request(struct hostapd_data *hapd,
+ 			}
+ 
+ 			/* If the link map is not specified for some tids, the
+-			 * tids should be mapped to all valid links
++			 * tids should be mapped to all links set up by the STA
+ 			 */
+-			os_memset(neg_ttlm->dlink, valid_links, sizeof(neg_ttlm->dlink));
+-			os_memset(neg_ttlm->ulink, valid_links, sizeof(neg_ttlm->ulink));
++			for (i = 0; i < IEEE80211_TTLM_NUM_TIDS; i++) {
++				neg_ttlm->dlink[i] = sta->mld_info.valid_links;
++				neg_ttlm->ulink[i] = sta->mld_info.valid_links;
++			}
++
+ 			for (i = 0; i < num_tids; i++) {
+ 				tid_str = strtok_r(NULL, " ", &cmd);
+ 				map_str = strtok_r(NULL, " ", &cmd);
+@@ -4381,7 +4383,7 @@ hostapd_ctrl_iface_negotiated_ttlm_request(struct hostapd_data *hapd,
+ 				}
+ 
+ 				tid = atoi(tid_str);
+-				if (tid < 0 || tid > IEEE80211_TTLM_NUM_TIDS) {
++				if (tid < 0 || tid >= IEEE80211_TTLM_NUM_TIDS) {
+ 					wpa_printf(MSG_ERROR,
+ 						   "TTLM: Invalid TID: %d", tid);
+ 					return -1;
+@@ -4433,7 +4435,8 @@ static int hostapd_ctrl_iface_negotiated_ttlm(struct hostapd_data *hapd, char *c
+ 		return hostapd_ctrl_iface_neg_ttlm_teardown(hapd, cmd + 9);
+ 	}
+ 
+-	return 0;
++	wpa_printf(MSG_ERROR, "TTLM: Invalid TTLM command");
++	return -1;
+ }
+ #endif /* CONFIG_TESTING_OPTIONS */
+ #endif /* CONFIG_IEEE80211BE */
+diff --git a/src/ap/ieee802_11_eht.c b/src/ap/ieee802_11_eht.c
+index 970189723..6b1a3d8ab 100644
+--- a/src/ap/ieee802_11_eht.c
++++ b/src/ap/ieee802_11_eht.c
+@@ -3562,7 +3562,8 @@ int ieee802_11_send_neg_ttlm_request(struct hostapd_data *hapd, struct sta_info
+ 	       1 + /* len */
+ 	       1 + /* Element ID Extension */
+ 	       2 + /* Control */
+-	       2 * IEEE80211_TTLM_NUM_TIDS; /* Link Mapping of each TID */
++	       /* Link Mapping of each TID */
++	       (map_size ? 1 : 2) * IEEE80211_TTLM_NUM_TIDS;
+ 
+ 	buf = wpabuf_alloc(len);
+ 	if (!buf)
+-- 
+2.45.2
+
