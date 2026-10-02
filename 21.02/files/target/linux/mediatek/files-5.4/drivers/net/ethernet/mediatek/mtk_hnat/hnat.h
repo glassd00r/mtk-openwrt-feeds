@@ -1314,16 +1314,14 @@ enum FoeIpAct {
 #define IS_PPPQ_MODE (qos_toggle == 2)		/* Per Port Per Queue */
 #define IS_HQOS_DL_MODE (IS_HQOS_MODE && qos_dl_toggle)
 #define IS_HQOS_UL_MODE (IS_HQOS_MODE && qos_ul_toggle)
-#define MAX_SWITCH_PORT_NUM		(6)
+#define PPPQ_DSA_QUEUE_NUM		mtk_pppq_dsa_queue_num()
+#define MAX_PPPQ_QUEUE_NUM		(MTK_MAX_DEVS + 2 * PPPQ_DSA_QUEUE_NUM)
+
 #if defined(CONFIG_MEDIATEK_NETSYS_V3)
-#define MAX_PPPQ_QUEUE_NUM		(2 * MAX_SWITCH_PORT_NUM + 2)
 #define IS_PPPQ_PATH(dev, skb)						\
-	((IS_DSA_1G_LAN(dev) || IS_DSA_WAN(dev)) ||			\
-	 (IS_ETH_GRP(dev) && is_eth_dev_speed_under(dev, SPEED_1000)) ||\
-	 (FROM_WED(skb) && (IS_DSA_LAN(dev) ||				\
-			    is_eth_dev_speed_under(dev, SPEED_2500))))
+	(is_dev_speed_under(dev, SPEED_1000) ||				\
+	 (FROM_WED(skb) && is_dev_speed_under(dev, SPEED_2500)))
 #else
-#define MAX_PPPQ_QUEUE_NUM		(2 * MAX_SWITCH_PORT_NUM)
 #define IS_PPPQ_PATH(dev, skb)				\
 	((IS_DSA_1G_LAN(dev) || IS_DSA_WAN(dev)) ||	\
 	 (FROM_WED(skb) && IS_DSA_LAN(dev)))
@@ -1415,7 +1413,7 @@ int hnat_search_cache_line(u32 ppe_id, u32 tag);
 int hnat_write_cache_line(u32 ppe_id, int line, u32 tag, u32 state, u32 *data);
 int hnat_dump_cache_entry(u32 ppe_id, int hash);
 int hnat_dump_ppe_entry(u32 ppe_id, u32 hash);
-bool is_eth_dev_speed_under(const struct net_device *dev, u32 speed);
+bool is_dev_speed_under(const struct net_device *dev, u32 speed);
 extern int dbg_cpu_reason;
 extern int debug_level;
 extern int mcast_mode;

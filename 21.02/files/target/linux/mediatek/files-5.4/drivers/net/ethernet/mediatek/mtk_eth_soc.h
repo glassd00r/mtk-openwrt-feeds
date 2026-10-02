@@ -662,7 +662,11 @@
 #endif
 
 /* QDMA TX NUM */
+#if defined(CONFIG_MEDIATEK_NETSYS_V3)
+#define MTK_QDMA_TX_NUM		32
+#else
 #define MTK_QDMA_TX_NUM		16
+#endif
 #define MTK_QDMA_PAGE_NUM	8
 #define MTK_QDMA_TX_MASK	((MTK_QDMA_TX_NUM) - 1)
 #define QID_LOW_BITS(x)         ((x) & 0xf)
@@ -671,6 +675,8 @@
 
 #define MTK_QDMA_GMAC2_QID	8
 #define MTK_QDMA_GMAC3_QID	6
+
+#define MTK_DSA_USER_PORT_MAX	32
 
 /* QDMA V2 descriptor txd8 */
 #define TX_DMA_CDRT_SHIFT          0
@@ -2315,6 +2321,7 @@ struct mtk_eth {
 	u8				hwver;
 	u32				msg_enable;
 	u32				pppq_toggle;
+	u8				dsa_queue_count;
 	u64				sram_size;
 	unsigned long			sysclk;
 	struct regmap			*ethsys;
@@ -2383,6 +2390,9 @@ struct mtk_mac {
 	int				speed;
 	int				phy_speed;
 	int				duplex;
+	u8				dsa_queue_base;
+	u8				dsa_port_rank[MTK_DSA_USER_PORT_MAX];
+	int				dsa_port_speed[MTK_DSA_USER_PORT_MAX];
 	bool				tx_pause;
 	bool				rx_pause;
 	struct device_node		*of_node;
@@ -2443,6 +2453,9 @@ void mtk_stats_update_mac(struct mtk_mac *mac);
 void mtk_w32(struct mtk_eth *eth, u32 val, unsigned reg);
 u32 mtk_r32(struct mtk_eth *eth, unsigned reg);
 u32 mtk_m32(struct mtk_eth *eth, u32 mask, u32 set, unsigned reg);
+
+int mtk_dev_link_speed(const struct net_device *dev);
+u8 mtk_pppq_dsa_queue_num(void);
 
 struct phylink_pcs *mtk_sgmii_select_pcs(struct mtk_sgmii *ss, unsigned int id);
 int mtk_sgmii_init(struct mtk_eth *eth, struct device_node *np,

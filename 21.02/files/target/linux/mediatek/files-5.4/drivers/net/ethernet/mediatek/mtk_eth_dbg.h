@@ -95,13 +95,6 @@
 #define PROCREG_HW_LRO_AUTO_TLB		"hw_lro_auto_tlb"
 #define PROCREG_RESET_EVENT		"reset_event"
 
-#define MAX_SWITCH_PORT_NUM		(6)
-#if defined(CONFIG_MEDIATEK_NETSYS_V3)
-#define MAX_PPPQ_QUEUE_NUM		(2 * MAX_SWITCH_PORT_NUM + 2)
-#else
-#define MAX_PPPQ_QUEUE_NUM		(2 * MAX_SWITCH_PORT_NUM)
-#endif
-
 /* GMAC MIB Register */
 #define MTK_MAC_MIB_BASE(x)		(0x10400 + (x * 0x60))
 #define MTK_MAC_RX_UC_PKT_CNT_L		0x00

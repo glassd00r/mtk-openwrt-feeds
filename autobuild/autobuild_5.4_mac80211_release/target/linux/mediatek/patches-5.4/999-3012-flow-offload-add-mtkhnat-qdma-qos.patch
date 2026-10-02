@@ -43,10 +43,10 @@ index 010a971..c166c35 100644
  
  	for (i = 0; i < MTK_MAX_DEVS; i++) {
 diff --git a/drivers/net/ethernet/mediatek/mtk_eth_soc.h b/drivers/net/ethernet/mediatek/mtk_eth_soc.h
-index ce660c2..cc062b8 100644
+index bac2ecd..566c7a4 100644
 --- a/drivers/net/ethernet/mediatek/mtk_eth_soc.h
 +++ b/drivers/net/ethernet/mediatek/mtk_eth_soc.h
-@@ -2383,6 +2383,7 @@ struct mtk_eth {
+@@ -2399,6 +2399,7 @@ struct mtk_eth {
  	spinlock_t			syscfg0_lock;
  	struct notifier_block		netdevice_notifier;
  
@@ -54,7 +54,7 @@ index ce660c2..cc062b8 100644
  	u8				ppe_num;
  	struct mtk_ppe			*ppe[MTK_MAX_PPE_NUM];
  	struct rhashtable		flow_table;
-@@ -2462,6 +2463,34 @@ mtk_foe_get_entry(struct mtk_ppe *ppe, u16 hash)
+@@ -2485,6 +2486,15 @@ mtk_foe_get_entry(struct mtk_ppe *ppe, u16 hash)
  	return ppe->foe_table + hash * soc->foe_entry_size;
  }
  
@@ -67,29 +67,45 @@ index ce660c2..cc062b8 100644
 +#endif
 +}
 +
+ /* read the hardware status register */
+ void mtk_stats_update_mac(struct mtk_mac *mac);
+ 
+@@ -2495,6 +2505,34 @@ u32 mtk_m32(struct mtk_eth *eth, u32 mask, u32 set, unsigned reg);
+ int mtk_dev_link_speed(const struct net_device *dev);
+ u8 mtk_pppq_dsa_queue_num(void);
+ 
 +static inline int
-+mtk_ppe_check_pppq_path(struct mtk_mac *mac, struct net_device *idev, int dsa_port)
++mtk_ppe_check_pppq_path(struct net_device *idev, struct net_device *odev,
++			int dsa_port)
 +{
-+	bool wifi_rx = !!(idev->ieee80211_ptr);
++	bool wifi_rx = idev && idev->ieee80211_ptr;
++#if defined(CONFIG_MEDIATEK_NETSYS_V3)
++	int odev_speed = mtk_dev_link_speed(odev);
 +
++	if (odev_speed <= 0)
++		return 0;
++
++	/* Handle cases of port linked less or equal to 1Gbps */
++	if (odev_speed <= SPEED_1000)
++		return 1;
++
++	/* Handle cases of WiFi RX to port linked less or equal to 2.5Gbps */
++	if (odev_speed <= SPEED_2500 && wifi_rx)
++		return 1;
++#else
 +	/* Handle cases of DSA switch ports */
 +	if ((dsa_port >= 0 && dsa_port <= 4) ||
 +	    (dsa_port == 5 && wifi_rx))
-+		return 1;
-+
-+#if defined(CONFIG_MEDIATEK_NETSYS_V3)
-+	/* Handle cases of GMAC port linked less or equal to 1Gbps */
-+	if (mac->speed <= SPEED_1000)
 +		return 1;
 +#endif
 +
 +	return 0;
 +}
 +
- /* read the hardware status register */
- void mtk_stats_update_mac(struct mtk_mac *mac);
- 
-@@ -2500,4 +2529,6 @@ int mtk_ptp_clock_init(struct mtk_eth *eth);
+ struct phylink_pcs *mtk_sgmii_select_pcs(struct mtk_sgmii *ss, unsigned int id);
+ int mtk_sgmii_init(struct mtk_eth *eth, struct device_node *np,
+ 		   u32 ana_rgc3);
+@@ -2526,4 +2564,6 @@ int mtk_ptp_clock_init(struct mtk_eth *eth);
  int mtk_ptp_clock_deinit(struct mtk_eth *eth);
  
  int mtk_ppe_debugfs_init(struct mtk_eth *eth);
@@ -187,7 +203,7 @@ index 6c3fdb1..c3fbbc5 100644
  
  #endif
 diff --git a/drivers/net/ethernet/mediatek/mtk_ppe_offload.c b/drivers/net/ethernet/mediatek/mtk_ppe_offload.c
-index b80f72d..16f8477 100755
+index b80f72d..d12af19 100755
 --- a/drivers/net/ethernet/mediatek/mtk_ppe_offload.c
 +++ b/drivers/net/ethernet/mediatek/mtk_ppe_offload.c
 @@ -9,6 +9,8 @@
@@ -199,7 +215,7 @@ index b80f72d..16f8477 100755
  #include <net/dsa.h>
  #include "mtk_eth_soc.h"
  #include "mtk_wed.h"
-@@ -183,13 +185,22 @@ mtk_flow_get_dsa_port(struct net_device **dev)
+@@ -183,13 +185,23 @@ mtk_flow_get_dsa_port(struct net_device **dev)
  
  static int
  mtk_flow_set_output_device(struct mtk_eth *eth, struct mtk_foe_entry *foe,
@@ -212,6 +228,7 @@ index b80f72d..16f8477 100755
 -	int pse_port, dsa_port;
 +	struct nf_conn *ct = NULL;
 +	struct mtk_mac *mac;
++	struct net_device *link_dev = odev;
 +	u32 ct_mark = 0;
 +	int pse_port, dsa_port, queue;
 +
@@ -225,7 +242,7 @@ index b80f72d..16f8477 100755
  		mtk_foe_entry_set_wdma(foe, info.wdma_idx, info.queue, info.bss,
  				       info.wcid);
  		pse_port = PSE_PPE0_PORT;
-@@ -205,18 +216,45 @@ mtk_flow_set_output_device(struct mtk_eth *eth, struct mtk_foe_entry *foe,
+@@ -205,18 +217,46 @@ mtk_flow_set_output_device(struct mtk_eth *eth, struct mtk_foe_entry *foe,
  		goto out;
  	}
  
@@ -246,14 +263,15 @@ index b80f72d..16f8477 100755
 +	} else
  		return -EOPNOTSUPP;
  
-+	if (dsa_port >= 0) {
-+		queue = dsa_port + MTK_GMAC_ID_MAX;
++	if (dsa_port >= 0)
 +		mtk_foe_entry_set_dsa(foe, dsa_port);
-+	} else {
-+		queue = (pse_port == PSE_GDM3_PORT) ? 2 : pse_port - 1;
-+	}
 +
-+	if (eth->qos_toggle == 2 && mtk_ppe_check_pppq_path(mac, idev, dsa_port))
++	if (dsa_port >= 0 && dsa_port < MTK_DSA_USER_PORT_MAX)
++		queue = mac->dsa_queue_base + mac->dsa_port_rank[dsa_port];
++	else
++		queue = (pse_port == PSE_GDM3_PORT) ? 2 : pse_port - 1;
++
++	if (eth->qos_toggle == 2 && mtk_ppe_check_pppq_path(idev, link_dev, dsa_port))
 +		mtk_foe_entry_set_qid(foe, queue & MTK_QDMA_TX_MASK);
 +
  out:
@@ -277,7 +295,7 @@ index b80f72d..16f8477 100755
  	mtk_foe_entry_set_pse_port(foe, pse_port);
  
  	return 0;
-@@ -447,7 +485,7 @@ mtk_flow_offload_replace(struct mtk_eth *eth, struct flow_cls_offload *f)
+@@ -447,7 +487,7 @@ mtk_flow_offload_replace(struct mtk_eth *eth, struct flow_cls_offload *f)
  	if (data.pppoe.num == 1)
  		mtk_foe_entry_set_pppoe(&foe, data.pppoe.sid);
  

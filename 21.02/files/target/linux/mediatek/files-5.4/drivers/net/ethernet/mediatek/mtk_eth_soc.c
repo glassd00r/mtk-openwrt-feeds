@@ -1234,8 +1234,12 @@ static void mtk_set_queue_speed(struct mtk_eth *eth, unsigned int idx,
 	}
 
 out:
-	mtk_w32(eth, (idx / MTK_QTX_PER_PAGE) & MTK_QTX_CFG_PAGE, MTK_QDMA_PAGE);
-	mtk_w32(eth, val, MTK_QTX_SCH(idx));
+	if (idx >= MTK_QDMA_TX_NUM)
+		return;
+
+	mtk_m32(eth, MTK_QTX_CFG_PAGE, idx / MTK_QTX_PER_PAGE, MTK_QDMA_PAGE);
+	mtk_w32(eth, val, MTK_QTX_SCH(idx % MTK_QTX_PER_PAGE));
+	mtk_m32(eth, MTK_QTX_CFG_PAGE, 0, MTK_QDMA_PAGE);
 }
 
 static void mtk_mac_link_up(struct phylink_config *config, unsigned int mode,
@@ -3275,7 +3279,11 @@ static int mtk_tx_alloc(struct mtk_eth *eth, int ring_no)
 			soc->reg_map->qdma.crx_ptr);
 		mtk_w32(eth, ring->last_free_ptr, soc->reg_map->qdma.drx_ptr);
 
-		for (i = 0, ofs = 0; i < MTK_QDMA_TX_NUM; i++) {
+		for (i = 0; i < MTK_QDMA_TX_NUM; i++) {
+			ofs = MTK_QTX_OFFSET * (i % MTK_QTX_PER_PAGE);
+			mtk_m32(eth, MTK_QTX_CFG_PAGE, i / MTK_QTX_PER_PAGE,
+				MTK_QDMA_PAGE);
+
 			val = (QDMA_RES_THRES << 8) | QDMA_RES_THRES;
 			mtk_w32(eth, val, soc->reg_map->qdma.qtx_cfg + ofs);
 
@@ -3292,8 +3300,8 @@ static int mtk_tx_alloc(struct mtk_eth *eth, int ring_no)
 			if (MTK_HAS_CAPS(eth->soc->caps, MTK_NETSYS_V1))
 				val |= MTK_QTX_SCH_LEAKY_BUCKET_EN;
 			mtk_w32(eth, val, soc->reg_map->qdma.qtx_sch + ofs);
-			ofs += MTK_QTX_OFFSET;
 		}
+		mtk_m32(eth, MTK_QTX_CFG_PAGE, 0, MTK_QDMA_PAGE);
 		val = MTK_QDMA_TX_SCH_MAX_WFQ | (MTK_QDMA_TX_SCH_MAX_WFQ << 16);
 		mtk_w32(eth, val, soc->reg_map->qdma.tx_sch_rate);
 #if defined(CONFIG_MEDIATEK_NETSYS_V2) || defined(CONFIG_MEDIATEK_NETSYS_V3)
@@ -4583,6 +4591,84 @@ void mtk_set_pse_drop(u32 config)
 }
 EXPORT_SYMBOL(mtk_set_pse_drop);
 
+static void mtk_update_dsa_queue_map(struct mtk_eth *eth)
+{
+#if IS_ENABLED(CONFIG_NET_DSA)
+	struct net_device *conduit;
+	struct dsa_switch *ds;
+	struct mtk_mac *mac;
+	u8 base = MTK_MAX_DEVS;
+	u8 rank;
+	int i, p;
+
+	for (i = 0; i < MTK_MAX_DEVS; i++) {
+		conduit = eth->netdev[i];
+		if (!conduit)
+			continue;
+
+		mac = netdev_priv(conduit);
+		mac->dsa_queue_base = base;
+
+		if (!netdev_uses_dsa(conduit))
+			continue;
+
+		ds = conduit->dsa_ptr->ds;
+		rank = 0;
+		for (p = 0; p < ds->num_ports; p++) {
+			if (!dsa_is_user_port(ds, p))
+				continue;
+			if (p < MTK_DSA_USER_PORT_MAX)
+				mac->dsa_port_rank[p] = rank;
+			rank++;
+		}
+		base += rank;
+	}
+
+	WRITE_ONCE(eth->dsa_queue_count, base - MTK_MAX_DEVS);
+#endif
+}
+
+u8 mtk_pppq_dsa_queue_num(void)
+{
+	return g_eth ? READ_ONCE(g_eth->dsa_queue_count) : 0;
+}
+EXPORT_SYMBOL(mtk_pppq_dsa_queue_num);
+
+int mtk_dev_link_speed(const struct net_device *dev)
+{
+	struct dsa_port *dp = NULL;
+	const struct mtk_mac *mac;
+	int i;
+
+	if (!dev || !g_eth)
+		return SPEED_UNKNOWN;
+
+	if (dev->phydev)
+		return READ_ONCE(dev->phydev->speed);
+
+#if IS_ENABLED(CONFIG_NET_DSA)
+	if (dsa_slave_dev_check(dev)) {
+		dp = dsa_port_from_netdev((struct net_device *)dev);
+
+		if (IS_ERR(dp) || dp->index >= MTK_DSA_USER_PORT_MAX)
+			return SPEED_UNKNOWN;
+
+		dev = dp->cpu_dp->master;
+	}
+#endif
+
+	for (i = 0; i < MTK_MAX_DEVS; i++) {
+		if (g_eth->netdev[i] == dev) {
+			mac = netdev_priv(dev);
+			return dp ? mac->dsa_port_speed[dp->index] :
+				    mac->speed;
+		}
+	}
+
+	return SPEED_UNKNOWN;
+}
+EXPORT_SYMBOL(mtk_dev_link_speed);
+
 static int mtk_device_event(struct notifier_block *n, unsigned long event, void *ptr)
 {
 	struct mtk_mac *mac = container_of(n, struct mtk_mac, device_notifier);
@@ -4593,9 +4679,6 @@ static int mtk_device_event(struct notifier_block *n, unsigned long event, void 
 	struct list_head *iter;
 	struct dsa_port *dp;
 	unsigned int queue = 0;
-
-	if (!eth->pppq_toggle)
-		return NOTIFY_DONE;
 
 	if (event != NETDEV_CHANGE || dev->priv_flags & IFF_EBRIDGE)
 		return NOTIFY_DONE;
@@ -4621,9 +4704,18 @@ found:
 
 	if (dsa_slave_dev_check(dev)) {
 		dp = dsa_port_from_netdev(dev);
-		queue = dp->index + MTK_GMAC_ID_MAX;
+		if (IS_ERR(dp) || dp->index >= MTK_DSA_USER_PORT_MAX)
+			return NOTIFY_DONE;
+
+		mtk_update_dsa_queue_map(eth);
+
+		mac->dsa_port_speed[dp->index] = s.base.speed;
+		queue = mac->dsa_queue_base + mac->dsa_port_rank[dp->index];
 	} else
 		queue = mac->id;
+
+	if (!eth->pppq_toggle)
+		return NOTIFY_DONE;
 
 	if (queue >= MTK_QDMA_TX_NUM)
 		return NOTIFY_DONE;
@@ -6047,9 +6139,14 @@ static u16 mtk_select_queue(struct net_device *dev, struct sk_buff *skb,
 		return skb->mark;
 
 	if (eth->pppq_toggle) {
-		if (netdev_uses_dsa(dev))
-			queue = skb_get_queue_mapping(skb) + MTK_GMAC_ID_MAX;
-		else
+		if (netdev_uses_dsa(dev)) {
+			unsigned int dp_idx = skb_get_queue_mapping(skb);
+
+			if (dp_idx >= MTK_DSA_USER_PORT_MAX)
+				return 0;
+
+			queue = mac->dsa_queue_base + mac->dsa_port_rank[dp_idx];
+		} else
 			queue = mac->id;
 	} else
 		queue = mac->id ? MTK_QDMA_GMAC2_QID : 0;
@@ -6335,7 +6432,7 @@ static int mtk_add_mac(struct mtk_eth *eth, struct device_node *np)
 	struct mtk_phylink_priv *phylink_priv;
 	struct fwnode_handle *fixed_node;
 	struct gpio_desc *desc;
-	int txqs;
+	int txqs, i;
 
 	if (!_id) {
 		dev_err(eth->dev, "missing mac id\n");
@@ -6368,6 +6465,10 @@ static int mtk_add_mac(struct mtk_eth *eth, struct device_node *np)
 	mac->id = id;
 	mac->hw = eth;
 	mac->of_node = np;
+
+	mac->dsa_queue_base = MTK_MAX_DEVS;
+	for (i = 0; i < MTK_DSA_USER_PORT_MAX; i++)
+		mac->dsa_port_rank[i] = i;
 
 	memset(mac->hwlro_ip, 0, sizeof(mac->hwlro_ip));
 	mac->hwlro_ip_cnt = 0;

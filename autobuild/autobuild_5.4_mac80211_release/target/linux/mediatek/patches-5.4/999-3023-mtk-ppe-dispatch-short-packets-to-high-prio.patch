@@ -8,7 +8,7 @@ Subject: [PATCH] mtk ppe dispatch short packets to high priority TXQ in PPPQ
  1 file changed, 89 insertions(+), 1 deletion(-)
 
 diff --git a/drivers/net/ethernet/mediatek/mtk_ppe_offload.c b/drivers/net/ethernet/mediatek/mtk_ppe_offload.c
-index 9b3bdd8..5e8d88a 100644
+index 6948373..fa7dfb6 100644
 --- a/drivers/net/ethernet/mediatek/mtk_ppe_offload.c
 +++ b/drivers/net/ethernet/mediatek/mtk_ppe_offload.c
 @@ -186,6 +186,86 @@ mtk_flow_get_dsa_port(struct net_device **dev)
@@ -98,18 +98,27 @@ index 9b3bdd8..5e8d88a 100644
  static int
  mtk_flow_set_output_device(struct mtk_eth *eth, struct mtk_foe_entry *foe,
  			   struct net_device *idev, struct net_device *odev,
-@@ -242,8 +322,16 @@ mtk_flow_set_output_device(struct mtk_eth *eth, struct mtk_foe_entry *foe,
- 		queue = (pse_port == PSE_GDM3_PORT) ? 2 : pse_port - 1;
- 	}
+@@ -198,6 +278,7 @@ mtk_flow_set_output_device(struct mtk_eth *eth, struct mtk_foe_entry *foe,
+ 	struct net_device *link_dev = odev;
+ 	u32 ct_mark = 0;
+ 	int pse_port, dsa_port, queue;
++	u8 dsa_queue_count = READ_ONCE(eth->dsa_queue_count);
  
--	if (eth->qos_toggle == 2 && mtk_ppe_check_pppq_path(mac, idev, dsa_port))
-+	if (eth->qos_toggle == 2 && mtk_ppe_check_pppq_path(mac, idev, dsa_port)) {
-+		if (ct && nf_ct_protonum(ct) == IPPROTO_TCP && (queue >= 3 && queue <= 8)) {
+ 	if (f->flow && f->flow->ct) {
+ 		ct = f->flow->ct;
+@@ -244,8 +325,17 @@ mtk_flow_set_output_device(struct mtk_eth *eth, struct mtk_foe_entry *foe,
+ 	else
+ 		queue = (pse_port == PSE_GDM3_PORT) ? 2 : pse_port - 1;
+ 
+-	if (eth->qos_toggle == 2 && mtk_ppe_check_pppq_path(idev, link_dev, dsa_port))
++	if (eth->qos_toggle == 2 && mtk_ppe_check_pppq_path(idev, link_dev, dsa_port)) {
++		if (dsa_port >= 0 && ct && nf_ct_protonum(ct) == IPPROTO_TCP) {
 +			/* Dispatch the IPv4/IPv6 TCP Ack packets to the high-priority
 +			 * queue, assuming they are less than 64 bytes.
 +			 */
-+			if (mtk_flow_is_tcp_ack(eth, foe, ct))
-+				queue += 6;
++			if (mtk_flow_is_tcp_ack(eth, foe, ct) &&
++			    queue + dsa_queue_count < MTK_QDMA_TX_NUM)
++				queue += dsa_queue_count;
 +		}
  		mtk_foe_entry_set_qid(foe, queue & MTK_QDMA_TX_MASK);
 +	}

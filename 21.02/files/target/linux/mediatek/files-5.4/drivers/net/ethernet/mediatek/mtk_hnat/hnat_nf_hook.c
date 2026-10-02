@@ -1200,40 +1200,35 @@ drop:
 	return NF_DROP;
 }
 
-bool is_eth_dev_speed_under(const struct net_device *dev, u32 speed)
+bool is_dev_speed_under(const struct net_device *dev, u32 speed)
 {
-	const struct mtk_mac *mac;
+	int link_speed = mtk_dev_link_speed(dev);
 
-	if (!dev || !IS_ETH_GRP(dev) || netdev_uses_dsa((struct net_device *)dev))
-		return false;
-
-	mac = netdev_priv(dev);
-
-	return mac->phy_speed <= speed;
+	return link_speed > 0 && link_speed <= speed;
 }
 
 static inline void qos_rate_limit_set(u32 id, const struct net_device *dev)
 {
-	const struct mtk_mac *mac;
 	u32 max_man = SPEED_10000 / SPEED_100;
 	u32 max_exp = 5;
+	int link_speed;
 	u32 cfg;
 
-	if (id > MTK_QDMA_TX_NUM)
+	if (id >= MTK_QDMA_TX_NUM)
 		return;
 
 	if (!dev)
 		goto setup_rate_limit;
 
-	mac = netdev_priv(dev);
+	link_speed = mtk_dev_link_speed(dev);
 
-	switch (mac->phy_speed) {
+	switch (link_speed) {
 	case SPEED_100:
 	case SPEED_1000:
 	case SPEED_2500:
 	case SPEED_5000:
 	case SPEED_10000:
-		max_man = mac->phy_speed / SPEED_100;
+		max_man = link_speed / SPEED_100;
 		break;
 	default:
 		return;
@@ -1246,7 +1241,9 @@ setup_rate_limit:
 	       FIELD_PREP(MTK_QTX_SCH_MAX_RATE_MAN, max_man) |
 	       FIELD_PREP(MTK_QTX_SCH_MAX_RATE_EXP, max_exp) |
 	       FIELD_PREP(MTK_QTX_SCH_MAX_RATE_WEIGHT, 4);
+	writel(id / MTK_QTX_PER_PAGE, hnat_priv->fe_base + MTK_QDMA_PAGE);
 	writel(cfg, hnat_priv->fe_base + MTK_QTX_SCH(id % MTK_QTX_PER_PAGE));
+	writel(0, hnat_priv->fe_base + MTK_QDMA_PAGE);
 }
 
 static unsigned int
@@ -2708,11 +2705,14 @@ hnat_entry_bind:
 	if (IS_HQOS_MODE || (skb->mark & MTK_QDMA_TX_MASK) >= MAX_PPPQ_QUEUE_NUM)
 		qid = skb->mark & (MTK_QDMA_TX_MASK);
 	else if (IS_PPPQ_MODE && IS_PPPQ_PATH(dev, skb))
-		qid = ((port_id >= 0) ? MTK_GMAC_ID_MAX + port_id : mac->id) & MTK_QDMA_TX_MASK;
+		qid = (port_id >= 0 && port_id < MTK_DSA_USER_PORT_MAX) ?
+		      mac->dsa_queue_base + mac->dsa_port_rank[port_id] :
+		      mac->id;
 	else
 		qid = 0;
 
-	if (IS_PPPQ_MODE && IS_PPPQ_PATH(dev, skb) && port_id >= 0) {
+	if (IS_PPPQ_MODE && IS_PPPQ_PATH(dev, skb) &&
+	    port_id >= 0 && qid < MAX_PPPQ_QUEUE_NUM) {
 		if (h_proto == ETH_P_IP) {
 			iph = (struct iphdr *)(skb_network_header(skb) + h_offset);
 			if (iph->protocol == IPPROTO_TCP) {
@@ -2720,8 +2720,9 @@ hnat_entry_bind:
 				payload_len = be16_to_cpu(iph->tot_len) -
 					      iph->ihl * 4 - __tcp_hdrlen(tcph);
 				/* Dispatch ACK packets to high priority queue */
-				if (payload_len == 0)
-					qid += MAX_SWITCH_PORT_NUM;
+				if (payload_len == 0 &&
+				    qid + PPPQ_DSA_QUEUE_NUM < MTK_QDMA_TX_NUM)
+					qid += PPPQ_DSA_QUEUE_NUM;
 			}
 		} else if (h_proto == ETH_P_IPV6) {
 			ip6h = (struct ipv6hdr *)(skb_network_header(skb) + h_offset);
@@ -2729,8 +2730,9 @@ hnat_entry_bind:
 				tcph = (struct tcphdr *)((u8 *)ip6h + sizeof(struct ipv6hdr));
 				payload_len = be16_to_cpu(ip6h->payload_len) - __tcp_hdrlen(tcph);
 				/* Dispatch ACK packets to high priority queue */
-				if (payload_len == 0)
-					qid += MAX_SWITCH_PORT_NUM;
+				if (payload_len == 0 &&
+				    qid + PPPQ_DSA_QUEUE_NUM < MTK_QDMA_TX_NUM)
+					qid += PPPQ_DSA_QUEUE_NUM;
 			}
 		}
 	}
