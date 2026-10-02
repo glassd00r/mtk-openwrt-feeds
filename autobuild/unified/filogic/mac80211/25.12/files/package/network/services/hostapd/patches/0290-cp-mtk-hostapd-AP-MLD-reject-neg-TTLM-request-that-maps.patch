@@ -1,0 +1,74 @@
+From 58a621704933f5a9c5b1bc7d923cbcc03c4e51fd Mon Sep 17 00:00:00 2001
+From: Michael-CY Lee <michael-cy.lee@mediatek.com>
+Date: Wed, 24 Jun 2026 15:10:17 +0800
+Subject: [PATCH] mtk: hostapd: AP MLD: reject neg-TTLM request that maps a tid
+ to a STA's non-setup link
+
+When validating the link mapping from the TTLM, the STA's valid links
+should be referenced. In other word, the AP should reject the TTLM
+that maps any tid to a link that is not set up by the STA.
+
+Signed-off-by: Michael-CY Lee <michael-cy.lee@mediatek.com>
+---
+ hostapd/ctrl_iface.c    |  6 ++++--
+ src/ap/ieee802_11_eht.c | 12 ++++++++++--
+ 2 files changed, 14 insertions(+), 4 deletions(-)
+
+diff --git a/hostapd/ctrl_iface.c b/hostapd/ctrl_iface.c
+index a2c10f539..de9b32e5d 100644
+--- a/hostapd/ctrl_iface.c
++++ b/hostapd/ctrl_iface.c
+@@ -4388,9 +4388,11 @@ hostapd_ctrl_iface_negotiated_ttlm_request(struct hostapd_data *hapd,
+ 				}
+ 
+ 				map = strtol(map_str, NULL, 0);
+-				if (map < 0 || map > BIT(MAX_NUM_MLD_LINKS) - 1) {
++				if (map < 0 || map > BIT(MAX_NUM_MLD_LINKS) - 1 ||
++				    (map & ~sta->mld_info.valid_links)) {
+ 					wpa_printf(MSG_ERROR,
+-						   "TTLM: Invalid map: %d", map);
++						   "TTLM: TID %d: Invalid map: "
++						   "0x%x", tid, map);
+ 					return -1;
+ 				}
+ 
+diff --git a/src/ap/ieee802_11_eht.c b/src/ap/ieee802_11_eht.c
+index e32b7df8f..426df1d8e 100644
+--- a/src/ap/ieee802_11_eht.c
++++ b/src/ap/ieee802_11_eht.c
+@@ -3000,7 +3000,7 @@ static u16 ieee80211_get_link_map(u8 bm_size, const u8 *data)
+ static int ieee802_11_parse_neg_ttlm(struct hostapd_data *hapd,
+ 				     const u8 *ttlm_ie, size_t ttlm_ie_len,
+ 				     struct ieee80211_neg_ttlm *neg_ttlm,
+-				     u8 *direction)
++				     u8 *direction, u16 sta_valid_links)
+ {
+ 	u8 control, link_map_presence, map_size, tid;
+ 	const u8 *pos = ttlm_ie;
+@@ -3061,6 +3061,13 @@ static int ieee802_11_parse_neg_ttlm(struct hostapd_data *hapd,
+ 			return -EINVAL;
+ 		}
+ 
++		if (map & ~sta_valid_links) {
++			wpa_printf(MSG_ERROR,
++				   "TID %u: link mapping 0x%x contains link(s) "
++				   "not set up by the STA.", tid, map);
++			return -EINVAL;
++		}
++
+ 		switch (*direction) {
+ 		case IEEE80211_TTLM_DIRECTION_BOTH:
+ 			neg_ttlm->dlink[tid] = map;
+@@ -3154,7 +3161,8 @@ static void ieee802_11_rx_neg_ttlm_req(struct hostapd_data *hapd, const u8 *addr
+ 	}
+ 
+ 	ret = ieee802_11_parse_neg_ttlm(hapd, elems.ttlm[0], elems.ttlm_len[0],
+-					&new_ttlm, &direction);
++					&new_ttlm, &direction,
++					sta->mld_info.valid_links);
+ 	if (ret) {
+ 		wpa_printf(MSG_ERROR, "Invalid TTLM format");
+ 		goto fail;
+-- 
+2.45.2
+
