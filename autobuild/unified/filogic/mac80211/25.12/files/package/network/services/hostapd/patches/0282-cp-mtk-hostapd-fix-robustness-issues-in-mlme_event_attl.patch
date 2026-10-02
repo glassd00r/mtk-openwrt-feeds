@@ -1,0 +1,48 @@
+From 654d6629397555f756cf1614fecf06511324d8be Mon Sep 17 00:00:00 2001
+From: Michael-CY Lee <michael-cy.lee@mediatek.com>
+Date: Wed, 15 Jul 2026 10:43:01 +0800
+Subject: [PATCH] mtk: hostapd: fix robustness issues in mlme_event_attlm()
+
+fixup! mtk: hostapd: add A-TTLM support
+
+- Check ifindex attribute against NULL before passing it to
+  nla_get_u32(), which would dereference a NULL pointer if the
+  kernel omits NL80211_ATTR_IFINDEX from the event message.
+- Zero-initialize the wpa_event_data union before filling fields,
+  consistent with all peer functions in the same file.
+
+Signed-off-by: Michael-CY Lee <michael-cy.lee@mediatek.com>
+---
+ src/drivers/driver_nl80211_event.c | 7 ++++---
+ 1 file changed, 4 insertions(+), 3 deletions(-)
+
+diff --git a/src/drivers/driver_nl80211_event.c b/src/drivers/driver_nl80211_event.c
+index 86ee54b81..13efc2ee7 100644
+--- a/src/drivers/driver_nl80211_event.c
++++ b/src/drivers/driver_nl80211_event.c
+@@ -1405,6 +1405,9 @@ static void mlme_event_attlm(struct wpa_driver_nl80211_data *drv,
+ 	struct i802_bss *bss;
+ 	int ifidx;
+ 
++	if (!ifindex || !event)
++		return;
++
+ 	ifidx = nla_get_u32(ifindex);
+ 	bss = get_bss_ifindex(drv, ifidx);
+ 	if (bss == NULL) {
+@@ -1414,11 +1417,9 @@ static void mlme_event_attlm(struct wpa_driver_nl80211_data *drv,
+ 		return;
+ 	}
+ 
+-	if (!event)
+-		return;
+-
+ 	wpa_printf(MSG_DEBUG, "nl80211: %s: A-TTLM event", bss->ifname);
+ 
++	os_memset(&data, 0, sizeof(data));
+ 	data.attlm_event.switch_time_tsf_tu = switch_time_tsf_tu ?
+ 					nla_get_u16(switch_time_tsf_tu) : 0;
+ 	event_type = nla_get_u32(event);
+-- 
+2.45.2
+
