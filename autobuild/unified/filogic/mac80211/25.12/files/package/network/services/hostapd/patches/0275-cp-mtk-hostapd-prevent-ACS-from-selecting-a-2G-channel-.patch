@@ -1,0 +1,31 @@
+From 0d34652558dff0c7a15f5c42e5a2b43233855c96 Mon Sep 17 00:00:00 2001
+From: Michael-CY Lee <michael-cy.lee@mediatek.com>
+Date: Mon, 13 Apr 2026 13:56:41 +0800
+Subject: [PATCH] mtk: hostapd: prevent ACS from selecting a 2G channel
+ secondary channel as the control channel
+
+Signed-off-by: Michael-CY Lee <michael-cy.lee@mediatek.com>
+---
+ src/ap/acs.c | 6 ++++++
+ 1 file changed, 6 insertions(+)
+
+diff --git a/src/ap/acs.c b/src/ap/acs.c
+index ca86e2e33..87ef88e48 100644
+--- a/src/ap/acs.c
++++ b/src/ap/acs.c
+@@ -924,6 +924,12 @@ acs_find_ideal_chan_mode(struct hostapd_iface *iface,
+ 			if (!chan_pri_allowed(chan2))
+ 				continue;
+ 
++			/* The secondary channel in 2.4 GHz will not be
++			 * the primary channel
++			 */
++			if (is_24ghz_mode(mode->mode) && j > 1)
++				continue;
++
+ 			if (!is_in_chanlist(iface, chan2))
+ 				continue;
+ 
+-- 
+2.45.2
+
