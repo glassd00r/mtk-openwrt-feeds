@@ -1,0 +1,37 @@
+From 031803fd1f5dce43dfe4e3455e54d78c74f36337 Mon Sep 17 00:00:00 2001
+From: Michael-CY Lee <michael-cy.lee@mediatek.com>
+Date: Thu, 2 Jul 2026 15:52:49 +0800
+Subject: [PATCH] mtk: hostapd: fix ML probe response to non-TX BSS
+
+If a STA MLD sends an ML probe request addressing a non-TX BSS of an
+AP MLD (using its address in A1/A3) without the MLD ID field (which is
+fully spec-compliant), hostapd fails to process the request correctly and
+sends an invalid ML probe response.
+
+The root cause is that hostapd does not handle cases where the MLD ID is
+absent from the ML probe request.
+
+This commit adds support to properly handle such cases.
+
+Signed-off-by: Michael-CY Lee <michael-cy.lee@mediatek.com>
+---
+ src/ap/beacon.c | 3 +++
+ 1 file changed, 3 insertions(+)
+
+diff --git a/src/ap/beacon.c b/src/ap/beacon.c
+index 3ea35789e..7ff2cfc3e 100644
+--- a/src/ap/beacon.c
++++ b/src/ap/beacon.c
+@@ -1158,6 +1158,9 @@ static void hostapd_fill_probe_resp_ml_params(struct hostapd_data *hapd,
+ 			}
+ 		}
+ 		params->mld_ap = hapd;
++	} else if (mld_id == -1 && hapd->iconf->mbssid &&
++		   hapd != hostapd_mbssid_get_tx_bss(hapd)) {
++		params->mld_ap = hapd;
+ 	}
+ 
+ 	for_each_mld_link(link, hapd) {
+-- 
+2.45.2
+
