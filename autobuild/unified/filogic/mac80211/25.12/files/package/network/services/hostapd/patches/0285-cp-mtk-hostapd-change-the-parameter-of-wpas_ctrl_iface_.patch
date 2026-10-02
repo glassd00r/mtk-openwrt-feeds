@@ -1,0 +1,30 @@
+From 4548ec4c80c5664a815a36e080824ff84e8ae78c Mon Sep 17 00:00:00 2001
+From: Michael-CY Lee <michael-cy.lee@mediatek.com>
+Date: Wed, 15 Jul 2026 18:08:09 +0800
+Subject: [PATCH] mtk: hostapd: change the parameter of
+ wpas_ctrl_iface_neg_ttlm_setup
+
+fixup! mtk: wpa_s: add Neg-TTLM setup and teardown for STA MLD
+
+Signed-off-by: Michael-CY Lee <michael-cy.lee@mediatek.com>
+---
+ wpa_supplicant/ctrl_iface.c | 3 +--
+ 1 file changed, 1 insertion(+), 2 deletions(-)
+
+diff --git a/wpa_supplicant/ctrl_iface.c b/wpa_supplicant/ctrl_iface.c
+index a59f0917b..ba25a760b 100644
+--- a/wpa_supplicant/ctrl_iface.c
++++ b/wpa_supplicant/ctrl_iface.c
+@@ -12633,8 +12633,7 @@ wpa_supplicant_ctrl_iface_setup_link_reconfig(struct wpa_supplicant *wpa_s,
+ }
+ 
+ 
+-static int wpas_ctrl_iface_neg_ttlm_setup(struct wpa_supplicant *wpa_s,
+-					  const char *cmd)
++static int wpas_ctrl_iface_neg_ttlm_setup(struct wpa_supplicant *wpa_s, char *cmd)
+ {
+ 	int dir, i = 0, ret;
+ 	u16 tid_bitmap[IEEE80211_TTLM_NUM_TIDS];
+-- 
+2.45.2
+
