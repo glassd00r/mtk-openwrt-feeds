@@ -1,0 +1,62 @@
+From 1006093715c335e9e44a76a3fb6e6668c9bd721d Mon Sep 17 00:00:00 2001
+From: Michael-CY Lee <michael-cy.lee@mediatek.com>
+Date: Mon, 13 Apr 2026 14:00:37 +0800
+Subject: [PATCH] mtk: hostapd: fix ACS re-triggered on a interface after a
+ failed ACS
+
+hostapd_setup_interface_complete() is called on both ACS success
+and failure. The loop that triggers acs_init() for pending siblings
+matched the current interface itself if its ACS fails and freq is
+not yet assigned, causing ACS to restart on it instead of moving to
+the next sibling.
+
+Also, if the ACS, the iface will be disable and the iface->state
+become HAPD_IFACE_DISABLED. Prevent re-do ACS on such iface.
+
+Exclude the current interface and a disabled interface from the
+search to fix this.
+
+Signed-off-by: Michael-CY Lee <michael-cy.lee@mediatek.com>
+---
+ src/ap/hostapd.c | 25 ++++++++++++++-----------
+ 1 file changed, 14 insertions(+), 11 deletions(-)
+
+diff --git a/src/ap/hostapd.c b/src/ap/hostapd.c
+index f6aa611c9..6792acf0c 100644
+--- a/src/ap/hostapd.c
++++ b/src/ap/hostapd.c
+@@ -3146,17 +3146,20 @@ int hostapd_setup_interface_complete(struct hostapd_iface *iface, int err)
+ 		int i;
+ 
+ 		for (i = 0; i < interfaces->count; i++) {
+-			if (!interfaces->iface[i]->freq) {
+-				/* FIXME problems remained
+-				 * 1. the return value of acs_init() is
+-				 *    not check
+-				 * 2. if it fails the setup, next acs_init()
+-				 *    will not be handled
+-				 */
+-				wpa_printf(MSG_DEBUG, "mtk: trigger acs_init for %s", interfaces->iface[i]->phy);
+-				acs_init(interfaces->iface[i]);
+-				break;
+-			}
++			if (iface == interfaces->iface[i] ||
++			    interfaces->iface[i]->freq ||
++			    interfaces->iface[i]->state <= HAPD_IFACE_DISABLED)
++				continue;
++
++			/* FIXME problems remained
++			 * 1. the return value of acs_init() is
++			 *    not check
++			 * 2. if it fails the setup, next acs_init()
++			 *    will not be handled
++			 */
++			wpa_printf(MSG_DEBUG, "mtk: trigger acs_init for %s", interfaces->iface[i]->phy);
++			acs_init(interfaces->iface[i]);
++			break;
+ 		}
+ 	}
+ 
+-- 
+2.45.2
+
