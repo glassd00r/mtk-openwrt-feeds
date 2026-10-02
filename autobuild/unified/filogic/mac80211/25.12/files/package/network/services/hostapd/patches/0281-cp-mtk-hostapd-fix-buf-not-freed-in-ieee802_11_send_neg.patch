@@ -1,0 +1,46 @@
+From 7b5ebcce6676f22b4438e39047064f0f23646abf Mon Sep 17 00:00:00 2001
+From: Michael-CY Lee <michael-cy.lee@mediatek.com>
+Date: Tue, 14 Jul 2026 15:35:12 +0800
+Subject: [PATCH] mtk: hostapd: fix "buf" not freed in
+ ieee802_11_send_neg_ttlm_teardown()
+
+fixup! mtk: hostapd: add Neg-TTLM support for AP MLD
+
+wpabuf_alloc() was called before the ATTLM disabled-link guard, so
+when that guard fired and returned -1 early, the allocated buffer was
+never freed. Move the allocation to after the guard to fix the leak.
+
+Signed-off-by: Michael-CY Lee <michael-cy.lee@mediatek.com>
+---
+ src/ap/ieee802_11_eht.c | 8 ++++----
+ 1 file changed, 4 insertions(+), 4 deletions(-)
+
+diff --git a/src/ap/ieee802_11_eht.c b/src/ap/ieee802_11_eht.c
+index fd059d1c3..80372f919 100644
+--- a/src/ap/ieee802_11_eht.c
++++ b/src/ap/ieee802_11_eht.c
+@@ -3597,10 +3597,6 @@ int ieee802_11_send_neg_ttlm_teardown(struct hostapd_data *hapd, const u8 *addr)
+ 	size_t len = 2;
+ 	int ret;
+ 
+-	buf = wpabuf_alloc(len);
+-	if (!buf)
+-		return -1;
+-
+ 	if (hostapd_is_attlm_active(hapd) &&
+ 	    hapd->mld->new_attlm.disabled_links & BIT(hapd->mld_link_id)) {
+ 		wpa_printf(MSG_ERROR,
+@@ -3608,6 +3604,10 @@ int ieee802_11_send_neg_ttlm_teardown(struct hostapd_data *hapd, const u8 *addr)
+ 		return -1;
+ 	}
+ 
++	buf = wpabuf_alloc(len);
++	if (!buf)
++		return -1;
++
+ 	wpabuf_put_u8(buf, WLAN_ACTION_PROTECTED_EHT);
+ 	wpabuf_put_u8(buf, WLAN_PROT_EHT_T2L_MAPPING_TEARDOWN);
+ 
+-- 
+2.45.2
+
