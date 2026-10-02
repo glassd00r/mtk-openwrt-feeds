@@ -1,0 +1,70 @@
+From 761ea04e0a6349cdfc6a7567b8fbeb19b7ad92b2 Mon Sep 17 00:00:00 2001
+From: Michael-CY Lee <michael-cy.lee@mediatek.com>
+Date: Wed, 24 Jun 2026 14:49:45 +0800
+Subject: [PATCH] mtk: hostapd: AP MLD: reject AP neg-TTLM requests with
+ def_link_map set to 1
+
+This avoids complex code logic since the same function can be
+achieved via neg-TTLM teardown.
+
+fixup: mtk: hostapd: add Neg-TTLM support for AP MLD
+
+Signed-off-by: Michael-CY Lee <michael-cy.lee@mediatek.com>
+---
+ hostapd/ctrl_iface.c    | 10 ++++++++--
+ src/ap/ieee802_11_eht.c | 10 +++++++---
+ 2 files changed, 15 insertions(+), 5 deletions(-)
+
+diff --git a/hostapd/ctrl_iface.c b/hostapd/ctrl_iface.c
+index 4501edc06..a2c10f539 100644
+--- a/hostapd/ctrl_iface.c
++++ b/hostapd/ctrl_iface.c
+@@ -4336,9 +4336,15 @@ hostapd_ctrl_iface_negotiated_ttlm_request(struct hostapd_data *hapd,
+ 				return -1;
+ 			}
+ 
++			/* TODO How to handle this? */
++			if (tmp == 1) {
++				wpa_printf(MSG_ERROR,
++					   "TTLM: Not support TTLM request with"
++					   " def_link_map being 1");
++				return -1;
++			}
++
+ 			neg_ttlm->def_link_map = !!tmp;
+-			if (neg_ttlm->def_link_map)
+-				dir = -1;
+ 		} else if (os_strncmp(token, "link_map_size=", 15) == 0) {
+ 			tmp = atoi(token + 15);
+ 			if (tmp < 0 || tmp > 2) {
+diff --git a/src/ap/ieee802_11_eht.c b/src/ap/ieee802_11_eht.c
+index 80372f919..829b5d7cd 100644
+--- a/src/ap/ieee802_11_eht.c
++++ b/src/ap/ieee802_11_eht.c
+@@ -3535,7 +3535,13 @@ int ieee802_11_send_neg_ttlm_request(struct hostapd_data *hapd, struct sta_info
+ 	int ret, i;
+ 	bool map_size = neg_ttlm->link_map_size;
+ 
+-	/* TODO currently do not support bi-direction Neg-TTLM */
++	/* TODO currently do not support bi-direction Neg-TTLM or default TTLM */
++	if (neg_ttlm->def_link_map) {
++		wpa_printf(MSG_ERROR,
++			   "Do not support TTLM request with def_link_map being 1");
++		return -1;
++	}
++
+ 	for (i = 0; i < IEEE80211_TTLM_NUM_TIDS; i++) {
+ 		if (neg_ttlm->ulink[i] != neg_ttlm->dlink[i]) {
+ 			wpa_printf(MSG_ERROR,
+@@ -3572,8 +3578,6 @@ int ieee802_11_send_neg_ttlm_request(struct hostapd_data *hapd, struct sta_info
+ 	wpabuf_put_u8(buf, WLAN_EID_EXT_TID_TO_LINK_MAPPING);
+ 	control |= IEEE80211_TTLM_DIRECTION_BOTH;
+ 	control |= IEEE80211_TTLM_CONTROL_INDICATOR;
+-	if (neg_ttlm->def_link_map)
+-		control |= IEEE80211_TTLM_CONTROL_DEF_LINK_MAP;
+ 	if (map_size)
+ 		control |= IEEE80211_TTLM_CONTROL_LINK_MAP_SIZE;
+ 	wpabuf_put_le16(buf, control);
+-- 
+2.45.2
+
