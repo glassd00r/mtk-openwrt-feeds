@@ -1,0 +1,101 @@
+From 5215c42f957e3d3a1bf4ab4c7e5cfb1c72d70429 Mon Sep 17 00:00:00 2001
+From: Michael-CY Lee <michael-cy.lee@mediatek.com>
+Date: Tue, 14 Jul 2026 15:03:56 +0800
+Subject: [PATCH] mtk: hostapd: fix ieee802_11_rx_neg_ttlm_req robustness
+ issues
+
+fixup! mtk: hostapd: add Neg-TTLM support for AP MLD
+
+- Add a minimum length check at the start of the function to guard
+  against zero-length frames causing an integer underflow in len - 1
+- If the hapd or STA is invalid (e.g., non-MLD AP or STA), do direct
+  return instead of goto fail, which also prevent 'neg_ttlm_req' from
+  being referred before assignment.
+- Move neg_ttlm->dialog_token assignment to after the parse result
+  check, so a failed parse will not overwrite an in-progress AP-initiated
+  TTLM negotiation token
+- Remove unused tid variable
+
+Signed-off-by: Michael-CY Lee <michael-cy.lee@mediatek.com>
+---
+ src/ap/ieee802_11_eht.c | 30 ++++++++++++++++--------------
+ 1 file changed, 16 insertions(+), 14 deletions(-)
+
+diff --git a/src/ap/ieee802_11_eht.c b/src/ap/ieee802_11_eht.c
+index 7aeeff66f..fd059d1c3 100644
+--- a/src/ap/ieee802_11_eht.c
++++ b/src/ap/ieee802_11_eht.c
+@@ -3119,27 +3119,26 @@ static void ieee802_11_rx_neg_ttlm_req(struct hostapd_data *hapd, const u8 *addr
+ 	struct hostapd_data *assoc_hapd;
+ 	struct neg_ttlm_req *neg_ttlm_req;
+ 	struct ieee802_11_elems elems;
+-	struct ieee80211_neg_ttlm *neg_ttlm;
++	struct ieee80211_neg_ttlm new_ttlm;
+ 	struct sta_info *sta;
+ 	u8 direction;
+ 	u16 status_code = WLAN_STATUS_DENIED_TID_TO_LINK_MAPPING;
+-	int ret = 0, tid;
++	int ret = 0;
++
++	if (len < sizeof(struct neg_ttlm_req))
++		return;
+ 
+ 	/* TODO Check if AP MLD support Neg-TTLM */
+ 	if (!hostapd_is_mld_ap(hapd))
+-		goto fail;
++		return;
+ 
+ 	sta = ap_get_sta(hapd, addr);
+ 	if (!sta || !ap_sta_is_mld(hapd, sta))
+-		goto fail;
++		return;
+ 
+ 	sta = hostapd_ml_get_assoc_sta(hapd, sta, &assoc_hapd);
+ 	if (!sta)
+-		goto fail;
+-
+-	/* TODO check the relationship between Adv-TTLM and Neg-TTLM */
+-	if (hostapd_is_attlm_active(hapd))
+-		goto fail;
++		return;
+ 
+ 	neg_ttlm_req = (struct neg_ttlm_req *)frm;
+ 	if (ieee802_11_parse_elems(neg_ttlm_req->variable, len - 1, &elems, 1) ==
+@@ -3156,11 +3155,8 @@ static void ieee802_11_rx_neg_ttlm_req(struct hostapd_data *hapd, const u8 *addr
+ 		goto fail;
+ 	}
+ 
+-	neg_ttlm = &sta->neg_ttlm;
+ 	ret = ieee802_11_parse_neg_ttlm(hapd, elems.ttlm[0], elems.ttlm_len[0],
+-					neg_ttlm, &direction);
+-	neg_ttlm->dialog_token = neg_ttlm_req->dialog_token;
+-
++					&new_ttlm, &direction);
+ 	if (ret) {
+ 		wpa_printf(MSG_ERROR, "Invalid TTLM format");
+ 		goto fail;
+@@ -3171,6 +3167,12 @@ static void ieee802_11_rx_neg_ttlm_req(struct hostapd_data *hapd, const u8 *addr
+ 		goto fail;
+ 	}
+ 
++	/* TODO handle the overrlap between Adv-TTLM and Neg-TTLM */
++	if (hostapd_is_attlm_active(hapd))
++		goto fail;
++
++	os_memcpy(&sta->neg_ttlm, &new_ttlm, sizeof(sta->neg_ttlm));
++	sta->neg_ttlm.dialog_token = neg_ttlm_req->dialog_token;
+ 	status_code = WLAN_STATUS_SUCCESS;
+ fail:
+ 	ret = ieee802_11_send_neg_ttlm_resp(hapd, addr, neg_ttlm_req->dialog_token, status_code);
+@@ -3178,7 +3180,7 @@ fail:
+ 	if (ret) {
+ 		/* For synchronization */
+ 		ieee802_11_send_neg_ttlm_teardown(hapd, addr);
+-		os_memset(neg_ttlm, 0, sizeof(*neg_ttlm));
++		os_memset(&sta->neg_ttlm, 0, sizeof(sta->neg_ttlm));
+ 	}
+ }
+ 
+-- 
+2.45.2
+
