@@ -1,0 +1,39 @@
+From ebff0c9a0458cb4e2078f0877e470a7737b2ae16 Mon Sep 17 00:00:00 2001
+From: Michael-CY Lee <michael-cy.lee@mediatek.com>
+Date: Thu, 16 Jul 2026 11:13:46 +0800
+Subject: [PATCH] mtk: hostapd: fix potential NULL pointer access in
+ hostapd_mld_add_link()
+
+fixup! mtk: hostapd: prevent repeatly adding link to MLD
+
+Move the null check on mld before the condition that dereferences it.
+
+Signed-off-by: Michael-CY Lee <michael-cy.lee@mediatek.com>
+---
+ src/ap/hostapd.c | 6 +++---
+ 1 file changed, 3 insertions(+), 3 deletions(-)
+
+diff --git a/src/ap/hostapd.c b/src/ap/hostapd.c
+index 43ea84add..f6aa611c9 100644
+--- a/src/ap/hostapd.c
++++ b/src/ap/hostapd.c
+@@ -5977,13 +5977,13 @@ int hostapd_mld_add_link(struct hostapd_data *hapd)
+ {
+ 	struct hostapd_mld *mld = hapd->mld;
+ 
+-	if (!hapd->conf->mld_ap || (mld->valid_links & BIT(hapd->mld_link_id)))
+-		return 0;
+-
+ 	/* Should not happen */
+ 	if (!mld)
+ 		return -1;
+ 
++	if (!hapd->conf->mld_ap || (mld->valid_links & BIT(hapd->mld_link_id)))
++		return 0;
++
+ 	dl_list_add_tail(&mld->links, &hapd->link);
+ 	mld->num_links++;
+ 	mld->valid_links |= BIT(hapd->mld_link_id);
+-- 
+2.45.2
+
