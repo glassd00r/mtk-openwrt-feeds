@@ -1,0 +1,92 @@
+From c5518f752f1333101b7780d004bd4e1c58a3cfed Mon Sep 17 00:00:00 2001
+From: Michael-CY Lee <michael-cy.lee@mediatek.com>
+Date: Wed, 24 Jun 2026 14:59:56 +0800
+Subject: [PATCH] mtk: hostapd: AP MLD: refactor STA neg_ttlm.valid usage
+
+1. Set STA's neg_ttlm.valid to true when receiving TTLM response TxS.
+   Because AP configures the STA's Neg-TTLM in dirver upon receiving the
+   TTLM response TxS, neg_ttlm.valid should be set to true here.
+2. The neg-TTLM request from STA with def_link_map set to 1 will be
+   accepted, but the AP handles it like a TTLM teardown and does not set
+   neg_ttlm.valid. This is to avoid unnecessary TTLM configuration and data
+   structure maintenance.
+3. When AP receives TTLM teardown from a STA, always does tearodwn no
+   matter the neg_ttlm is valid or not.
+
+fixup: mtk: hostapd: add Neg-TTLM support for AP MLD
+
+Signed-off-by: Michael-CY Lee <michael-cy.lee@mediatek.com>
+---
+ src/ap/ieee802_11_eht.c | 28 ++++++++++++----------------
+ 1 file changed, 12 insertions(+), 16 deletions(-)
+
+diff --git a/src/ap/ieee802_11_eht.c b/src/ap/ieee802_11_eht.c
+index 829b5d7cd..e8482b77f 100644
+--- a/src/ap/ieee802_11_eht.c
++++ b/src/ap/ieee802_11_eht.c
+@@ -1945,21 +1945,23 @@ void hostapd_neg_ttlm_resp_tx_status(struct hostapd_data *hapd,
+ 	}
+ 
+ 	neg_ttlm = &assoc_sta->neg_ttlm;
+-	if (!neg_ttlm->valid) {
+-		wpa_printf(MSG_DEBUG,
+-			   "MLD: Unexpected Negotiated TTLM Request TX status");
+-		return;
+-	}
+-
+-	if (dialog_token != neg_ttlm->dialog_token) {
++	if (neg_ttlm->dialog_token != 0 && dialog_token != neg_ttlm->dialog_token) {
+ 		wpa_printf(MSG_DEBUG,
+ 			   "MLD: Negotiated TTLM session expired for %u",
+ 			   dialog_token);
+ 		return;
+ 	}
+ 
+-	if (ok && status_code == WLAN_STATUS_SUCCESS)
+-		ret = hostapd_drv_set_sta_ttlm(assoc_hapd, assoc_sta->addr, neg_ttlm);
++	if (ok && status_code == WLAN_STATUS_SUCCESS) {
++		if (!neg_ttlm->def_link_map) {
++			neg_ttlm->valid = true;
++			ret = hostapd_drv_set_sta_ttlm(assoc_hapd, assoc_sta->addr,
++						       neg_ttlm);
++		} else {
++			hostapd_teardown_neg_ttlm(assoc_hapd, assoc_sta);
++			ret = 0;
++		}
++	}
+ 
+ 	if (ret) {
+ 		ieee802_11_send_neg_ttlm_teardown(hapd, assoc_sta->addr);
+@@ -3021,12 +3023,7 @@ static int ieee802_11_parse_neg_ttlm(struct hostapd_data *hapd,
+ 	}
+ 
+ 	if (control & IEEE80211_TTLM_CONTROL_DEF_LINK_MAP) {
+-		for (tid = 0; tid < IEEE80211_TTLM_NUM_TIDS; tid++) {
+-			neg_ttlm->dlink[tid] = hapd->mld->valid_links;
+-			neg_ttlm->ulink[tid] = hapd->mld->valid_links;
+-		}
+ 		*direction = IEEE80211_TTLM_DIRECTION_BOTH;
+-		neg_ttlm->valid = true;
+ 		neg_ttlm->def_link_map = true;
+ 		return 0;
+ 	}
+@@ -3081,7 +3078,6 @@ static int ieee802_11_parse_neg_ttlm(struct hostapd_data *hapd,
+ 		ttlm_ie_len -= map_size;
+ 	}
+ 
+-	neg_ttlm->valid = true;
+ 	return 0;
+ }
+ 
+@@ -3233,7 +3229,7 @@ static void ieee802_11_rx_neg_ttlm_teardown(struct hostapd_data *hapd, const u8
+ 		return;
+ 
+ 	sta = hostapd_ml_get_assoc_sta(hapd, sta, &assoc_hapd);
+-	if (!sta || !sta->neg_ttlm.valid)
++	if (!sta)
+ 		return;
+ 
+ 	os_memset(&sta->neg_ttlm, 0, sizeof(sta->neg_ttlm));
+-- 
+2.45.2
+
