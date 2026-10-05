@@ -1,19 +1,19 @@
 diff --git a/package/kernel/mac80211/Makefile b/package/kernel/mac80211/Makefile
-index aec88b6..bd0cc20 100644
+index 52f54fc..bd0cc20 100644
 --- a/package/kernel/mac80211/Makefile
 +++ b/package/kernel/mac80211/Makefile
 @@ -10,18 +10,19 @@ include $(INCLUDE_DIR)/kernel.mk
  
  PKG_NAME:=mac80211
  
--PKG_VERSION:=6.18.39
+-PKG_VERSION:=6.18.55
 +PKG_VERSION:=6.18.7
  PKG_RELEASE:=1
  PKG_LICENSE:=GPL-2.0-only
  PKG_LICENSE_FILES:=COPYING
  
  PKG_SOURCE_URL:=https://github.com/openwrt/backports/releases/download/backports-v$(PKG_VERSION)
--PKG_HASH:=8951c1e270d7c311432377bd50951cd1d5dee2b5fedf33d30db41aa8e428aeb0
+-PKG_HASH:=ca3666d1b89a0399747fb9b9fd7b0a4d0a1568548198d800acaf7ca0e8659979
 +PKG_HASH:=623e5cf46ca8e81fd413f4f465e2580a0143e24929f9c22ce1ba7c34f2872989
  
  PKG_SOURCE:=backports-$(PKG_VERSION).tar.zst
