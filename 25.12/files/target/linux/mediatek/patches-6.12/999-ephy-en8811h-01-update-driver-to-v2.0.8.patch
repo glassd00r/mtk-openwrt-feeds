@@ -1,17 +1,16 @@
 ---
-[v2] net: phy: airoha: update EN8811H driver to v2.0.7
+[v1] net: phy: airoha: update EN8811H driver to v2.0.8
 
-Update Airoha EN8811H 2.5G Ethernet PHY driver to version 2.0.7 with
+Update Airoha EN8811H 2.5G Ethernet PHY driver to version 2.0.8 with
 bug fixes, performance improvements, and enhanced stability.
 ---
-v2: Add Kconfig option for debugfs support.
-v1: Update EN8811H driver to v2.0.7.
+v1: Update EN8811H driver to v2.0.8.
 ---
 
 From b360da2d80046d46b3ee85459164c004e7d92a74 Mon Sep 17 00:00:00 2001
 From: Mason Chang <mason-cw.chang@mediatek.com>
 Date: Fri, 9 Jan 2026 10:50:06 +0800
-Subject: [PATCH] net: phy: air_en8811h: update driver to v2.0.7
+Subject: [PATCH] net: phy: air_en8811h: update driver to v2.0.8
 
 ---
  drivers/net/phy/air_en8811h.c | 1929 ++++++++++++++++++++++++++++++++-
@@ -2166,7 +2165,7 @@ Subject: [PATCH] net: phy: air_en8811h: update driver to v2.0.7
 +
 +#define MAX_RETRY                   25
 +
-+#define EN8811H_DRIVER_VERSION  "v2.0.7"
++#define EN8811H_DRIVER_VERSION  "v2.0.8"
 +
 +
 +/***************************************************************
