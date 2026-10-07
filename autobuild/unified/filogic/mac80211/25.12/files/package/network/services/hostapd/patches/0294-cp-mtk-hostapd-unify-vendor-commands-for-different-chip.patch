@@ -1,0 +1,1160 @@
+From c8c3438d5807f5da6fdf18486cceb54b1d12a92e Mon Sep 17 00:00:00 2001
+From: Benjamin Lin <benjamin-jw.lin@mediatek.com>
+Date: Thu, 22 Jan 2026 10:53:03 +0800
+Subject: [PATCH] mtk: hostapd: unify vendor commands for different chip
+ generation
+
+This commit squashes following commits for conciseness.
+
+mtk: hostapd: prevent casting bss->ctx to hostapd_data in nl80211
+
+Since the bss->ctx might be the type of struct hostapd_data or struct
+wpa_supplicant, casting the bss->ctx to struct hostapd_data leads to
+crash if bss->ctx is actually the type of wpa_supplciant.
+
+For example, wpa_s fails mesh interface setup and crashes due to the
+casting.
+
+To prevent casting bss->ctx to hostapd_data, this commit does the
+following changes.
+
+For the following driver operations, the "radio_idx" is changed to a
+function parameter and passed by the caller:
+- configure_edcca_enable
+- configure_edcca_threshold
+- get_edcca
+- csi_set
+- csi_dump
+- dfs_tx_mode
+
+For the following driver operations, all necessary data are grouped in a
+struct named "struct wpa_driver_mu_params"
+- mu_ctrl
+- mu_dump
+
+Signed-off-by: Michael-CY Lee <michael-cy.lee@mediatek.com>
+
+mtk: hostapd: refactor muru_manual_config to unify connac2 and connac3
+
+Refactor muru_manual_config structure names to unify connac2 and connac3.
+
+Signed-off-by: Howard Hsu <howard-yh.hsu@mediatek.com>
+Signed-off-by: Benjamin Lin <benjamin-jw.lin@mediatek.com>
+
+mtk: hostapd: Update MAC address handling in vendor policies
+
+Signed-off-by: Peter Chiu <chui-hao.chiu@mediatek.com>
+
+mtk: hostapd: unify vendor command for different chip generation
+
+This patch is part of a series to unify vendor commands across chip
+generations.
+
+Integrate Wi-Fi 6 vendor commands with Wi-Fi 7/8 and use
+VENDOR_SUBCMD_ABI_CONNAC2 to split for some old Wi-Fi 6 paths.
+
+Signed-off-by: Shayne Chen <shayne.chen@mediatek.com>
+---
+ hostapd/config_file.c             |  41 ++++++-
+ hostapd/ctrl_iface.c              |  51 ++++++--
+ src/ap/ap_config.h                |   1 +
+ src/ap/ap_drv_ops.c               |  94 +++++++-------
+ src/common/mtk_vendor.h           |  45 ++++---
+ src/drivers/driver.h              |  30 +++--
+ src/drivers/driver_nl80211.c      | 196 ++++++++++++------------------
+ src/drivers/driver_nl80211.h      |   2 +
+ src/drivers/driver_nl80211_capa.c |   8 ++
+ 9 files changed, 258 insertions(+), 210 deletions(-)
+
+diff --git a/hostapd/config_file.c b/hostapd/config_file.c
+index 50bdf51ee..b55559ffa 100644
+--- a/hostapd/config_file.c
++++ b/hostapd/config_file.c
+@@ -872,6 +872,34 @@ static int hostapd_parse_intlist(int **int_list, char *val)
+ }
+ 
+ 
++/*
++ * Connac2 hostapd configurations provided thresholds for 20/40/80 MHz only.
++ * Keep accepting that form with the unified driver and leave the 160 MHz
++ * threshold unchanged in firmware.
++ */
++static int hostapd_parse_edcca_threshold(int **threshold, char *val)
++{
++	int count = 1;
++	char *pos;
++
++	for (pos = val; *pos; pos++) {
++		if (*pos == ' ')
++			count++;
++	}
++
++	if (count != 3 && count != 4)
++		return -1;
++
++	if (hostapd_parse_intlist(threshold, val))
++		return -1;
++
++	if (count == 3)
++		(*threshold)[3] = 0x7f;
++
++	return 0;
++}
++
++
+ static int hostapd_config_bss(struct hostapd_config *conf, const char *ifname)
+ {
+ 	struct hostapd_bss_config **all, *bss;
+@@ -5298,15 +5326,16 @@ static int hostapd_config_fill(struct hostapd_config *conf,
+ 		           pos, sizeof(bss->apup_peer_ifname_prefix));
+ #endif // def CONFIG_APUP
+ 	} else if (os_strcmp(buf, "edcca_threshold") == 0) {
+-		if (hostapd_parse_intlist(&conf->edcca_threshold, pos) ||
++		if (hostapd_parse_edcca_threshold(&conf->edcca_threshold, pos) ||
+ 		    conf->edcca_threshold[0] < EDCCA_MIN_CONFIG_THRES ||
+ 		    conf->edcca_threshold[0] > EDCCA_MAX_CONFIG_THRES ||
+ 		    conf->edcca_threshold[1] < EDCCA_MIN_CONFIG_THRES ||
+ 		    conf->edcca_threshold[1] > EDCCA_MAX_CONFIG_THRES ||
+ 		    conf->edcca_threshold[2] < EDCCA_MIN_CONFIG_THRES ||
+ 		    conf->edcca_threshold[2] > EDCCA_MAX_CONFIG_THRES ||
+-		    conf->edcca_threshold[3] < EDCCA_MIN_CONFIG_THRES ||
+-		    conf->edcca_threshold[3] > EDCCA_MAX_CONFIG_THRES) {
++		    (conf->edcca_threshold[3] != 0x7f &&
++		     (conf->edcca_threshold[3] < EDCCA_MIN_CONFIG_THRES ||
++		      conf->edcca_threshold[3] > EDCCA_MAX_CONFIG_THRES))) {
+ 			wpa_printf(MSG_ERROR, "Line %d: invalid edcca threshold",
+ 				   line);
+ 			return 1;
+@@ -5367,14 +5396,16 @@ static int hostapd_config_fill(struct hostapd_config *conf,
+ 		}
+ 		conf->pp_mode = (u8) val;
+ #endif /* CONFIG_IEEE80211BE */
+-	} else if (os_strcmp(buf, "lpi_psd") == 0) {
++	} else if (os_strcmp(buf, "lpi_psd") == 0 ||
++		   os_strcmp(buf, "lpi_enable") == 0) {
+ 		u8 en = strtol(pos, NULL, 10);
+ 		conf->lpi_psd = !!en;
+ 	} else if (os_strcmp(buf, "sku_idx") == 0) {
+ 		conf->sku_idx = strtol(pos, NULL, 10);
+ 	} else if (os_strcmp(buf, "lpi_sku_idx") == 0) {
+ 		conf->lpi_sku_idx = strtol(pos, NULL, 10);
+-	} else if (os_strcmp(buf, "lpi_bcn_enhance") == 0) {
++	} else if (os_strcmp(buf, "lpi_bcn_enhance") == 0 ||
++		   os_strcmp(buf, "beacon_dup") == 0) {
+ 		u8 en = strtol(pos, NULL, 10);
+ 		conf->lpi_bcn_enhance = !!en;
+ 	} else if (os_strcmp(buf, "sku_filename") == 0) {
+diff --git a/hostapd/ctrl_iface.c b/hostapd/ctrl_iface.c
+index d72dc791d..0d2183161 100644
+--- a/hostapd/ctrl_iface.c
++++ b/hostapd/ctrl_iface.c
+@@ -4969,11 +4969,11 @@ hostapd_ctrl_iface_set_mu(struct hostapd_data *hapd, char *cmd,
+ 	char *pos, *config, *value;
+ 	u8 i;
+ 	int cnt = 0, ret;
+-	u16 *val;
+-	struct connac3_muru *muru;
+-	struct connac3_muru_dl *dl;
+-	struct connac3_muru_ul *ul;
+-	struct connac3_muru_comm *comm;
++	u16 *val = NULL;
++	struct mtk_muru *muru;
++	struct mtk_muru_dl *dl;
++	struct mtk_muru_ul *ul;
++	struct mtk_muru_comm *comm;
+ 
+ 	config = cmd;
+ 	pos = os_strchr(config, ' ');
+@@ -4981,7 +4981,6 @@ hostapd_ctrl_iface_set_mu(struct hostapd_data *hapd, char *cmd,
+ 		*pos++ = '\0';
+ 
+ 	value = pos;
+-
+ 	if (os_strcmp(config, "onoff") == 0) {
+ 		cnt = hostapd_parse_argument_helper(value, &val);
+ 		if (cnt == -1)
+@@ -4997,19 +4996,52 @@ hostapd_ctrl_iface_set_mu(struct hostapd_data *hapd, char *cmd,
+ 		return os_snprintf(buf, buflen, "OK\n");
+ 	}
+ 
+-	if (hapd->iconf->muru_config == NULL)
+-		hapd->iconf->muru_config = os_zalloc(sizeof(struct connac3_muru));
++	if (hapd->iconf->muru_config == NULL) {
++		hapd->iconf->muru_config = os_zalloc(sizeof(struct mtk_muru));
++		hapd->iconf->muru_config_len = sizeof(struct mtk_muru);
++	}
+ 
+ 	muru = hapd->iconf->muru_config;
+ 	dl = &muru->dl;
+ 	ul = &muru->ul;
+ 	comm = &muru->comm;
+ 
++	if (os_strcmp(config, "ul_user_cnt") == 0 ||
++	    os_strcmp(config, "dl_user_cnt") == 0) {
++		cnt = hostapd_parse_argument_helper(value, &val);
++		if (cnt != 1 || val[0] > 255)
++			goto para_fail;
++
++		if (os_strcmp(config, "ul_user_cnt") == 0) {
++			ul->user_num = (u8) val[0];
++			comm->ppdu_format |= MURU_PPDU_HE_TRIG;
++			comm->sch_type |= MURU_OFDMA_SCH_TYPE_UL;
++			muru->cfg_ul |= host_to_le32(MURU_FIXED_UL_TOTAL_USER_CNT);
++		} else {
++			dl->user_num = (u8) val[0];
++			comm->ppdu_format |= MURU_PPDU_HE_MU;
++			comm->sch_type |= MURU_OFDMA_SCH_TYPE_DL;
++			muru->cfg_dl |= host_to_le32(MURU_FIXED_DL_TOTAL_USER_CNT);
++		}
++		muru->cfg_comm |= host_to_le32(MURU_COMM_SET);
++		os_free(val);
++
++		ret = hostapd_drv_mu_ctrl(hapd, MU_CTRL_UPDATE);
++		os_free(hapd->iconf->muru_config);
++		hapd->iconf->muru_config = NULL;
++		hapd->iconf->muru_config_len = 0;
++		if (ret)
++			goto fail;
++
++		goto out;
++	}
++
+ 	if (os_strncmp(config, "update", 6) == 0) {
+ 		ret = hostapd_drv_mu_ctrl(hapd, MU_CTRL_UPDATE);
+ 
+ 		os_free(hapd->iconf->muru_config);
+ 		hapd->iconf->muru_config = NULL;
++		hapd->iconf->muru_config_len = 0;
+ 
+ 		if (ret)
+ 			goto fail;
+@@ -5147,6 +5179,7 @@ hostapd_ctrl_iface_set_mu(struct hostapd_data *hapd, char *cmd,
+ 		goto fail;
+ 	}
+ 
++out:
+ 	return os_snprintf(buf, buflen, "OK\n");
+ 
+ para_fail:
+@@ -5715,7 +5748,7 @@ hostapd_ctrl_iface_ap_wireless(struct hostapd_data *hapd, char *cmd,
+ 	if (os_strncmp(config, "fixed_mcs", 9) == 0)
+ 		sub_cmd = MTK_VENDOR_ATTR_WIRELESS_CTRL_FIXED_MCS;
+ 	else if (os_strncmp(config, "ofdma", 5) == 0)
+-		sub_cmd = MTK_VENDOR_ATTR_WIRELESS_CTRL_FIXED_OFDMA;
++		sub_cmd = MTK_VENDOR_ATTR_WIRELESS_CTRL_OFDMA;
+ 	else if (os_strncmp(config, "ppdu_type", 9) == 0)
+ 		sub_cmd = MTK_VENDOR_ATTR_WIRELESS_CTRL_PPDU_TX_TYPE;
+ 	else if (os_strncmp(config, "nusers_ofdma", 12) == 0)
+diff --git a/src/ap/ap_config.h b/src/ap/ap_config.h
+index 71b21baa2..bb839f6ca 100644
+--- a/src/ap/ap_config.h
++++ b/src/ap/ap_config.h
+@@ -1368,6 +1368,7 @@ struct hostapd_config {
+ 	u8 dfs_detect_mode;
+ 	u8 amsdu;
+ 	void *muru_config;
++	size_t muru_config_len;
+ 	u8 pp_mode;
+ 	u8 lpi_psd;
+ 	s8 sku_idx;
+diff --git a/src/ap/ap_drv_ops.c b/src/ap/ap_drv_ops.c
+index 6fff40ed6..44975eee0 100644
+--- a/src/ap/ap_drv_ops.c
++++ b/src/ap/ap_drv_ops.c
+@@ -1512,17 +1512,15 @@ int hostapd_remove_pmkid(struct hostapd_data *hapd, const u8 *sta_addr,
+ 
+ int hostapd_drv_configure_edcca_enable(struct hostapd_data *hapd)
+ {
+-	s8 link_id = -1;
++	u8 radio_idx = 0;
+ 
+ 	if (!hapd->driver || !hapd->driver->configure_edcca_enable)
+ 		return 0;
+ 
+-#ifdef CONFIG_IEEE80211BE
+-	if (hapd->conf->mld_ap)
+-		link_id = hapd->mld_link_id;
+-#endif /* CONFIG_IEEE80211BE */
++	if (hapd->iface->current_hw_info)
++		radio_idx = hapd->iface->current_hw_info->hw_idx;
+ 
+-	return hapd->driver->configure_edcca_enable(hapd->drv_priv, link_id,
++	return hapd->driver->configure_edcca_enable(hapd->drv_priv, radio_idx,
+ 						    hapd->iconf->edcca_enable,
+ 						    hapd->iconf->edcca_compensation);
+ }
+@@ -1531,63 +1529,67 @@ int hostapd_drv_configure_edcca_enable(struct hostapd_data *hapd)
+ int hostapd_drv_configure_edcca_threshold(struct hostapd_data *hapd,
+ 					  const int *threshold)
+ {
+-	s8 link_id = -1;
++	u8 radio_idx = 0;
+ 
+ 	if (!hapd->driver || !hapd->driver->configure_edcca_threshold)
+ 		return 0;
+ 
+-#ifdef CONFIG_IEEE80211BE
+-	if (hapd->conf->mld_ap)
+-		link_id = hapd->mld_link_id;
+-#endif /* CONFIG_IEEE80211BE */
++	if (hapd->iface->current_hw_info)
++		radio_idx = hapd->iface->current_hw_info->hw_idx;
+ 
+-	return hapd->driver->configure_edcca_threshold(hapd->drv_priv, link_id, threshold);
++	return hapd->driver->configure_edcca_threshold(hapd->drv_priv, radio_idx,
++						       threshold);
+ }
+ 
+ 
+ int hostapd_drv_get_edcca(struct hostapd_data *hapd, const u8 mode, u8 *value)
+ {
+-	s8 link_id = -1;
++	u8 radio_idx = 0;
+ 
+ 	if (!hapd->driver || !hapd->driver->get_edcca)
+ 		return 0;
+ 
+-#ifdef CONFIG_IEEE80211BE
+-	if (hapd->conf->mld_ap)
+-		link_id = hapd->mld_link_id;
+-#endif /* CONFIG_IEEE80211BE */
++	if (hapd->iface->current_hw_info)
++		radio_idx = hapd->iface->current_hw_info->hw_idx;
+ 
+-	return hapd->driver->get_edcca(hapd->drv_priv, link_id, mode, value);
++	return hapd->driver->get_edcca(hapd->drv_priv, radio_idx, mode, value);
+ }
+ 
+ int hostapd_drv_mu_ctrl(struct hostapd_data *hapd, u8 mode)
+ {
+-	s8 link_id = -1;
++	struct wpa_driver_mu_params params;
++	u8 radio_idx = 0;
++	int ret;
+ 
+ 	if (!hapd->driver || !hapd->driver->mu_ctrl)
+ 		return 0;
+ 
+-#ifdef CONFIG_IEEE80211BE
+-	if (hapd->conf->mld_ap)
+-		link_id = hapd->mld_link_id;
+-#endif /* CONFIG_IEEE80211BE */
++	if (hapd->iface->current_hw_info)
++		radio_idx = hapd->iface->current_hw_info->hw_idx;
++
++	os_memset(&params, 0, sizeof(params));
++	params.mode = mode;
++	params.mu_onoff = hapd->iconf->mu_onoff;
++	params.muru_config = os_zalloc(hapd->iconf->muru_config_len);
++	os_memcpy(params.muru_config, hapd->iconf->muru_config, hapd->iconf->muru_config_len);
+ 
+-	return hapd->driver->mu_ctrl(hapd->drv_priv, mode, link_id);
++	ret = hapd->driver->mu_ctrl(hapd->drv_priv, radio_idx, &params);
++
++	os_free(params.muru_config);
++	return ret;
+ }
+ 
+ int hostapd_drv_mu_dump(struct hostapd_data *hapd, u8 *mu_onoff)
+ {
+-	s8 link_id = -1;
++	u8 radio_idx = 0;
+ 
+ 	if (!hapd->driver || !hapd->driver->mu_dump)
+ 		return 0;
+ 
+-#ifdef CONFIG_IEEE80211BE
+-	if (hapd->conf->mld_ap)
+-		link_id = hapd->mld_link_id;
+-#endif /* CONFIG_IEEE80211BE */
++	if (hapd->iface->current_hw_info)
++		radio_idx = hapd->iface->current_hw_info->hw_idx;
+ 
+-	return hapd->driver->mu_dump(hapd->drv_priv, mu_onoff, link_id);
++	return hapd->driver->mu_dump(hapd->drv_priv, radio_idx, mu_onoff);
+ }
+ 
+ static void hostapd_update_three_wire_ctrl(struct hostapd_data *hapd)
+@@ -1891,32 +1893,29 @@ int hostapd_drv_set_epcs(struct hostapd_data *hapd, struct epcs_entry *entry,
+ 
+ int hostapd_drv_csi_set(struct hostapd_data *hapd, u8 mode, u8 cfg, u8 v1, u32 v2, u8 *mac)
+ {
+-	s8 link_id = -1;
++	u8 radio_idx = 0;
+ 
+ 	if (!hapd->driver || !hapd->driver->csi_set)
+ 		return 0;
+ 
+-#ifdef CONFIG_IEEE80211BE
+-	if (hapd->conf->mld_ap)
+-		link_id = hapd->mld_link_id;
+-#endif /* CONFIG_IEEE80211BE */
++	if (hapd->iface->current_hw_info)
++		radio_idx = hapd->iface->current_hw_info->hw_idx;
+ 
+-	return hapd->driver->csi_set(hapd->drv_priv, link_id, mode, cfg, v1, v2, mac);
++	return hapd->driver->csi_set(hapd->drv_priv, radio_idx, mode, cfg,
++				     v1, v2, mac);
+ }
+ 
+ int hostapd_drv_csi_dump(struct hostapd_data *hapd, void *dump_buf)
+ {
+-	s8 link_id = -1;
++	u8 radio_idx = 0;
+ 
+ 	if (!hapd->driver || !hapd->driver->csi_dump)
+ 		return 0;
+ 
+-#ifdef CONFIG_IEEE80211BE
+-	if (hapd->conf->mld_ap)
+-		link_id = hapd->mld_link_id;
+-#endif /* CONFIG_IEEE80211BE */
++	if (hapd->iface->current_hw_info)
++		radio_idx = hapd->iface->current_hw_info->hw_idx;
+ 
+-	return hapd->driver->csi_dump(hapd->drv_priv, link_id, dump_buf);
++	return hapd->driver->csi_dump(hapd->drv_priv, radio_idx, dump_buf);
+ }
+ 
+ #ifdef CONFIG_IEEE80211BE
+@@ -1930,16 +1929,13 @@ int hostapd_drv_set_scs(struct hostapd_data *hapd, struct hostapd_scs_desc_info
+ 
+ int hostapd_drv_dfs_tx_mode(struct hostapd_data *hapd, u8 dfs_tx_mode)
+ {
+-	s8 link_id = -1;
++	u8 radio_idx = 0;
+ 
+ 	if (!hapd->driver || !hapd->driver->dfs_tx_mode)
+ 		return 0;
+ 
+-#ifdef CONFIG_IEEE80211BE
+-	if (hapd->conf->mld_ap)
+-		link_id = hapd->mld_link_id;
+-#endif /* CONFIG_IEEE80211BE */
++	if (hapd->iface->current_hw_info)
++		radio_idx = hapd->iface->current_hw_info->hw_idx;
+ 
+-	return hapd->driver->dfs_tx_mode(hapd->drv_priv, link_id,
+-					 dfs_tx_mode);
++	return hapd->driver->dfs_tx_mode(hapd->drv_priv, radio_idx, dfs_tx_mode);
+ }
+diff --git a/src/common/mtk_vendor.h b/src/common/mtk_vendor.h
+index 37d9c5923..0b1ab2b4b 100644
+--- a/src/common/mtk_vendor.h
++++ b/src/common/mtk_vendor.h
+@@ -11,7 +11,7 @@ enum mtk_nl80211_vendor_subcmds {
+ 	MTK_NL80211_VENDOR_SUBCMD_RFEATURE_CTRL = 0xc3,
+ 	MTK_NL80211_VENDOR_SUBCMD_WIRELESS_CTRL = 0xc4,
+ 	MTK_NL80211_VENDOR_SUBCMD_MU_CTRL = 0xc5,
+-	MTK_NL80211_VENDOR_SUBCMD_PHY_CAPA_CTRL= 0xc6,
++	MTK_NL80211_VENDOR_SUBCMD_PHY_CAPA_CTRL = 0xc6,
+ 	MTK_NL80211_VENDOR_SUBCMD_EDCCA_CTRL = 0xc7,
+ 	MTK_NL80211_VENDOR_SUBCMD_3WIRE_CTRL = 0xc8,
+ 	MTK_NL80211_VENDOR_SUBCMD_IBF_CTRL = 0xc9,
+@@ -23,6 +23,7 @@ enum mtk_nl80211_vendor_subcmds {
+ 	MTK_NL80211_VENDOR_SUBCMD_SCS_CTRL = 0xd0,
+ 	MTK_NL80211_VENDOR_SUBCMD_EPCS_CTRL = 0xd4,
+ 	MTK_NL80211_VENDOR_SUBCMD_DFS_TX_CTRL = 0xd5,
++	MTK_NL80211_VENDOR_SUBCMD_ABI_CONNAC2 = 0xd6,
+ };
+ 
+ enum mtk_vendor_element_id {
+@@ -30,7 +31,7 @@ enum mtk_vendor_element_id {
+ 	MTK_VENDOR_ELEM_256QAM = 8,
+ };
+ 
+-enum mtk_nl80211_vendor_subevents {
++enum mtk_nl80211_vendor_events {
+ 	MTK_NL80211_VENDOR_EVENT_PP_BMP_UPDATE = 0x5,
+ };
+ 
+@@ -172,12 +173,13 @@ enum mtk_vendor_attr_wireless_ctrl {
+ 	MTK_VENDOR_ATTR_WIRELESS_CTRL_UNSPEC,
+ 
+ 	MTK_VENDOR_ATTR_WIRELESS_CTRL_FIXED_MCS,
+-	MTK_VENDOR_ATTR_WIRELESS_CTRL_FIXED_OFDMA,
++	MTK_VENDOR_ATTR_WIRELESS_CTRL_OFDMA,
+ 	MTK_VENDOR_ATTR_WIRELESS_CTRL_PPDU_TX_TYPE,
+ 	MTK_VENDOR_ATTR_WIRELESS_CTRL_NUSERS_OFDMA,
+ 	MTK_VENDOR_ATTR_WIRELESS_CTRL_BA_BUFFER_SIZE,
+ 	MTK_VENDOR_ATTR_WIRELESS_CTRL_MIMO,
+ 	MTK_VENDOR_ATTR_WIRELESS_CTRL_AMSDU,
++	MTK_VENDOR_ATTR_WIRELESS_CTRL_AMPDU,
+ 	MTK_VENDOR_ATTR_WIRELESS_CTRL_CERT = 9,
+ 	MTK_VENDOR_ATTR_WIRELESS_CTRL_RTS_SIGTA,
+ 	MTK_VENDOR_ATTR_WIRELESS_CTRL_MU_EDCA,
+@@ -238,6 +240,9 @@ enum mtk_vendor_attr_mu_ctrl {
+ 		NUM_MTK_VENDOR_ATTRS_MU_CTRL - 1
+ };
+ 
++#define MTK_VENDOR_ATTR_MU_CTRL_OFDMA_MODE	MTK_VENDOR_ATTR_MU_CTRL_STRUCT
++#define MTK_VENDOR_ATTR_MU_CTRL_OFDMA_VAL	MTK_VENDOR_ATTR_MU_CTRL_RADIO_IDX
++
+ enum mtk_vendor_attr_ibf_ctrl {
+ 	MTK_VENDOR_ATTR_IBF_CTRL_UNSPEC,
+ 
+@@ -367,12 +372,7 @@ enum mtk_vendor_attr_dfs_tx_ctrl {
+ 		NUM_MTK_VENDOR_ATTRS_DFS_TX_CTRL - 1
+ };
+ 
+-#define CSI_BW20_DATA_COUNT	64
+-#define CSI_BW40_DATA_COUNT	128
+-#define CSI_BW80_DATA_COUNT	256
+-#define CSI_BW160_DATA_COUNT	512
+ #define CSI_BW320_DATA_COUNT	1024
+-#define ETH_ALEN 6
+ 
+ struct csi_data {
+ 	u8 ch_bw;
+@@ -422,7 +422,18 @@ enum {
+ 	MU_CTRL_ONOFF,
+ };
+ 
+-struct connac3_muru_comm {
++/*
++ * Connac2 (Wi-Fi 6) used these values in the same netlink attribute slots
++ * that Connac3 later assigned to MU_CTRL_STRUCT and MU_CTRL_RADIO_IDX.
++ * Keep them explicit instead of using the Connac3 enum names: the payload
++ * formats are different even though the numeric attribute IDs are shared.
++ */
++enum mtk_legacy_mu_ctrl_mode {
++	MTK_LEGACY_MU_CTRL_DL_USER_CNT = 1,
++	MTK_LEGACY_MU_CTRL_UL_USER_CNT = 2,
++};
++
++struct mtk_muru_comm {
+ 	u8 pda_pol;
+ 	u8 band;
+ 	u8 spe_idx;
+@@ -435,7 +446,7 @@ struct connac3_muru_comm {
+ 	u8 _rsv[3];
+ };
+ 
+-struct connac3_muru_dl {
++struct mtk_muru_dl {
+ 	u8 user_num;
+ 	u8 tx_mode;
+ 	u8 bw;
+@@ -481,7 +492,7 @@ struct connac3_muru_dl {
+ 	} usr[16];
+ };
+ 
+-struct connac3_muru_ul {
++struct mtk_muru_ul {
+ 	u8 user_num;
+ 	u8 tx_mode;
+ 
+@@ -522,22 +533,22 @@ struct connac3_muru_ul {
+ 	} usr[16];
+ };
+ 
+-struct connac3_muru_dbg {
++struct mtk_muru_dbg {
+ 	/* HE TB RX Debug */
+ 	le32 rx_hetb_nonsf_en_bitmap;
+ 	le32 rx_hetb_cfg[2];
+ };
+ 
+-struct connac3_muru {
++struct mtk_muru {
+ 	le32 cfg_comm;
+ 	le32 cfg_dl;
+ 	le32 cfg_ul;
+ 	le32 cfg_dbg;
+ 
+-	struct connac3_muru_comm comm;
+-	struct connac3_muru_dl dl;
+-	struct connac3_muru_ul ul;
+-	struct connac3_muru_dbg dbg;
++	struct mtk_muru_comm comm;
++	struct mtk_muru_dl dl;
++	struct mtk_muru_ul ul;
++	struct mtk_muru_dbg dbg;
+ };
+ 
+ #define MURU_OFDMA_SCH_TYPE_DL	BIT(0)
+diff --git a/src/drivers/driver.h b/src/drivers/driver.h
+index a3f498c1b..59259f804 100644
+--- a/src/drivers/driver.h
++++ b/src/drivers/driver.h
+@@ -3318,6 +3318,12 @@ struct driver_sta_mlo_info {
+ 	} links[MAX_NUM_MLD_LINKS];
+ };
+ 
++struct wpa_driver_mu_params {
++	u8 mode;
++	u8 mu_onoff;
++	void *muru_config;
++};
++
+ /**
+  * struct nan_band_config - NAN band specific configuration
+  *
+@@ -5778,18 +5784,19 @@ struct wpa_driver_ops {
+ 	void (*nan_stop)(void *priv);
+ #endif /* CONFIG_NAN */
+ 
+-	int (*configure_edcca_enable)(void *priv, s8 link_id, const u8 edcca_enable,
++	int (*configure_edcca_enable)(void *priv, u8 radio_idx, const u8 edcca_enable,
+ 				      const s8 edcca_compensation);
+-	int (*configure_edcca_threshold)(void *priv, s8 link_id, const int *threshold);
+-	int (*get_edcca)(void *priv, s8 link_id, const u8 mode, u8 *value);
++	int (*configure_edcca_threshold)(void *priv, u8 radio_idx,
++					 const int *threshold);
++	int (*get_edcca)(void *priv, u8 radio_idx, const u8 mode, u8 *value);
+ 
+ 	/**
+ 	 * mu_ctrl - ctrl for UL/DL MURU
+ 	 * @priv: Private driver interface data
+ 	 *
+ 	 */
+-	 int (*mu_ctrl)(void *priv, u8 mode, s8 link_id);
+-	 int (*mu_dump)(void *priv, u8 *mu_onoff, s8 link_id);
++	 int (*mu_ctrl)(void *priv, u8 radio_idx, struct wpa_driver_mu_params *params);
++	 int (*mu_dump)(void *priv, u8 radio_idx, u8 *mu_onoff);
+ 
+ 	/**
+ 	 * beacon_ctrl - ctrl on off for beacon
+@@ -5918,21 +5925,22 @@ struct wpa_driver_ops {
+ 	/**
+ 	 * csi_set - Set csi related mode and parameter
+ 	 * @priv: Private driver interface data
+-	 * @link_id: MLD link id. -1 if this is an non-MLD AP
++	 * @radio_idx: Radio index
+ 	 * @mode: Csi mode parameter
+ 	 * @cfg: Csi config parameter
+ 	 * @v1: Value1
+ 	 * @v2: Value2
+ 	 * @mac: Station mac for station filter
+ 	 */
+-	int (*csi_set)(void *priv, s8 link_id, u8 mode, u8 cfg, u8 v1, u32 v2, u8 *mac);
++	int (*csi_set)(void *priv, u8 radio_idx, u8 mode, u8 cfg,
++		       u8 v1, u32 v2, u8 *mac);
+ 	/**
+ 	* csi_dump - Dump csi data to json file
+ 	* @priv: Private driver interface data
+-	* @link_id: MLD link id. -1 if this is an non-MLD AP
++	* @radio_idx: Radio index
+ 	* @dump_buf: Dump_struct that store csi data and related info
+ 	*/
+-	int (*csi_dump)(void *priv, s8 link_id, void *dump_buf);
++	int (*csi_dump)(void *priv, u8 radio_idx, void *dump_buf);
+ 	/**
+ 	* txpower_ctrl - ctrl txpower operation
+ 	* @priv: Private driver interface data
+@@ -5957,10 +5965,10 @@ struct wpa_driver_ops {
+ 	/**
+ 	 * dfs_tx_mode - set dfs tx mode
+ 	 * @priv: Private driver interface data
+-	 * @link_id: MLD link id. -1 if this is an non-MLD AP
++	 * @radio_idx: Radio index
+ 	 * @dfs_tx_mode: dfs tx mode
+ 	 */
+-	int (*dfs_tx_mode)(void *priv, s8 link_id, u8 dfs_tx_mode);
++	int (*dfs_tx_mode)(void *priv, u8 radio_idx, u8 dfs_tx_mode);
+ };
+ 
+ /**
+diff --git a/src/drivers/driver_nl80211.c b/src/drivers/driver_nl80211.c
+index 1162d154c..3614f82f7 100644
+--- a/src/drivers/driver_nl80211.c
++++ b/src/drivers/driver_nl80211.c
+@@ -143,7 +143,7 @@ rfeature_ctrl_policy[NUM_MTK_VENDOR_ATTRS_RFEATURE_CTRL] = {
+ static const struct nla_policy
+ wireless_ctrl_policy[NUM_MTK_VENDOR_ATTRS_WIRELESS_CTRL] = {
+ 	[MTK_VENDOR_ATTR_WIRELESS_CTRL_FIXED_MCS] = {.type = NLA_U8 },
+-	[MTK_VENDOR_ATTR_WIRELESS_CTRL_FIXED_OFDMA] = {.type = NLA_U8 },
++	[MTK_VENDOR_ATTR_WIRELESS_CTRL_OFDMA] = {.type = NLA_U8 },
+ 	[MTK_VENDOR_ATTR_WIRELESS_CTRL_PPDU_TX_TYPE] = {.type = NLA_U8 },
+ 	[MTK_VENDOR_ATTR_WIRELESS_CTRL_NUSERS_OFDMA] = {.type = NLA_U8 },
+ 	[MTK_VENDOR_ATTR_WIRELESS_CTRL_MIMO] = {.type = NLA_U8 },
+@@ -181,7 +181,9 @@ static struct nla_policy csi_ctrl_policy[NUM_MTK_VENDOR_ATTRS_CSI_CTRL] = {
+ 	[MTK_VENDOR_ATTR_CSI_CTRL_CFG_TYPE] = { .type = NLA_U8 },
+ 	[MTK_VENDOR_ATTR_CSI_CTRL_CFG_VAL1] = { .type = NLA_U8 },
+ 	[MTK_VENDOR_ATTR_CSI_CTRL_CFG_VAL2] = { .type = NLA_U32 },
+-	[MTK_VENDOR_ATTR_CSI_CTRL_MAC_ADDR] = { .type = NLA_NESTED },
++	[MTK_VENDOR_ATTR_CSI_CTRL_MAC_ADDR] = { .type = NLA_BINARY,
++						.minlen = ETH_ALEN,
++						.maxlen = ETH_ALEN },
+ 	[MTK_VENDOR_ATTR_CSI_CTRL_DUMP_NUM] = { .type = NLA_U16 },
+ 	[MTK_VENDOR_ATTR_CSI_CTRL_DATA] = { .type = NLA_NESTED },
+ };
+@@ -193,7 +195,9 @@ static struct nla_policy csi_data_policy[NUM_MTK_VENDOR_ATTRS_CSI_DATA] = {
+ 	[MTK_VENDOR_ATTR_CSI_DATA_SNR] = { .type = NLA_U8 },
+ 	[MTK_VENDOR_ATTR_CSI_DATA_BW] = { .type = NLA_U8 },
+ 	[MTK_VENDOR_ATTR_CSI_DATA_CH_IDX] = { .type = NLA_U8 },
+-	[MTK_VENDOR_ATTR_CSI_DATA_TA] = { .type = NLA_NESTED },
++	[MTK_VENDOR_ATTR_CSI_DATA_TA] = { .type = NLA_BINARY,
++					  .minlen = ETH_ALEN,
++					  .maxlen = ETH_ALEN },
+ 	[MTK_VENDOR_ATTR_CSI_DATA_NUM] = { .type = NLA_U32 },
+ 	[MTK_VENDOR_ATTR_CSI_DATA_I] = { .type = NLA_NESTED },
+ 	[MTK_VENDOR_ATTR_CSI_DATA_Q] = { .type = NLA_NESTED },
+@@ -15533,17 +15537,14 @@ fail:
+ 
+ 
+ #ifdef CONFIG_IEEE80211AX
+-static int nl80211_mu_ctrl(void *priv, u8 mode, s8 link_id)
++static int
++nl80211_mu_ctrl(void *priv, u8 radio_idx, struct wpa_driver_mu_params *params)
+ {
+ 	struct i802_bss *bss = priv;
+ 	struct wpa_driver_nl80211_data *drv = bss->drv;
+-	struct i802_link *link = nl80211_get_link(bss, link_id);
+-	struct hostapd_data *hapd = bss->ctx;
+-	struct hostapd_config *cfg;
+ 	struct nl_msg *msg;
+ 	struct nlattr *data;
+ 	int ret = -ENOBUFS;
+-	u8 radio_idx = 0;
+ 
+ 	if (!drv->mtk_mu_vendor_cmd_avail) {
+ 		wpa_printf(MSG_INFO,
+@@ -15551,33 +15552,50 @@ static int nl80211_mu_ctrl(void *priv, u8 mode, s8 link_id)
+ 		return 0;
+ 	}
+ 
+-	if (link && link->ctx)
+-		hapd = link->ctx;
+-
+-	cfg = hapd->iconf;
+-
+ 	if (!(msg = nl80211_bss_msg(bss, 0, NL80211_CMD_VENDOR)) ||
+ 		nla_put_u32(msg, NL80211_ATTR_VENDOR_ID, OUI_MTK) ||
+ 		nla_put_u32(msg, NL80211_ATTR_VENDOR_SUBCMD, MTK_NL80211_VENDOR_SUBCMD_MU_CTRL) ||
+ 		!(data = nla_nest_start(msg, NL80211_ATTR_VENDOR_DATA)))
+ 		goto fail;
+ 
+-	switch (mode) {
++	switch (params->mode) {
+ 	case MU_CTRL_ONOFF:
+-		if (hapd->iface->current_hw_info)
+-			radio_idx = hapd->iface->current_hw_info->hw_idx;
+-
+-		if (nla_put_u8(msg, MTK_VENDOR_ATTR_MU_CTRL_ONOFF, cfg->mu_onoff) ||
++		if (nla_put_u8(msg, MTK_VENDOR_ATTR_MU_CTRL_ONOFF, params->mu_onoff) ||
+ 		    nla_put_u8(msg, MTK_VENDOR_ATTR_MU_CTRL_RADIO_IDX, radio_idx))
+ 			goto fail;
+ 		break;
+ 	case MU_CTRL_UPDATE:
++		if (drv->mtk_vendor_connac_version == 2) {
++			const struct mtk_muru *muru = params->muru_config;
++			u8 legacy_mode, user_num;
++
++			/* Connac2 only implements the two user-count controls. */
++			if (muru->cfg_dl & host_to_le32(MURU_FIXED_DL_TOTAL_USER_CNT)) {
++				legacy_mode = MTK_LEGACY_MU_CTRL_DL_USER_CNT;
++				user_num = muru->dl.user_num;
++			} else if (muru->cfg_ul &
++				   host_to_le32(MURU_FIXED_UL_TOTAL_USER_CNT)) {
++				legacy_mode = MTK_LEGACY_MU_CTRL_UL_USER_CNT;
++				user_num = muru->ul.user_num;
++			} else {
++				wpa_printf(MSG_ERROR,
++					   "nl80211: legacy MU only supports DL/UL user count");
++				ret = -EOPNOTSUPP;
++				goto fail;
++			}
++
++			if (nla_put_u8(msg, MTK_VENDOR_ATTR_MU_CTRL_OFDMA_MODE,
++				       legacy_mode) ||
++			    nla_put_u8(msg, MTK_VENDOR_ATTR_MU_CTRL_OFDMA_VAL, user_num))
++				goto fail;
++			break;
++		}
+ 		if (nla_put(msg, MTK_VENDOR_ATTR_MU_CTRL_STRUCT,
+-			    sizeof(struct connac3_muru), cfg->muru_config))
++			    sizeof(struct mtk_muru), params->muru_config))
+ 			goto fail;
+ 		break;
+ 	default:
+-		wpa_printf(MSG_ERROR, "nl80211: Wrong mu mode %u!", mode);
++		wpa_printf(MSG_ERROR, "nl80211: Wrong mu mode %u!", params->mode);
+ 		ret = -EINVAL;
+ 		goto fail;
+ 	}
+@@ -15632,16 +15650,13 @@ static int mu_dump_handler(struct nl_msg *msg, void *arg)
+ 	return 0;
+ }
+ 
+-static int nl80211_mu_dump(void *priv, u8 *mu_onoff, s8 link_id)
++static int nl80211_mu_dump(void *priv, u8 radio_idx, u8 *mu_onoff)
+ {
+ 	struct i802_bss *bss = priv;
+ 	struct wpa_driver_nl80211_data *drv = bss->drv;
+-	struct i802_link *link = nl80211_get_link(bss, link_id);
+-	struct hostapd_data *hapd = bss->ctx;
+ 	struct nl_msg *msg;
+ 	struct nlattr *attr;
+ 	int ret;
+-	u8 radio_idx = 0;
+ 
+ 	if (!drv->mtk_mu_vendor_cmd_avail) {
+ 		wpa_printf(MSG_INFO,
+@@ -15649,12 +15664,6 @@ static int nl80211_mu_dump(void *priv, u8 *mu_onoff, s8 link_id)
+ 		return 0;
+ 	}
+ 
+-	if (link && link->ctx)
+-		hapd = link->ctx;
+-
+-	if (hapd->iface->current_hw_info)
+-		radio_idx = hapd->iface->current_hw_info->hw_idx;
+-
+ 	if (!(msg = nl80211_bss_msg(bss, NLM_F_DUMP, NL80211_CMD_VENDOR)) ||
+ 		nla_put_u32(msg, NL80211_ATTR_VENDOR_ID, OUI_MTK) ||
+ 		nla_put_u32(msg, NL80211_ATTR_VENDOR_SUBCMD, MTK_NL80211_VENDOR_SUBCMD_MU_CTRL) ||
+@@ -16070,17 +16079,14 @@ static int testing_nl80211_radio_disable(void *priv, int disabled)
+ 
+ #endif /* CONFIG_TESTING_OPTIONS */
+ 
+-static int nl80211_configure_edcca_enable(void *priv, s8 link_id,
+-					  const u8 edcca_enable,
+-					  const s8 edcca_compensation)
++static int
++nl80211_configure_edcca_enable(void *priv, u8 radio_idx, const u8 edcca_enable,
++			       const s8 edcca_compensation)
+ {
+ 	struct i802_bss *bss = priv;
+ 	struct wpa_driver_nl80211_data *drv = bss->drv;
+-	struct i802_link *link = nl80211_get_link(bss, link_id);
+-	struct hostapd_data *hapd = bss->ctx;
+ 	struct nl_msg *msg;
+ 	struct nlattr *data;
+-	u8 radio_idx = 0;
+ 	int ret;
+ 
+ 	if (!drv->mtk_edcca_vendor_cmd_avail) {
+@@ -16089,12 +16095,6 @@ static int nl80211_configure_edcca_enable(void *priv, s8 link_id,
+ 		return 0;
+ 	}
+ 
+-	if (link && link->ctx)
+-		hapd = link->ctx;
+-
+-	if (hapd->iface->current_hw_info)
+-		radio_idx = hapd->iface->current_hw_info->hw_idx;
+-
+ 	if (!(msg = nl80211_drv_msg(drv, 0, NL80211_CMD_VENDOR)) ||
+ 	    nla_put_u32(msg, NL80211_ATTR_VENDOR_ID, OUI_MTK) ||
+ 	    nla_put_u32(msg, NL80211_ATTR_VENDOR_SUBCMD,
+@@ -16117,15 +16117,13 @@ static int nl80211_configure_edcca_enable(void *priv, s8 link_id,
+ 	return ret;
+ }
+ 
+-static int nl80211_configure_edcca_threshold(void *priv, s8 link_id, const int *threshold)
++static int
++nl80211_configure_edcca_threshold(void *priv, u8 radio_idx, const int *threshold)
+ {
+ 	struct i802_bss *bss = priv;
+ 	struct wpa_driver_nl80211_data *drv = bss->drv;
+-	struct i802_link *link = nl80211_get_link(bss, link_id);
+-	struct hostapd_data *hapd = bss->ctx;
+ 	struct nl_msg *msg;
+ 	struct nlattr *data;
+-	u8 radio_idx = 0;
+ 	int ret;
+ 
+ 	if (!drv->mtk_edcca_vendor_cmd_avail) {
+@@ -16140,12 +16138,6 @@ static int nl80211_configure_edcca_threshold(void *priv, s8 link_id, const int *
+ 		return 0;
+ 	}
+ 
+-	if (link && link->ctx)
+-		hapd = link->ctx;
+-
+-	if (hapd->iface->current_hw_info)
+-		radio_idx = hapd->iface->current_hw_info->hw_idx;
+-
+ 	if (!(msg = nl80211_drv_msg(drv, 0, NL80211_CMD_VENDOR)) ||
+ 	    nla_put_u32(msg, NL80211_ATTR_VENDOR_ID, OUI_MTK) ||
+ 	    nla_put_u32(msg, NL80211_ATTR_VENDOR_SUBCMD,
+@@ -16214,25 +16206,19 @@ static int edcca_info_handler(struct nl_msg *msg, void *arg)
+ 	*info++ = nla_get_u8(attr);
+ 
+ 	attr = tb_vendor[MTK_VENDOR_ATTR_EDCCA_DUMP_SEC160_VAL];
+-	if (!attr) {
+-		wpa_printf(MSG_ERROR, "nl80211: MTK_VENDOR_ATTR_EDCCA_DUMP_SEC160_VAL");
+-		return NL_SKIP;
+-	}
+-
+-	*info = nla_get_u8(attr);
++	/* Connac2 returns only 20/40/80 MHz thresholds. */
++	*info = attr ? nla_get_u8(attr) : 0x7f;
+ 	return NL_SKIP;
+ }
+ 
+ 
+-static int nl80211_get_edcca(void *priv, s8 link_id, const u8 mode, u8 *value)
++static int
++nl80211_get_edcca(void *priv, u8 radio_idx, const u8 mode, u8 *value)
+ {
+ 	struct i802_bss *bss = priv;
+ 	struct wpa_driver_nl80211_data *drv = bss->drv;
+-	struct i802_link *link = nl80211_get_link(bss, link_id);
+-	struct hostapd_data *hapd = bss->ctx;
+ 	struct nl_msg *msg;
+ 	struct nlattr *data;
+-	u8 radio_idx = 0;
+ 	int ret;
+ 
+ 	if (!drv->mtk_edcca_vendor_cmd_avail) {
+@@ -16241,12 +16227,6 @@ static int nl80211_get_edcca(void *priv, s8 link_id, const u8 mode, u8 *value)
+ 		return 0;
+ 	}
+ 
+-	if (link && link->ctx)
+-		hapd = link->ctx;
+-
+-	if (hapd->iface->current_hw_info)
+-		radio_idx = hapd->iface->current_hw_info->hw_idx;
+-
+ 	if (!(msg = nl80211_drv_msg(drv, NLM_F_DUMP, NL80211_CMD_VENDOR)) ||
+ 	    nla_put_u32(msg, NL80211_ATTR_VENDOR_ID, OUI_MTK) ||
+ 	    nla_put_u32(msg, NL80211_ATTR_VENDOR_SUBCMD,
+@@ -17077,7 +17057,8 @@ nl80211_amnt_dump(void *priv, u8 amnt_idx, u8 *dump_buf, s8 link_id)
+ 	if (!data)
+ 		goto fail;
+ 
+-	nla_put_u8(msg, MTK_VENDOR_ATTR_AMNT_CTRL_LINK_ID, link_id);
++	if (nla_put_u8(msg, MTK_VENDOR_ATTR_AMNT_CTRL_LINK_ID, link_id))
++		goto fail;
+ 	tb1 = nla_nest_start(msg, MTK_VENDOR_ATTR_AMNT_CTRL_DUMP | NLA_F_NESTED);
+ 	if (!tb1)
+ 		goto fail;
+@@ -17288,17 +17269,14 @@ fail:
+ #endif
+ 
+ static int
+-nl80211_csi_set(void *priv, s8 link_id, u8 mode, u8 cfg, u8 v1, u32 v2, u8 *mac)
++nl80211_csi_set(void *priv, u8 radio_idx, u8 mode, u8 cfg, u8 v1, u32 v2, u8 *mac)
+ {
+ 	struct i802_bss *bss = priv;
+ 	struct wpa_driver_nl80211_data *drv = bss->drv;
+-	struct i802_link *link = nl80211_get_link(bss, link_id);
+-	struct hostapd_data *hapd = bss->ctx;
+ 	struct nl_msg *msg;
+ 	struct nlattr *data;
+-	void *tb1, *tb2;
+-	int ret, i;
+-	u8 radio_idx = 0;
++	void *tb1;
++	int ret;
+ 
+ 	if (!drv->mtk_csi_vendor_cmd_avail) {
+ 		wpa_printf(MSG_ERROR,
+@@ -17306,12 +17284,6 @@ nl80211_csi_set(void *priv, s8 link_id, u8 mode, u8 cfg, u8 v1, u32 v2, u8 *mac)
+ 		return 0;
+ 	}
+ 
+-	if (link && link->ctx)
+-		hapd = link->ctx;
+-
+-	if (hapd->iface->current_hw_info)
+-		radio_idx = hapd->iface->current_hw_info->hw_idx;
+-
+ 	msg = nl80211_bss_msg(bss, 0, NL80211_CMD_VENDOR);
+ 	if (!msg)
+ 		goto fail;
+@@ -17325,7 +17297,8 @@ nl80211_csi_set(void *priv, s8 link_id, u8 mode, u8 cfg, u8 v1, u32 v2, u8 *mac)
+ 	if (!data)
+ 		goto fail;
+ 
+-	nla_put_u8(msg, MTK_VENDOR_ATTR_CSI_CTRL_RADIO_IDX, radio_idx);
++	if (drv->mtk_vendor_connac_version > 2)
++		nla_put_u8(msg, MTK_VENDOR_ATTR_CSI_CTRL_RADIO_IDX, radio_idx);
+ 
+ 	tb1 = nla_nest_start(msg, MTK_VENDOR_ATTR_CSI_CTRL_CFG | NLA_F_NESTED);
+ 	if (!tb1)
+@@ -17334,19 +17307,22 @@ nl80211_csi_set(void *priv, s8 link_id, u8 mode, u8 cfg, u8 v1, u32 v2, u8 *mac)
+ 	nla_put_u8(msg, MTK_VENDOR_ATTR_CSI_CTRL_CFG_MODE, mode);
+ 	nla_put_u8(msg, MTK_VENDOR_ATTR_CSI_CTRL_CFG_TYPE, cfg);
+ 	nla_put_u8(msg, MTK_VENDOR_ATTR_CSI_CTRL_CFG_VAL1, v1);
+-	nla_put_u32(msg, MTK_VENDOR_ATTR_CSI_CTRL_CFG_VAL2, v2);
++	if (drv->mtk_vendor_connac_version == 2) {
++		if (v2 > 0xff) {
++			wpa_printf(MSG_ERROR,
++				   "nl80211: legacy CSI supports an 8-bit cfg value");
++			goto fail;
++		}
++		nla_put_u8(msg, MTK_VENDOR_ATTR_CSI_CTRL_CFG_VAL2, v2);
++	} else {
++		nla_put_u32(msg, MTK_VENDOR_ATTR_CSI_CTRL_CFG_VAL2, v2);
++	}
+ 
+ 	nla_nest_end(msg, tb1);
+ 
+ 	if (mac) {
+-		tb2 = nla_nest_start(msg, MTK_VENDOR_ATTR_CSI_CTRL_MAC_ADDR | NLA_F_NESTED);
+-		if (!tb2)
++		if (nla_put(msg, MTK_VENDOR_ATTR_CSI_CTRL_MAC_ADDR, ETH_ALEN, mac))
+ 			goto fail;
+-
+-		for (i = 0; i < ETH_ALEN; i++)
+-			nla_put_u8(msg, i, mac[i]);
+-
+-		nla_nest_end(msg, tb2);
+ 	}
+ 
+ 	nla_nest_end(msg, data);
+@@ -17402,9 +17378,12 @@ mt76_csi_dump_cb(struct nl_msg *msg, void *arg)
+ 	      tb2[MTK_VENDOR_ATTR_CSI_DATA_BW] &&
+ 	      tb2[MTK_VENDOR_ATTR_CSI_DATA_CH_IDX] &&
+ 	      tb2[MTK_VENDOR_ATTR_CSI_DATA_TA] &&
++	      tb2[MTK_VENDOR_ATTR_CSI_DATA_NUM] &&
+ 	      tb2[MTK_VENDOR_ATTR_CSI_DATA_I] &&
+ 	      tb2[MTK_VENDOR_ATTR_CSI_DATA_Q] &&
+ 	      tb2[MTK_VENDOR_ATTR_CSI_DATA_INFO] &&
++	      tb2[MTK_VENDOR_ATTR_CSI_DATA_TX_ANT] &&
++	      tb2[MTK_VENDOR_ATTR_CSI_DATA_RX_ANT] &&
+ 	      tb2[MTK_VENDOR_ATTR_CSI_DATA_MODE] &&
+ 	      tb2[MTK_VENDOR_ATTR_CSI_DATA_CHAIN_INFO])) {
+ 		fprintf(stderr, "Attributes error for CSI data\n");
+@@ -17427,11 +17406,7 @@ mt76_csi_dump_cb(struct nl_msg *msg, void *arg)
+ 
+ 	c->data_num = nla_get_u32(tb2[MTK_VENDOR_ATTR_CSI_DATA_NUM]);
+ 
+-	idx = 0;
+-	nla_for_each_nested(cur, tb2[MTK_VENDOR_ATTR_CSI_DATA_TA], rem) {
+-		if (idx < ETH_ALEN)
+-			c->ta[idx++] = nla_get_u8(cur);
+-	}
++	os_memcpy(c->ta, nla_data(tb2[MTK_VENDOR_ATTR_CSI_DATA_TA]), ETH_ALEN);
+ 
+ 	idx = 0;
+ 	nla_for_each_nested(cur, tb2[MTK_VENDOR_ATTR_CSI_DATA_I], rem) {
+@@ -17450,19 +17425,15 @@ mt76_csi_dump_cb(struct nl_msg *msg, void *arg)
+ 	return NL_SKIP;
+ }
+ 
+-static int
+-nl80211_csi_dump(void *priv, s8 link_id, void *dump_buf)
++static int nl80211_csi_dump(void *priv, u8 radio_idx, void *dump_buf)
+ {
+ 	struct i802_bss *bss = priv;
+ 	struct wpa_driver_nl80211_data *drv = bss->drv;
+-	struct i802_link *link = nl80211_get_link(bss, link_id);
+-	struct hostapd_data *hapd = bss->ctx;
+ 	struct nl_msg *msg;
+ 	struct nlattr *data;
+ 	int ret;
+ 	struct csi_resp_data *csi_resp;
+ 	u16 pkt_num, i;
+-	u8 radio_idx = 0;
+ 
+ 	if (!drv->mtk_csi_vendor_cmd_avail) {
+ 		wpa_printf(MSG_INFO,
+@@ -17470,12 +17441,6 @@ nl80211_csi_dump(void *priv, s8 link_id, void *dump_buf)
+ 		return 0;
+ 	}
+ 
+-	if (link && link->ctx)
+-		hapd = link->ctx;
+-
+-	if (hapd->iface->current_hw_info)
+-		radio_idx = hapd->iface->current_hw_info->hw_idx;
+-
+ 	csi_resp = (struct csi_resp_data *)dump_buf;
+ 	pkt_num =  csi_resp->usr_need_cnt;
+ 
+@@ -17497,7 +17462,8 @@ nl80211_csi_dump(void *priv, s8 link_id, void *dump_buf)
+ 		if (!data)
+ 			goto fail;
+ 
+-		nla_put_u8(msg, MTK_VENDOR_ATTR_CSI_CTRL_RADIO_IDX, radio_idx);
++		if (drv->mtk_vendor_connac_version > 2)
++			nla_put_u8(msg, MTK_VENDOR_ATTR_CSI_CTRL_RADIO_IDX, radio_idx);
+ 		nla_put_u16(msg, MTK_VENDOR_ATTR_CSI_CTRL_DUMP_NUM, CSI_DUMP_PER_NUM);
+ 
+ 		nla_nest_end(msg, data);
+@@ -17512,6 +17478,7 @@ fail:
+ 	return -ENOBUFS;
+ }
+ 
++
+ static int
+ nl80211_txpower_ctrl(void *priv, u8 lpi_psd, s8 sku_idx, u8 lpi_bcn_enhance, s8 link_id,
+ 		     s8 *power_table, u8 lpi_mode, const char *sku_filename)
+@@ -17543,7 +17510,7 @@ nl80211_txpower_ctrl(void *priv, u8 lpi_psd, s8 sku_idx, u8 lpi_bcn_enhance, s8
+ 		goto fail;
+ 
+ 	nla_put_u8(msg, MTK_VENDOR_ATTR_TXPOWER_CTRL_LPI_PSD, lpi_psd);
+-	if (sku_filename[0])
++	if (sku_filename[0] && drv->mtk_vendor_connac_version > 2)
+ 		nla_put_string(msg, MTK_VENDOR_ATTR_TXPOWER_CTRL_SKU_FILENAME,
+ 			       sku_filename);
+ 	else if (sku_idx > -1)
+@@ -17556,7 +17523,7 @@ nl80211_txpower_ctrl(void *priv, u8 lpi_psd, s8 sku_idx, u8 lpi_bcn_enhance, s8
+ #ifdef CONFIG_AFC
+ 	if (power_table) {
+ 		nla_put(msg, MTK_VENDOR_ATTR_TXPOWER_CTRL_AFC_TABLE,
+-		        MAX_CHANNEL_NUM_6G * afc_power_table_num, power_table);
++			MAX_CHANNEL_NUM_6G * afc_power_table_num, power_table);
+ 	}
+ #endif /* CONFIG_AFC */
+ 
+@@ -17574,15 +17541,12 @@ fail:
+ 	return -ENOBUFS;
+ }
+ 
+-static int nl80211_dfs_tx_mode(void *priv, s8 link_id, const u8 dfs_tx_mode)
++static int nl80211_dfs_tx_mode(void *priv, u8 radio_idx, const u8 dfs_tx_mode)
+ {
+ 	struct i802_bss *bss = priv;
+ 	struct wpa_driver_nl80211_data *drv = bss->drv;
+-	struct i802_link *link = nl80211_get_link(bss, link_id);
+-	struct hostapd_data *hapd = bss->ctx;
+ 	struct nl_msg *msg;
+ 	struct nlattr *data;
+-	u8 radio_idx = 0;
+ 	int ret;
+ 
+ 	if (!drv->mtk_dfs_tx_vendor_cmd_avail) {
+@@ -17604,12 +17568,6 @@ static int nl80211_dfs_tx_mode(void *priv, s8 link_id, const u8 dfs_tx_mode)
+ 	if (!data)
+ 		goto fail;
+ 
+-	if (link && link->ctx)
+-		hapd = link->ctx;
+-
+-	if (hapd->iface->current_hw_info)
+-		radio_idx = hapd->iface->current_hw_info->hw_idx;
+-
+ 	if (nla_put_u8(msg, MTK_VENDOR_ATTR_DFS_TX_CTRL_MODE, dfs_tx_mode) ||
+ 	    nla_put_u8(msg, MTK_VENDOR_ATTR_DFS_TX_CTRL_RADIO_IDX, radio_idx))
+ 		goto fail;
+diff --git a/src/drivers/driver_nl80211.h b/src/drivers/driver_nl80211.h
+index 45ace4e9a..17fc2dae7 100644
+--- a/src/drivers/driver_nl80211.h
++++ b/src/drivers/driver_nl80211.h
+@@ -235,6 +235,8 @@ struct wpa_driver_nl80211_data {
+ 	unsigned int mtk_scs_vendor_cmd_avail:1;
+ 	unsigned int mtk_dfs_tx_vendor_cmd_avail:1;
+ 
++	u8 mtk_vendor_connac_version;
++
+ 	u8 extra_bss_membership_selectors[8];
+ 
+ 	u32 ignore_next_local_disconnect;
+diff --git a/src/drivers/driver_nl80211_capa.c b/src/drivers/driver_nl80211_capa.c
+index a7d8ad864..df5e14ace 100644
+--- a/src/drivers/driver_nl80211_capa.c
++++ b/src/drivers/driver_nl80211_capa.c
+@@ -1224,6 +1224,14 @@ static int wiphy_info_handler(struct nl_msg *msg, void *arg)
+ 				case MTK_NL80211_VENDOR_SUBCMD_DFS_TX_CTRL:
+ 					drv->mtk_dfs_tx_vendor_cmd_avail = 1;
+ 					break;
++				case MTK_NL80211_VENDOR_SUBCMD_ABI_CONNAC2:
++					drv->mtk_vendor_connac_version = 2;
++					break;
++				default:
++					/* CONNAC3/5 share the same ABI now */
++					if (!drv->mtk_vendor_connac_version)
++						drv->mtk_vendor_connac_version = 3;
++					break;
+ 				}
+ 			}
+ 
+-- 
+2.45.2
+
