@@ -112,14 +112,14 @@ key_val_pair() {
 concat_vars() {
 	# ==========================================
 	# Usage:
-	#	concat_vars "${vars}" "target"
+	#	concat_vars "target" "${vars}"
 	#
 	# Description:
 	#	Convert variables to key-value pairs and append them to the target variable
 	#
 	# Example:
-	#	__vars="aa bb cc"
 	#	__target_var="dd"
+	#	__vars="aa bb cc"
 	#	final result dd="${dd} aa=${aa} bb=${bb} cc=${cc}"
 	# ==========================================
 	local __target_var="$1"
@@ -426,4 +426,53 @@ convert_interface() {
 	fi
 
 	interface="phy${phy_idx}"
+}
+
+reload_module() {
+	local mt76_holders="/sys/module/mt76_connac_lib/holders"
+	local module_params="$1"
+	local chip_module=""
+
+	case "${connac_ver}" in
+		"2")
+			chip_module="mt7915e"
+			;;
+		"3")
+			chip_module="mt7996e"
+			;;
+		"5")
+			chip_module="mt7999e"
+			;;
+		*)
+			print_err "Invalid connac_ver ${connac_ver}"
+			;;
+	esac
+
+	do_cmd "wifi down"
+
+	# In the kernel 6.12 all-in-one codebase, the image may contain multiple
+	# chip-specific modules (e.g., mt7996e, mt7999e). All of them must be
+	# removed prior to unloading mt76-connac-lib.ko and mt76.ko.
+	if [ -d "${mt76_holders}" ]; then
+		for m in "${mt76_holders}"/*; do
+			[ -e "${m}" ] && do_cmd "rmmod ${m##*/}"
+		done
+	else
+		do_cmd "rmmod ${chip_module}"
+	fi
+
+	do_cmd "rmmod mt76-connac-lib"
+	do_cmd "rmmod mt76"
+	do_cmd "rmmod mac80211"
+	do_cmd "rmmod cfg80211"
+	do_cmd "rmmod compat"
+	do_cmd "insmod compat"
+	do_cmd "insmod cfg80211"
+	do_cmd "insmod mac80211"
+	do_cmd "insmod mt76"
+	do_cmd "insmod mt76-connac-lib"
+	do_cmd "insmod ${chip_module} ${module_params}"
+	do_cmd "sleep 5"
+	do_cmd "killall hostapd"
+	do_cmd "killall netifd"
 }

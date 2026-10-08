@@ -898,6 +898,19 @@ convert_band_to_interface() {
 		print_err "Cannot find any mld interface that has ${interface}"
 }
 
+convert_fw_dbg() {
+	local level fw_debug_level
+	local module fw_debug_module
+
+	split "${param}" ":" "level" "module"
+	mt76_debugfs_path "fw_debug_level"
+	mt76_debugfs_path "fw_debug_module"
+
+	# module should be set first
+	do_cmd "echo ${module} > ${fw_debug_module}"
+	do_cmd "echo ${level} > ${fw_debug_level}"
+}
+
 handle_cert() {
 	# In wifi 7 chipset, testmode & vendor command both use mwctl
 	# Therefore this wrapper would translate it to either mt76-test or
@@ -1035,6 +1048,10 @@ handle_cmd_set() {
 			convert_listmode
 			return
 			;;
+		"fw_dbg")
+			convert_fw_dbg
+			return
+			;;
 		*)
 			print_err "Unknown command to set: ${cmd}"
 			;;
@@ -1145,27 +1162,21 @@ handle_cmd_dump() {
         do_cmd "mt76-vendor ${interface} dump ${full_cmd}"
 }
 
+handle_cmd_reload() {
+	reload_module "${full_cmd}"
+}
+
 handle_cmd_switch() {
 	local eeprom_tm_offs="1af"
 	local testmode_enable="0"
-	local chip_module=""
 	local eeprom_mode
 
-	if [ "${connac_ver}" = "3" ]; then
-		chip_module="mt7996e"
-	elif [ "${connac_ver}" = "5" ]; then
-		chip_module="mt7999e"
-	else
-		return
-	fi
+	[ "${connac_ver}" = "2" ] && return
 
 	mt76_debugfs_path "eeprom_mode"
 	eeprom_mode=$(awk 'NR==2 { $1=$1; print }' "${eeprom_mode}")
 
-	[ "${cmd}" = "testmode" ] && {
-		testmode_enable="1"
-		do_cmd "wifi down"
-	}
+	[ "${cmd}" = "testmode" ] && testmode_enable="1"
 
 	do_cmd "uci set wireless.radio0.disabled=${testmode_enable}"
 	do_cmd "uci set wireless.radio1.disabled=${testmode_enable}"
@@ -1181,21 +1192,8 @@ handle_cmd_switch() {
 		do_cmd "atenl -i ${interface} -c \"sync eeprom all\""
 	}
 
-	do_cmd "rmmod ${chip_module}"
-	do_cmd "rmmod mt76-connac-lib"
-	do_cmd "rmmod mt76"
-	do_cmd "rmmod mac80211"
-	do_cmd "rmmod cfg80211"
-	do_cmd "rmmod compat"
-	do_cmd "insmod compat"
-	do_cmd "insmod cfg80211"
-	do_cmd "insmod mac80211"
-	do_cmd "insmod mt76"
-	do_cmd "insmod mt76-connac-lib"
-	do_cmd "insmod ${chip_module} testmode_enable=${testmode_enable}"
-	do_cmd "sleep 5"
-	do_cmd "killall hostapd"
-	do_cmd "killall netifd"
+	key_val_pair "testmode_enable"
+	reload_module "${testmode_enable}"
 }
 
 handle_cmd() {
@@ -1218,6 +1216,9 @@ handle_cmd() {
 		"switch")
 			handle_cmd_switch
 			;;
+		"reload")
+			handle_cmd_reload
+			;;
 		*)
 			print_err "Unknown command type"
 			;;
@@ -1227,8 +1228,9 @@ handle_cmd() {
 dump_usage() {
 	cat << 'EOF'
 Usage:
-	ATE:
+	ATE/Debug Command:
 		<iwpriv/mwctl> <interface> set <ATE={param}|{cmd}={param}>
+		<iwpriv/mwctl> <interface> set fw_dbg=<level>:<module>
 	Show:
 		<iwpriv/mwctl> <interface> show <wtbl=<wlan_idx>|ATERXSTAT>
 	Read/Write EEPROM:
@@ -1243,6 +1245,8 @@ Usage:
 		mwctl phy <interface> mac <start offs>-<end offs>
 	Switch FW mode:
 		<iwpriv/mwctl> <interface> switch <testmode/normal>
+	Reload Module:
+		<iwpriv/mwctl> <interface> reload [<module_param>=<val> [<module_param>=<val> ...]]
 	Cert:
 		mwctl <interface> set csi ctrl=<opt1>,<opt2>,<opt3>,<opt4> (macaddr=<macaddr>)
 		mwctl <interface> set csi interval=<interval (us)>
@@ -1267,7 +1271,6 @@ Usage:
 		mwctl <interface> dump phy_capa
 EOF
 }
-
 
 main() {
 	interface="$1"
