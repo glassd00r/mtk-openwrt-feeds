@@ -1,0 +1,64 @@
+From 73343574df341429d89b79f6706e8fd61b954754 Mon Sep 17 00:00:00 2001
+From: StanleyYP Wang <StanleyYP.Wang@mediatek.com>
+Date: Wed, 30 Sep 2026 14:31:14 +0800
+Subject: [PATCH] mtk: mt76: fix the behavior of radar detection for bootup CAC
+
+The previous solution only addressed radar detection during in-service
+monitoring or runtime CAC.
+However, during bootup CAC, if a radar is detected, the AP bypasses the
+channel switch flow because it has not yet fully started, which prevents
+MAC TX from resuming.
+To ensure a robust solution across Wi-Fi 6, and 7 generations,
+we now invoke the resume TX MCU command directly within mt79xx_set_channel.
+
+Signed-off-by: StanleyYP Wang <StanleyYP.Wang@mediatek.com>
+---
+ mt7915/main.c | 5 +++++
+ mt7996/main.c | 8 ++++----
+ 2 files changed, 9 insertions(+), 4 deletions(-)
+
+diff --git a/mt7915/main.c b/mt7915/main.c
+index 103550866..96bc196f8 100644
+--- a/mt7915/main.c
++++ b/mt7915/main.c
+@@ -369,6 +369,11 @@ int mt7915_set_channel(struct mt76_phy *mphy)
+ 		goto out;
+ 
+ 	mt7915_mac_set_timing(phy);
++
++	ret = mt7915_mcu_rdd_resume_tx(phy);
++	if (ret)
++		goto out;
++
+ 	ret = mt7915_dfs_init_radar_detector(phy);
+ 	mt7915_mac_cca_stats_reset(phy);
+ 
+diff --git a/mt7996/main.c b/mt7996/main.c
+index 2cedaffbe..005ea0cd4 100644
+--- a/mt7996/main.c
++++ b/mt7996/main.c
+@@ -833,6 +833,10 @@ int mt7996_set_channel(struct mt76_phy *mphy)
+ 	if (ret)
+ 		goto out;
+ 
++	ret = mt7996_mcu_rdd_resume_tx(phy);
++	if (ret)
++		goto out;
++
+ 	ret = mt7996_dfs_init_radar_detector(phy);
+ 	mt7996_mac_cca_stats_reset(phy);
+ 
+@@ -1317,10 +1321,6 @@ mt7996_post_channel_switch(struct ieee80211_hw *hw, struct ieee80211_vif *vif,
+ 
+ 	ieee80211_iterate_stations_mtx(hw, mt7996_mcu_update_sta_rec_bw, link);
+ 
+-	ret = mt7996_mcu_rdd_resume_tx(phy);
+-	if (ret)
+-		goto out;
+-
+ out:
+ 	memset(mvif->cs_links, IEEE80211_LINK_UNSPECIFIED,
+ 	       sizeof(mvif->cs_links));
+-- 
+2.45.2
+
