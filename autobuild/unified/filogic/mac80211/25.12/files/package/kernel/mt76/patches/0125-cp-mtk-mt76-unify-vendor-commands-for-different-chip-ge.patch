@@ -1,4 +1,4 @@
-From a767e24047e90ee885c3ea3ec13a30ba99d8c8bc Mon Sep 17 00:00:00 2001
+From 1d6c0b86cf954b635f3e337b4b36fcb16fb9cfdd Mon Sep 17 00:00:00 2001
 From: Benjamin Lin <benjamin-jw.lin@mediatek.com>
 Date: Mon, 13 Jul 2026 17:01:02 +0800
 Subject: [PATCH] mtk: mt76: unify vendor commands for different chip
@@ -249,11 +249,11 @@ Signed-off-by: Shayne Chen <shayne.chen@mediatek.com>
  mt7996/mt7996.h             |   1 -
  mt7996/vendor.c             | 906 ++++++++----------------------------
  vendor.c                    | 643 +++++++++++++++++++++++++
- mt7996/vendor.h => vendor.h | 170 ++++++-
- 13 files changed, 1095 insertions(+), 1217 deletions(-)
+ mt7996/vendor.h => vendor.h | 166 ++++++-
+ 13 files changed, 1091 insertions(+), 1217 deletions(-)
  delete mode 100644 mt7915/vendor.h
  create mode 100644 vendor.c
- rename mt7996/vendor.h => vendor.h (57%)
+ rename mt7996/vendor.h => vendor.h (58%)
 
 diff --git a/Makefile b/Makefile
 index 48d8b46a0..bdccf60f3 100644
@@ -1178,7 +1178,7 @@ index dad9088a9..47dbbaf6f 100644
  int mt7996_vendor_tsf_offset_event(struct mt7996_phy *phy, s64 *tsf_offset, int tsf_len);
  #endif
 diff --git a/mt7996/vendor.c b/mt7996/vendor.c
-index 75b848c10..5af98ad7a 100644
+index 60c1dbed7..96f60de4a 100644
 --- a/mt7996/vendor.c
 +++ b/mt7996/vendor.c
 @@ -7,176 +7,10 @@
@@ -3022,25 +3022,24 @@ index 000000000..cade4895c
 +}
 +EXPORT_SYMBOL_GPL(mt76_vendor_register);
 diff --git a/mt7996/vendor.h b/vendor.h
-similarity index 57%
+similarity index 58%
 rename from mt7996/vendor.h
 rename to vendor.h
-index 64f2c7c95..84935e95f 100644
+index 6b9dc8697..5e4244305 100644
 --- a/mt7996/vendor.h
 +++ b/vendor.h
-@@ -1,5 +1,9 @@
+@@ -3,8 +3,8 @@
+  * Copyright (c) 2025 MediaTek Inc. All rights reserved.
+  */
+ 
 -#ifndef __MT7996_VENDOR_H
 -#define __MT7996_VENDOR_H
-+/* SPDX-License-Identifier: BSD-3-Clause-Clear */
-+/*
-+ * Copyright (C) 2026 MediaTek Inc.
-+ */
 +#ifndef __MT76_VENDOR_H
 +#define __MT76_VENDOR_H
  
  #define MTK_NL80211_VENDOR_ID	0x0ce7
  
-@@ -11,6 +15,7 @@ enum mtk_nl80211_vendor_subcmds {
+@@ -16,6 +16,7 @@ enum mtk_nl80211_vendor_subcmds {
  	MTK_NL80211_VENDOR_SUBCMD_RFEATURE_CTRL = 0xc3,
  	MTK_NL80211_VENDOR_SUBCMD_WIRELESS_CTRL = 0xc4,
  	MTK_NL80211_VENDOR_SUBCMD_MU_CTRL = 0xc5,
@@ -3048,7 +3047,7 @@ index 64f2c7c95..84935e95f 100644
  	MTK_NL80211_VENDOR_SUBCMD_EDCCA_CTRL = 0xc7,
  	MTK_NL80211_VENDOR_SUBCMD_3WIRE_CTRL = 0xc8,
  	MTK_NL80211_VENDOR_SUBCMD_IBF_CTRL = 0xc9,
-@@ -22,10 +27,12 @@ enum mtk_nl80211_vendor_subcmds {
+@@ -27,10 +28,12 @@ enum mtk_nl80211_vendor_subcmds {
  	MTK_NL80211_VENDOR_SUBCMD_SCS_CTRL = 0xd0,
  	MTK_NL80211_VENDOR_SUBCMD_EPCS_CTRL = 0xd4,
  	MTK_NL80211_VENDOR_SUBCMD_DFS_TX_CTRL = 0xd5,
@@ -3061,7 +3060,7 @@ index 64f2c7c95..84935e95f 100644
  };
  
  enum mtk_vendor_attr_edcca_ctrl {
-@@ -87,6 +94,20 @@ enum mtk_vendor_attr_mu_ctrl {
+@@ -92,6 +95,20 @@ enum mtk_vendor_attr_mu_ctrl {
  		NUM_MTK_VENDOR_ATTRS_MU_CTRL - 1
  };
  
@@ -3082,7 +3081,7 @@ index 64f2c7c95..84935e95f 100644
  enum mtk_vendor_attr_rfeature_ctrl {
  	MTK_VENDOR_ATTR_RFEATURE_CTRL_UNSPEC,
  
-@@ -118,7 +139,7 @@ enum mtk_vendor_attr_wireless_ctrl {
+@@ -123,7 +140,7 @@ enum mtk_vendor_attr_wireless_ctrl {
  	MTK_VENDOR_ATTR_WIRELESS_CTRL_MIMO,
  	MTK_VENDOR_ATTR_WIRELESS_CTRL_AMSDU,
  	MTK_VENDOR_ATTR_WIRELESS_CTRL_AMPDU,
@@ -3091,7 +3090,7 @@ index 64f2c7c95..84935e95f 100644
  	MTK_VENDOR_ATTR_WIRELESS_CTRL_RTS_SIGTA,
  	MTK_VENDOR_ATTR_WIRELESS_CTRL_MU_EDCA, /* reserve */
  	MTK_VENDOR_ATTR_WIRELESS_CTRL_LINK_ID,
-@@ -353,6 +374,9 @@ enum mtk_vendor_attr_txpower_ctrl {
+@@ -358,6 +375,9 @@ enum mtk_vendor_attr_txpower_ctrl {
  		NUM_MTK_VENDOR_ATTRS_TXPOWER_CTRL - 1
  };
  
@@ -3101,7 +3100,7 @@ index 64f2c7c95..84935e95f 100644
  enum mtk_vendor_attr_dfs_tx_ctrl {
  	MTK_VENDOR_ATTR_DFS_TX_CTRL_UNSPEC,
  
-@@ -365,6 +389,146 @@ enum mtk_vendor_attr_dfs_tx_ctrl {
+@@ -370,6 +390,146 @@ enum mtk_vendor_attr_dfs_tx_ctrl {
  		NUM_MTK_VENDOR_ATTRS_DFS_TX_CTRL - 1
  };
  
