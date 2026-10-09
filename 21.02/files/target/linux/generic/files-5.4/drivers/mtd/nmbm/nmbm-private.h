@@ -96,15 +96,18 @@ struct nmbm_instance {
 
 	nmbm_bitmap_t *block_state;
 	uint32_t block_state_changed;
+	uint32_t block_state_cached;
 	uint32_t state_table_size;
 
 	int32_t *block_mapping;
 	uint32_t block_mapping_changed;
+	uint32_t block_mapping_cached;
 	uint32_t mapping_table_size;
 
 	uint8_t *page_cache;
 
 	int protected;
+	bool info_table_update_aborted;
 
 	uint32_t block_count;
 	uint32_t data_block_count;
