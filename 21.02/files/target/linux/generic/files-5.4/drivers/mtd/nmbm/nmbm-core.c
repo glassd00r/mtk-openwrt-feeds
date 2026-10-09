@@ -2265,6 +2265,10 @@ size_t nmbm_calc_structure_size(struct nmbm_lower_device *nld)
 	uint32_t state_table_size, mapping_table_size, info_table_size;
 	uint32_t block_count;
 
+	if (!nld || !nld->size || !nld->erasesize || !nld->writesize ||
+	    !nld->oobsize)
+		return 0;
+
 	block_count = nmbm_lldiv(nld->size, nld->erasesize);
 
 	/* Calculate info table size */
@@ -2272,7 +2276,7 @@ size_t nmbm_calc_structure_size(struct nmbm_lower_device *nld)
 		NMBM_BITMAP_BLOCKS_PER_UNIT) * NMBM_BITMAP_UNIT_SIZE;
 	mapping_table_size = block_count * sizeof(int32_t);
 
-	info_table_size = NMBM_ALIGN(sizeof(struct nmbm_info_table_header),
+	info_table_size = NMBM_ALIGN((uint32_t)sizeof(struct nmbm_info_table_header),
 				     nld->writesize);
 	info_table_size += NMBM_ALIGN(state_table_size, nld->writesize);
 	info_table_size += NMBM_ALIGN(mapping_table_size, nld->writesize);
@@ -2311,7 +2315,7 @@ static void nmbm_init_structure(struct nmbm_instance *ni)
 		NMBM_BITMAP_BLOCKS_PER_UNIT) * NMBM_BITMAP_UNIT_SIZE;
 	ni->mapping_table_size = ni->block_count * sizeof(*ni->block_mapping);
 
-	ni->info_table_size = NMBM_ALIGN(sizeof(ni->info_table),
+	ni->info_table_size = NMBM_ALIGN((uint32_t)sizeof(ni->info_table),
 					 ni->lower.writesize);
 	ni->info_table.state_table_off = ni->info_table_size;
 
@@ -2634,7 +2638,7 @@ int nmbm_read_single_page(struct nmbm_instance *ni, uint64_t addr, void *data,
 int nmbm_read_range(struct nmbm_instance *ni, uint64_t addr, size_t size,
 		    void *data, enum nmbm_oob_mode mode, size_t *retlen)
 {
-	uint64_t off = addr;
+	uint64_t end, off = addr;
 	uint8_t *ptr = data;
 	size_t sizeremain = size, chunksize, leading;
 	bool has_ecc_err = false;
@@ -2649,12 +2653,14 @@ int nmbm_read_range(struct nmbm_instance *ni, uint64_t addr, size_t size,
 		return -EROFS;
 	}
 
-	if (addr >= ba2addr(ni, ni->data_block_count)) {
+	end = ba2addr(ni, ni->data_block_count);
+
+	if (addr >= end) {
 		nlog_err(ni, "Address 0x%llx is invalid\n", addr);
 		return -EINVAL;
 	}
 
-	if (addr + size > ba2addr(ni, ni->data_block_count)) {
+	if (size > end - addr) {
 		nlog_err(ni, "Read range 0x%llx is too large\n", size);
 		return -EINVAL;
 	}
@@ -2878,7 +2884,7 @@ int nmbm_write_range(struct nmbm_instance *ni, uint64_t addr, size_t size,
 		     const void *data, enum nmbm_oob_mode mode,
 		     size_t *retlen)
 {
-	uint64_t off = addr;
+	uint64_t end, off = addr;
 	const uint8_t *ptr = data;
 	size_t sizeremain = size, chunksize, leading;
 	int ret;
@@ -2892,12 +2898,14 @@ int nmbm_write_range(struct nmbm_instance *ni, uint64_t addr, size_t size,
 		return -EROFS;
 	}
 
-	if (addr >= ba2addr(ni, ni->data_block_count)) {
+	end = ba2addr(ni, ni->data_block_count);
+
+	if (addr >= end) {
 		nlog_err(ni, "Address 0x%llx is invalid\n", addr);
 		return -EINVAL;
 	}
 
-	if (addr + size > ba2addr(ni, ni->data_block_count)) {
+	if (size > end - addr) {
 		nlog_err(ni, "Write size 0x%zx is too large\n", size);
 		return -EINVAL;
 	}
