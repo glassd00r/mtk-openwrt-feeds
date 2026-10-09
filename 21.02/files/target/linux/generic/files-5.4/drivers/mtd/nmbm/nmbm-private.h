@@ -42,6 +42,7 @@ typedef uint32_t				nmbm_bitmap_t;
 #define NMBM_MGMT_BLOCKS_MIN			32
 
 #define NMBM_TRY_COUNT				3
+#define NMBM_MAX_CONSECUTIVE_FAILURES		3
 
 #define BLOCK_ST_BAD				0
 #define BLOCK_ST_NEED_REMAP			2

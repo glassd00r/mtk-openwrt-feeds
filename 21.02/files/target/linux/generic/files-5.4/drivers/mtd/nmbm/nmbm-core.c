@@ -239,7 +239,7 @@ static bool nmbm_write_phys_page(struct nmbm_instance *ni, uint64_t addr,
 	int tries, ret;
 
 	if (ni->lower.flags & NMBM_F_READ_ONLY) {
-		nlog_err(ni, "%s called with NMBM_F_READ_ONLY set\n", addr);
+		nlog_err(ni, "%s called with NMBM_F_READ_ONLY set\n", __func__);
 		return false;
 	}
 
@@ -270,7 +270,7 @@ static bool nmbm_panic_write_phys_page(struct nmbm_instance *ni, uint64_t addr,
 	int tries, ret;
 
 	if (ni->lower.flags & NMBM_F_READ_ONLY) {
-		nlog_err(ni, "%s called with NMBM_F_READ_ONLY set\n", addr);
+		nlog_err(ni, "%s called with NMBM_F_READ_ONLY set\n", __func__);
 		return false;
 	}
 
@@ -294,26 +294,26 @@ static bool nmbm_panic_write_phys_page(struct nmbm_instance *ni, uint64_t addr,
  *
  * Erase a block for at most NMBM_TRY_COUNT times.
  */
-static bool nmbm_erase_phys_block(struct nmbm_instance *ni, uint64_t addr)
+static int nmbm_erase_phys_block(struct nmbm_instance *ni, uint64_t addr)
 {
 	int tries, ret;
 
 	if (ni->lower.flags & NMBM_F_READ_ONLY) {
-		nlog_err(ni, "%s called with NMBM_F_READ_ONLY set\n", addr);
-		return false;
+		nlog_err(ni, "%s called with NMBM_F_READ_ONLY set\n", __func__);
+		return -EROFS;
 	}
 
 	for (tries = 0; tries < NMBM_TRY_COUNT; tries++) {
 		ret = ni->lower.erase_block(ni->lower.arg, addr);
 		if (!ret)
-			return true;
+			return 0;
 
 		nmbm_reset_chip(ni);
 	}
 
 	nlog_err(ni, "Block erasure failed at address 0x%08llx\n", addr);
 
-	return false;
+	return ret;
 }
 
 /*
@@ -321,20 +321,30 @@ static bool nmbm_erase_phys_block(struct nmbm_instance *ni, uint64_t addr)
  * @ni: NMBM instance structure
  * @ba: block address
  */
-static bool nmbm_check_bad_phys_block(struct nmbm_instance *ni, uint32_t ba)
+static int nmbm_check_bad_phys_block(struct nmbm_instance *ni, uint32_t ba)
 {
 	uint64_t addr = ba2addr(ni, ba);
-	int ret;
+	int tries, ret;
 
-	if (ni->lower.is_bad_block)
-		return ni->lower.is_bad_block(ni->lower.arg, addr);
+	if (ni->lower.is_bad_block) {
+		for (tries = 0; tries < NMBM_TRY_COUNT; tries++) {
+			ret = ni->lower.is_bad_block(ni->lower.arg, addr);
+			if (ret >= 0)
+				return !!ret;
 
-	/* Treat ECC error as read success */
+			nmbm_reset_chip(ni);
+		}
+
+		nlog_err(ni, "Failed to check bad-block marker at 0x%08llx\n",
+			 addr);
+		return ret;
+	}
+
 	ret = nmbm_read_phys_page(ni, addr, NULL,
 				  ni->page_cache + ni->lower.writesize,
 				  NMBM_MODE_RAW);
-	if (ret < 0 && ret != -EBADMSG)
-		return true;
+	if (ret < 0)
+		return ret;
 
 	return ni->page_cache[ni->lower.writesize] != 0xff;
 }
@@ -348,11 +358,12 @@ static int nmbm_mark_phys_bad_block(struct nmbm_instance *ni, uint32_t ba)
 {
 	uint64_t addr = ba2addr(ni, ba);
 	enum nmbm_log_category level;
+	bool failed = false;
 	uint32_t off;
 
 	if (ni->lower.flags & NMBM_F_READ_ONLY) {
-		nlog_err(ni, "%s called with NMBM_F_READ_ONLY set\n", addr);
-		return false;
+		nlog_err(ni, "%s called with NMBM_F_READ_ONLY set\n", __func__);
+		return -EROFS;
 	}
 
 	nlog_info(ni, "Block %u [0x%08llx] will be marked bad\n", ba, addr);
@@ -366,15 +377,17 @@ static int nmbm_mark_phys_bad_block(struct nmbm_instance *ni, uint32_t ba)
 	/* Write to all pages within this block, disable all errors */
 	level = nmbm_set_log_level(ni, __NMBM_LOG_MAX);
 
+
 	for (off = 0; off < ni->lower.erasesize; off += ni->lower.writesize) {
-		nmbm_write_phys_page(ni, addr + off, ni->page_cache,
-				     ni->page_cache + ni->lower.writesize,
-				     NMBM_MODE_RAW);
+		if (!nmbm_write_phys_page(ni, addr + off, ni->page_cache,
+					  ni->page_cache + ni->lower.writesize,
+					  NMBM_MODE_RAW))
+			failed = true;
 	}
 
 	nmbm_set_log_level(ni, level);
 
-	return 0;
+	return failed ? -EIO : 0;
 }
 
 /*****************************************************************************/
@@ -624,17 +637,24 @@ static bool nmbm_block_walk(struct nmbm_instance *ni, bool ascending,
  * Scan the entire lower NAND chip and record all bad blocks in to block state
  * table.
  */
-static void nmbm_scan_badblocks(struct nmbm_instance *ni)
+static bool nmbm_scan_badblocks(struct nmbm_instance *ni)
 {
 	uint32_t ba;
+	int ret;
 
 	for (ba = 0; ba < ni->block_count; ba++) {
-		if (nmbm_check_bad_phys_block(ni, ba)) {
+		ret = nmbm_check_bad_phys_block(ni, ba);
+		if (ret < 0)
+			return false;
+
+		if (ret) {
 			nmbm_set_block_state(ni, ba, BLOCK_ST_BAD);
 			nlog_info(ni, "Bad block %u [0x%08llx]\n", ba,
 				 ba2addr(ni, ba));
 		}
 	}
+
+	return true;
 }
 
 /*
@@ -670,26 +690,24 @@ static void nmbm_build_mapping_table(struct nmbm_instance *ni)
  *
  * Erase a block anc check its usability
  *
- * Return true if the block is usable, false if erasure failure or the block
- * has too many bitflips.
+ * Return 0 if the block is usable, 1 if it should be retired, or a negative
+ * error for a verification failure that does not prove the block is bad.
  */
-static bool nmbm_erase_block_and_check(struct nmbm_instance *ni, uint32_t ba)
+static int nmbm_erase_block_and_check(struct nmbm_instance *ni, uint32_t ba)
 {
 	uint64_t addr, off;
-	bool success;
 	int ret;
 
-	success = nmbm_erase_phys_block(ni, ba2addr(ni, ba));
-	if (!success)
-		return false;
+	ret = nmbm_erase_phys_block(ni, ba2addr(ni, ba));
+	if (ret)
+		return 1;
 
 	if (!(ni->lower.flags & NMBM_F_EMPTY_PAGE_ECC_OK))
-		return true;
+		return 0;
 
 	/* Check every page to make sure there aren't too many bitflips */
 
 	addr = ba2addr(ni, ba);
-
 	for (off = 0; off < ni->lower.erasesize; off += ni->lower.writesize) {
 		WATCHDOG_RESET();
 
@@ -698,19 +716,19 @@ static bool nmbm_erase_block_and_check(struct nmbm_instance *ni, uint32_t ba)
 		if (ret == -EBADMSG) {
 			/*
 			 * NMBM_F_EMPTY_PAGE_ECC_OK means the empty page is
-			 * still protected by ECC. So reading pages with ECC
-			 * enabled and -EBADMSG means there are too many
-			 * bitflips that can't be recovered, and the block
-			 * containing the page should be marked bad.
+			 * still protected by ECC. An uncorrectable ECC error
+			 * makes the block unusable.
 			 */
-			nlog_err(ni,
-				 "Too many bitflips in empty page at 0x%llx\n",
+			nlog_err(ni, "Too many bitflips in empty page at 0x%llx\n",
 				 addr + off);
-			return false;
+			return 1;
 		}
+
+		if (ret < 0)
+			return ret;
 	}
 
-	return true;
+	return 0;
 }
 
 /*
@@ -727,7 +745,8 @@ static bool nmbm_erase_block_and_check(struct nmbm_instance *ni, uint32_t ba)
 static void nmbm_erase_range(struct nmbm_instance *ni, uint32_t ba,
 			     uint32_t limit)
 {
-	bool success;
+	uint32_t consecutive_failures = 0;
+	int ret;
 
 	while (ba < limit) {
 		WATCHDOG_RESET();
@@ -736,17 +755,31 @@ static void nmbm_erase_range(struct nmbm_instance *ni, uint32_t ba,
 			goto next_block;
 
 		/* Insurance to detect unexpected bad block marked by user */
-		if (nmbm_check_bad_phys_block(ni, ba)) {
+		ret = nmbm_check_bad_phys_block(ni, ba);
+		if (ret < 0)
+			break;
+
+		if (ret) {
 			nmbm_set_block_state(ni, ba, BLOCK_ST_BAD);
 			goto next_block;
 		}
 
-		success = nmbm_erase_block_and_check(ni, ba);
-		if (success)
+		ret = nmbm_erase_block_and_check(ni, ba);
+		if (ret < 0)
+			break;
+
+		if (!ret) {
+			consecutive_failures = 0;
 			goto next_block;
+		}
 
 		nmbm_mark_phys_bad_block(ni, ba);
 		nmbm_set_block_state(ni, ba, BLOCK_ST_BAD);
+		if (++consecutive_failures >= NMBM_MAX_CONSECUTIVE_FAILURES) {
+			nlog_err(ni, "Stopping erase after %u consecutive failures\n",
+				 consecutive_failures);
+			break;
+		}
 
 	next_block:
 		ba++;
@@ -822,7 +855,9 @@ static bool nmbm_write_signature(struct nmbm_instance *ni, uint32_t limit,
 				 uint32_t *signature_ba)
 {
 	uint32_t ba = ni->block_count - 1;
+	uint32_t consecutive_failures = 0;
 	bool success;
+	int ret;
 
 	while (ba > limit) {
 		WATCHDOG_RESET();
@@ -831,13 +866,20 @@ static bool nmbm_write_signature(struct nmbm_instance *ni, uint32_t limit,
 			goto next_block;
 
 		/* Insurance to detect unexpected bad block marked by user */
-		if (nmbm_check_bad_phys_block(ni, ba)) {
+		ret = nmbm_check_bad_phys_block(ni, ba);
+		if (ret < 0)
+			return false;
+
+		if (ret) {
 			nmbm_set_block_state(ni, ba, BLOCK_ST_BAD);
 			goto next_block;
 		}
 
-		success = nmbm_erase_block_and_check(ni, ba);
-		if (!success)
+		ret = nmbm_erase_block_and_check(ni, ba);
+		if (ret < 0)
+			return false;
+
+		if (ret)
 			goto skip_bad_block;
 
 		success = nmbm_write_repeated_data(ni, ba, signature,
@@ -850,6 +892,11 @@ static bool nmbm_write_signature(struct nmbm_instance *ni, uint32_t limit,
 	skip_bad_block:
 		nmbm_mark_phys_bad_block(ni, ba);
 		nmbm_set_block_state(ni, ba, BLOCK_ST_BAD);
+		if (++consecutive_failures >= NMBM_MAX_CONSECUTIVE_FAILURES) {
+			nlog_err(ni, "Stopping signature write after %u consecutive failures\n",
+				 consecutive_failures);
+			return false;
+		}
 
 	next_block:
 		ba--;
@@ -983,7 +1030,9 @@ static bool nmbm_write_mgmt_range(struct nmbm_instance *ni, uint32_t ba,
 {
 	const uint8_t *ptr = data;
 	uint32_t sizeremain = size, chunksize;
+	uint32_t consecutive_failures = 0;
 	bool success;
+	int ret;
 
 	while (sizeremain && ba < limit) {
 		WATCHDOG_RESET();
@@ -996,13 +1045,20 @@ static bool nmbm_write_mgmt_range(struct nmbm_instance *ni, uint32_t ba,
 			goto next_block;
 
 		/* Insurance to detect unexpected bad block marked by user */
-		if (nmbm_check_bad_phys_block(ni, ba)) {
+		ret = nmbm_check_bad_phys_block(ni, ba);
+		if (ret < 0)
+			return false;
+
+		if (ret) {
 			nmbm_set_block_state(ni, ba, BLOCK_ST_BAD);
 			goto next_block;
 		}
 
-		success = nmbm_erase_block_and_check(ni, ba);
-		if (!success)
+		ret = nmbm_erase_block_and_check(ni, ba);
+		if (ret < 0)
+			return false;
+
+		if (ret)
 			goto skip_bad_block;
 
 		success = nmbn_write_verify_data(ni, ba2addr(ni, ba), ptr,
@@ -1015,12 +1071,18 @@ static bool nmbm_write_mgmt_range(struct nmbm_instance *ni, uint32_t ba,
 
 		ptr += chunksize;
 		sizeremain -= chunksize;
+		consecutive_failures = 0;
 
 		goto next_block;
 
 	skip_bad_block:
 		nmbm_mark_phys_bad_block(ni, ba);
 		nmbm_set_block_state(ni, ba, BLOCK_ST_BAD);
+		if (++consecutive_failures >= NMBM_MAX_CONSECUTIVE_FAILURES) {
+			nlog_err(ni, "Stopping info-table write after %u consecutive failures\n",
+				 consecutive_failures);
+			return false;
+		}
 
 	next_block:
 		ba++;
@@ -1715,7 +1777,10 @@ static bool nmbm_create_new(struct nmbm_instance *ni)
 	nmbm_mark_block_color_mgmt(ni, ni->mgmt_start_ba, ni->block_count - 1);
 
 	/* Fill block state table & mapping table */
-	nmbm_scan_badblocks(ni);
+	success = nmbm_scan_badblocks(ni);
+	if (!success)
+		return false;
+
 	nmbm_build_mapping_table(ni);
 
 	/* Write signature */
@@ -1847,7 +1912,11 @@ static bool nmbm_try_load_info_table(struct nmbm_instance *ni, uint32_t ba,
 		if (nmbm_get_block_state(ni, ba) != BLOCK_ST_GOOD)
 			goto next_block;
 
-		if (nmbm_check_bad_phys_block(ni, ba)) {
+		ret = nmbm_check_bad_phys_block(ni, ba);
+		if (ret < 0)
+			return false;
+
+		if (ret) {
 			nmbm_set_block_state(ni, ba, BLOCK_ST_BAD);
 			goto next_block;
 		}
@@ -1856,11 +1925,9 @@ static bool nmbm_try_load_info_table(struct nmbm_instance *ni, uint32_t ba,
 		if (chunksize > ni->lower.erasesize)
 			chunksize = ni->lower.erasesize;
 
-		/* Assume block with ECC error has no info table data */
+		/* A read error invalidates this candidate but does not prove a bad block. */
 		ret = nmbn_read_data(ni, ba2addr(ni, ba), off, chunksize);
-		if (ret < 0)
-			goto skip_bad_block;
-		else if (ret > 0)
+		if (ret)
 			return false;
 
 		if (checkhdr) {
@@ -1876,10 +1943,6 @@ static bool nmbm_try_load_info_table(struct nmbm_instance *ni, uint32_t ba,
 		sizeremain -= chunksize;
 
 		goto next_block;
-
-	skip_bad_block:
-		/* Only mark bad in memory */
-		nmbm_set_block_state(ni, ba, BLOCK_ST_BAD);
 
 	next_block:
 		ba++;
@@ -2100,7 +2163,10 @@ static bool nmbm_load_existing(struct nmbm_instance *ni)
 		return false;
 
 	/* Fill block state table & mapping table */
-	nmbm_scan_badblocks(ni);
+	success = nmbm_scan_badblocks(ni);
+	if (!success)
+		return false;
+
 	nmbm_build_mapping_table(ni);
 
 	if (ni->lower.flags & NMBM_F_READ_ONLY) {
@@ -2127,11 +2193,11 @@ static bool nmbm_load_existing(struct nmbm_instance *ni)
  * Find a valid signature from a specific range in the lower NAND chip,
  * from bottom (highest address) to top (lowest address)
  *
- * Return true if found.
+ * Return 1 if found. 0 if not found, -ve if error occurs
  */
-static bool nmbm_find_signature(struct nmbm_instance *ni,
-				struct nmbm_signature *signature,
-				uint32_t *signature_ba)
+static int nmbm_find_signature(struct nmbm_instance *ni,
+			       struct nmbm_signature *signature,
+			       uint32_t *signature_ba)
 {
 	struct nmbm_signature sig;
 	uint64_t off, addr;
@@ -2146,13 +2212,17 @@ static bool nmbm_find_signature(struct nmbm_instance *ni,
 	if (ni->lower.max_reserved_blocks && block_count - limit > ni->lower.max_reserved_blocks)
 		limit = block_count - ni->lower.max_reserved_blocks;
 
-	while (ba >= limit) {
+	while (ba > limit) {
 		WATCHDOG_RESET();
 
 		ba--;
 		addr = ba2addr(ni, ba);
 
-		if (nmbm_check_bad_phys_block(ni, ba))
+		ret = nmbm_check_bad_phys_block(ni, ba);
+		if (ret < 0)
+			return ret;
+
+		if (ret)
 			continue;
 
 		/* Check every page.
@@ -2178,12 +2248,12 @@ static bool nmbm_find_signature(struct nmbm_instance *ni,
 				/* Found it */
 				memcpy(signature, &sig, sizeof(sig));
 				*signature_ba = ba;
-				return true;
+				return 1;
 			}
 		}
 	};
 
-	return false;
+	return 0;
 }
 
 /*
@@ -2359,6 +2429,7 @@ static void nmbm_init_structure(struct nmbm_instance *ni)
 int nmbm_attach(struct nmbm_lower_device *nld, struct nmbm_instance *ni)
 {
 	bool success;
+	int ret;
 
 	if (!nld || !ni)
 		return -EINVAL;
@@ -2375,8 +2446,11 @@ int nmbm_attach(struct nmbm_lower_device *nld, struct nmbm_instance *ni)
 	memcpy(&ni->lower, nld, sizeof(struct nmbm_lower_device));
 	nmbm_init_structure(ni);
 
-	success = nmbm_find_signature(ni, &ni->signature, &ni->signature_ba);
-	if (!success) {
+	ret = nmbm_find_signature(ni, &ni->signature, &ni->signature_ba);
+	if (ret < 0)
+		return ret;
+
+	if (!ret) {
 		if (!(nld->flags & NMBM_F_CREATE)) {
 			nlog_err(ni, "Signature not found\n");
 			return -ENODEV;
@@ -2445,6 +2519,7 @@ static int nmbm_erase_logic_block(struct nmbm_instance *ni, uint32_t block_addr)
 {
 	uint32_t pb;
 	bool success;
+	int ret;
 
 retry:
 	/* Map logic block to physical block */
@@ -2462,14 +2537,21 @@ retry:
 		goto remap_logic_block;
 
 	/* Insurance to detect unexpected bad block marked by user */
-	if (nmbm_check_bad_phys_block(ni, pb)) {
+	ret = nmbm_check_bad_phys_block(ni, pb);
+	if (ret < 0)
+		return ret;
+
+	if (ret) {
 		nlog_warn(ni, "Found unexpected bad block possibly marked by user\n");
 		nmbm_set_block_state(ni, pb, BLOCK_ST_BAD);
 		goto remap_logic_block;
 	}
 
-	success = nmbm_erase_block_and_check(ni, pb);
-	if (success)
+	ret = nmbm_erase_block_and_check(ni, pb);
+	if (ret < 0)
+		return ret;
+
+	if (!ret)
 		return 0;
 
 	/* Mark bad block */
@@ -2989,6 +3071,7 @@ int nmbm_check_bad_block(struct nmbm_instance *ni, uint64_t addr)
 int nmbm_mark_bad_block(struct nmbm_instance *ni, uint64_t addr)
 {
 	uint32_t lb, pb;
+	int ret;
 
 	if (!ni)
 		return -EINVAL;
@@ -3013,11 +3096,12 @@ int nmbm_mark_bad_block(struct nmbm_instance *ni, uint64_t addr)
 		return 0;
 
 	ni->block_mapping[lb] = -1;
-	nmbm_mark_phys_bad_block(ni, pb);
+	ni->block_mapping_changed++;
+	ret = nmbm_mark_phys_bad_block(ni, pb);
 	nmbm_set_block_state(ni, pb, BLOCK_ST_BAD);
 	nmbm_update_info_table(ni);
 
-	return 0;
+	return ret;
 }
 
 /*
