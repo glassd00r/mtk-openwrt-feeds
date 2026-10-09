@@ -2566,15 +2566,17 @@ int nmbm_attach(struct nmbm_lower_device *nld, struct nmbm_instance *ni)
  */
 int nmbm_detach(struct nmbm_instance *ni)
 {
+	bool success = true;
+
 	if (!ni)
 		return -EINVAL;
 
 	if (!(ni->lower.flags & NMBM_F_READ_ONLY))
-		nmbm_update_info_table(ni);
+		success = nmbm_update_info_table(ni);
 
 	nmbm_mark_block_color_normal(ni, 0, ni->block_count - 1);
 
-	return 0;
+	return success ? 0 : -EIO;
 }
 
 /*
@@ -2779,12 +2781,6 @@ int nmbm_read_single_page(struct nmbm_instance *ni, uint64_t addr, void *data,
 	if (!ni)
 		return -EINVAL;
 
-	/* Sanity check */
-	if (ni->protected) {
-		nlog_debug(ni, "Device is forced read-only\n");
-		return -EROFS;
-	}
-
 	if (addr >= ba2addr(ni, ni->data_block_count)) {
 		nlog_err(ni, "Address 0x%llx is invalid\n", addr);
 		return -EINVAL;
@@ -2816,12 +2812,6 @@ int nmbm_read_range(struct nmbm_instance *ni, uint64_t addr, size_t size,
 
 	if (!ni)
 		return -EINVAL;
-
-	/* Sanity check */
-	if (ni->protected) {
-		nlog_debug(ni, "Device is forced read-only\n");
-		return -EROFS;
-	}
 
 	end = ba2addr(ni, ni->data_block_count);
 
@@ -2981,7 +2971,7 @@ static int nmbm_panic_write_logic_page(struct nmbm_instance *ni, uint64_t addr,
 	 * Remap this block on erasing.
 	 */
 	nmbm_set_block_state(ni, pb, BLOCK_ST_NEED_REMAP);
-	nmbm_update_info_table(ni);
+	/* Normal metadata I/O is not safe from panic context. */
 
 	return -EIO;
 }
