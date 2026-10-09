@@ -1836,6 +1836,11 @@ static bool nmbm_check_info_table_header(struct nmbm_instance *ni, void *data)
 	if (ifthdr->header.size != ni->info_table_size)
 		return false;
 
+	if (ifthdr->state_table_off < sizeof(*ifthdr) ||
+	    ifthdr->state_table_off > ifthdr->mapping_table_off ||
+	    ifthdr->mapping_table_off > ni->info_table_size)
+		return false;
+
 	if (ifthdr->mapping_table_off - ifthdr->state_table_off < ni->state_table_size)
 		return false;
 
@@ -1864,6 +1869,11 @@ static bool nmbm_check_info_table(struct nmbm_instance *ni, uint32_t start_ba,
 	uint32_t ba;
 
 	for (ba = 0; ba < ni->data_block_count; ba++) {
+		if (block_mapping[ba] < -1 ||
+		    (block_mapping[ba] >= 0 &&
+		     (uint32_t)block_mapping[ba] >= ni->block_count))
+			return false;
+
 		if ((block_mapping[ba] >= ni->data_block_count && block_mapping[ba] < end_ba) ||
 		    block_mapping[ba] == ni->signature_ba)
 			return false;
@@ -1895,13 +1905,13 @@ static bool nmbm_check_info_table(struct nmbm_instance *ni, uint32_t start_ba,
  * @table_loaded: used to record whether ni->info_table has valid data
  */
 static bool nmbm_try_load_info_table(struct nmbm_instance *ni, uint32_t ba,
+				     uint32_t limit,
 				     uint32_t *eba, uint32_t *write_count,
 				     uint32_t *mapping_blocks_top_ba,
 				     bool table_loaded)
 {
 	struct nmbm_info_table_header *ifthdr = (void *)ni->info_table_cache;
 	uint8_t *off = ni->info_table_cache;
-	uint32_t limit = ba + size2blk(ni, ni->info_table_size);
 	uint32_t start_ba = 0, chunksize, sizeremain = ni->info_table_size;
 	bool success, checkhdr = true;
 	int ret;
@@ -1997,10 +2007,10 @@ static bool nmbm_search_info_table(struct nmbm_instance *ni, uint32_t ba,
 {
 	bool success;
 
-	while (ba < limit - size2blk(ni, ni->info_table_size)) {
+	while (ba < limit) {
 		WATCHDOG_RESET();
 
-		success = nmbm_try_load_info_table(ni, ba, table_end_ba,
+		success = nmbm_try_load_info_table(ni, ba, limit, table_end_ba,
 						   write_count,
 						   mapping_blocks_top_ba,
 						   table_loaded);
