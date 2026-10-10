@@ -1,0 +1,88 @@
+From 39a10b8aeda7f6a8fc38eadfc7649114c5d05022 Mon Sep 17 00:00:00 2001
+From: Weijie Gao <weijie.gao@mediatek.com>
+Date: Fri, 9 Oct 2026 16:25:39 +0800
+Subject: [PATCH] mtd: nand: nmbm: reject malformed info tables during load
+
+Reject invalid table offsets and out-of-range physical block mappings
+before accepting an information table. Pass the management-region limit
+to the loader so multi-block tables can span bad blocks without reading
+beyond the region or excluding the last valid candidate.
+
+Signed-off-by: Weijie Gao <weijie.gao@mediatek.com>
+---
+--- a/target/linux/generic/files/drivers/mtd/nand/mtk_bmt_nmbm.c
++++ b/target/linux/generic/files/drivers/mtd/nand/mtk_bmt_nmbm.c
+@@ -1749,6 +1749,11 @@ static bool nmbm_check_info_table_header
+ 	if (ifthdr->header.size != ni->info_table_size)
+ 		return false;
+ 
++	if (ifthdr->state_table_off < sizeof(*ifthdr) ||
++	    ifthdr->state_table_off > ifthdr->mapping_table_off ||
++	    ifthdr->mapping_table_off > ni->info_table_size)
++		return false;
++
+ 	if (ifthdr->mapping_table_off - ifthdr->state_table_off < ni->state_table_size)
+ 		return false;
+ 
+@@ -1776,8 +1781,13 @@ static bool nmbm_check_info_table(struct
+ 	uint32_t minimum_mapping_pb = ni->signature_ba;
+ 	uint32_t ba;
+ 
+-	for (ba = 0; ba < ni->data_block_count; ba++) {
+-		if ((block_mapping[ba] >= ni->data_block_count && block_mapping[ba] < end_ba) ||
++	for (ba = 0; ba < ni->signature.mgmt_start_pb; ba++) {
++		if (block_mapping[ba] < -1 ||
++		    (block_mapping[ba] >= 0 &&
++		     (uint32_t)block_mapping[ba] >= ni->block_count))
++			return false;
++
++		if ((block_mapping[ba] >= ni->signature.mgmt_start_pb && block_mapping[ba] < end_ba) ||
+ 		    block_mapping[ba] == ni->signature_ba)
+ 			return false;
+ 
+@@ -1802,19 +1812,20 @@ static bool nmbm_check_info_table(struct
+  * nmbm_try_load_info_table - Try to load info table from a address
+  * @ni: NMBM instance structure
+  * @ba: start block address of the info table
++ * @limit: highest block address allowed for loading (exclusive)
+  * @eba: return the block address after end of the table
+  * @write_count: return the write count of this table
+  * @mapping_blocks_top_ba: return the block address of top remapped block
+  * @table_loaded: used to record whether ni->info_table has valid data
+  */
+ static bool nmbm_try_load_info_table(struct nmbm_instance *ni, uint32_t ba,
++				     uint32_t limit,
+ 				     uint32_t *eba, uint32_t *write_count,
+ 				     uint32_t *mapping_blocks_top_ba,
+ 				     bool table_loaded)
+ {
+ 	struct nmbm_info_table_header *ifthdr = (void *)ni->info_table_cache;
+ 	uint8_t *off = ni->info_table_cache;
+-	uint32_t limit = ba + size2blk(ni, ni->info_table_size);
+ 	uint32_t start_ba = 0, chunksize, sizeremain = ni->info_table_size;
+ 	bool success, checkhdr = true;
+ 	int ret;
+@@ -1908,8 +1919,8 @@ static bool nmbm_search_info_table(struc
+ {
+ 	bool success;
+ 
+-	while (ba < limit - size2blk(ni, ni->info_table_size)) {
+-		success = nmbm_try_load_info_table(ni, ba, table_end_ba,
++	while (ba < limit) {
++		success = nmbm_try_load_info_table(ni, ba, limit, table_end_ba,
+ 						   write_count,
+ 						   mapping_blocks_top_ba,
+ 						   table_loaded);
+@@ -2287,6 +2298,12 @@ static int nmbm_attach(struct nmbm_insta
+ 		return -EINVAL;
+ 	}
+ 
++	if (!ni->signature.mgmt_start_pb ||
++	    ni->signature.mgmt_start_pb >= ni->signature_ba) {
++		nlog_err(ni, "NMBM management region is invalid\n");
++		return -EINVAL;
++	}
++
+ 	success = nmbm_load_existing(ni);
+ 	if (!success)
+ 		return -ENODEV;

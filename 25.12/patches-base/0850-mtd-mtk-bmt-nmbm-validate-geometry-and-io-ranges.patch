@@ -1,0 +1,125 @@
+From 575d9f265c69e03d19df6a37580bdc3771d27313 Mon Sep 17 00:00:00 2001
+From: Weijie Gao <weijie.gao@mediatek.com>
+Date: Fri, 9 Oct 2026 16:25:39 +0800
+Subject: [PATCH] mtd: nand: nmbm: validate core geometry and I/O ranges
+
+Validate the integrated BMT device geometry before allocating the NMBM
+instance. Use overflow-safe range checks in the local data helpers and
+64-bit shifts when recording and exposing NAND capacity.
+
+Signed-off-by: Weijie Gao <weijie.gao@mediatek.com>
+---
+--- a/target/linux/generic/files/drivers/mtd/nand/mtk_bmt_nmbm.c
++++ b/target/linux/generic/files/drivers/mtd/nand/mtk_bmt_nmbm.c
+@@ -831,11 +831,14 @@ static bool nmbm_write_signature(struct
+ static int nmbn_read_data(struct nmbm_instance *ni, uint64_t addr, void *data,
+ 			  uint32_t size)
+ {
+-	uint64_t off = addr;
++	uint64_t end = ba2addr(ni, ni->block_count), off = addr;
+ 	uint8_t *ptr = data;
+ 	uint32_t sizeremain = size, chunksize, leading;
+ 	int ret;
+ 
++	if (addr >= end || size > end - addr)
++		return -EINVAL;
++
+ 	while (sizeremain) {
+ 		leading = off & (bmtd.pg_size - 1);
+ 		chunksize = bmtd.pg_size - leading;
+@@ -876,12 +879,15 @@ static int nmbn_read_data(struct nmbm_in
+ static bool nmbn_write_verify_data(struct nmbm_instance *ni, uint64_t addr,
+ 				   const void *data, uint32_t size)
+ {
+-	uint64_t off = addr;
++	uint64_t end = ba2addr(ni, ni->block_count), off = addr;
+ 	const uint8_t *ptr = data;
+ 	uint32_t sizeremain = size, chunksize, leading;
+ 	bool success;
+ 	int ret;
+ 
++	if (addr >= end || size > end - addr)
++		return false;
++
+ 	while (sizeremain) {
+ 		leading = off & (bmtd.pg_size - 1);
+ 		chunksize = bmtd.pg_size - leading;
+@@ -1644,7 +1650,7 @@ static bool nmbm_create_new(struct nmbm_
+ 	ni->signature.header.magic = NMBM_MAGIC_SIGNATURE;
+ 	ni->signature.header.version = NMBM_VER;
+ 	ni->signature.header.size = sizeof(ni->signature);
+-	ni->signature.nand_size = bmtd.total_blks << bmtd.blk_shift;
++	ni->signature.nand_size = (uint64_t)bmtd.total_blks << bmtd.blk_shift;
+ 	ni->signature.block_size = bmtd.blk_size;
+ 	ni->signature.page_size = bmtd.pg_size;
+ 	ni->signature.spare_size = bmtd.mtd->oobsize;
+@@ -2083,6 +2089,17 @@ static size_t nmbm_calc_structure_size(v
+ 	uint32_t state_table_size, mapping_table_size, info_table_size;
+ 	uint32_t block_count;
+ 
++	if (!bmtd.mtd || !bmtd.mtd->size || !bmtd.blk_size ||
++	    !bmtd.pg_size || !bmtd.mtd->oobsize || !bmtd.total_blks ||
++	    !is_power_of_2(bmtd.blk_size) ||
++	    !is_power_of_2(bmtd.pg_size) || bmtd.pg_size > bmtd.blk_size ||
++	    bmtd.blk_shift != ilog2(bmtd.blk_size) ||
++	    bmtd.pg_shift != ilog2(bmtd.pg_size) ||
++	    bmtd.blk_size != bmtd.mtd->erasesize ||
++	    bmtd.pg_size != bmtd.mtd->writesize ||
++	    ((uint64_t)bmtd.total_blks << bmtd.blk_shift) != bmtd.mtd->size)
++		return 0;
++
+ 	block_count = bmtd.total_blks;
+ 
+ 	/* Calculate info table size */
+@@ -2090,7 +2107,7 @@ static size_t nmbm_calc_structure_size(v
+ 		NMBM_BITMAP_BLOCKS_PER_UNIT) * NMBM_BITMAP_UNIT_SIZE;
+ 	mapping_table_size = block_count * sizeof(int32_t);
+ 
+-	info_table_size = ALIGN(sizeof(struct nmbm_info_table_header),
++	info_table_size = ALIGN((uint32_t)sizeof(struct nmbm_info_table_header),
+ 				     bmtd.pg_size);
+ 	info_table_size += ALIGN(state_table_size, bmtd.pg_size);
+ 	info_table_size += ALIGN(mapping_table_size, bmtd.pg_size);
+@@ -2123,7 +2140,7 @@ static void nmbm_init_structure(struct n
+ 		NMBM_BITMAP_BLOCKS_PER_UNIT) * NMBM_BITMAP_UNIT_SIZE;
+ 	ni->mapping_table_size = ni->block_count * sizeof(*ni->block_mapping);
+ 
+-	ni->info_table_size = ALIGN(sizeof(ni->info_table),
++	ni->info_table_size = ALIGN((uint32_t)sizeof(ni->info_table),
+ 					 bmtd.pg_size);
+ 	ni->info_table.state_table_off = ni->info_table_size;
+ 
+@@ -2197,7 +2214,7 @@ static int nmbm_attach(struct nmbm_insta
+ 		return -EINVAL;
+ 	}
+ 
+-	if (ni->signature.nand_size != bmtd.total_blks << bmtd.blk_shift ||
++	if (ni->signature.nand_size != (uint64_t)bmtd.total_blks << bmtd.blk_shift ||
+ 	    ni->signature.block_size != bmtd.blk_size ||
+ 	    ni->signature.page_size != bmtd.pg_size ||
+ 	    ni->signature.spare_size != bmtd.mtd->oobsize) {
+@@ -2246,9 +2263,14 @@ static int get_mapping_block_index_nmbm(
+ static int mtk_bmt_init_nmbm(struct device_node *np)
+ {
+ 	struct nmbm_instance *ni;
++	size_t structure_size;
+ 	int ret;
+ 
+-	ni = kzalloc(nmbm_calc_structure_size(), GFP_KERNEL);
++	structure_size = nmbm_calc_structure_size();
++	if (!structure_size)
++		return -EINVAL;
++
++	ni = kzalloc(structure_size, GFP_KERNEL);
+ 	if (!ni)
+ 		return -ENOMEM;
+ 
+@@ -2268,7 +2290,7 @@ static int mtk_bmt_init_nmbm(struct devi
+ 	if (ret)
+ 		goto out;
+ 
+-	bmtd.mtd->size = ni->data_block_count << bmtd.blk_shift;
++	bmtd.mtd->size = ba2addr(ni, ni->data_block_count);
+ 
+ 	return 0;
+ 

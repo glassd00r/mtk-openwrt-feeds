@@ -1,0 +1,73 @@
+From 84b5a4d2a224361addffe9e8528a443c268cc9fa Mon Sep 17 00:00:00 2001
+From: Weijie Gao <weijie.gao@mediatek.com>
+Date: Fri, 9 Oct 2026 15:09:02 +0800
+Subject: [PATCH] mtd: nand: nmbm: keep degraded devices readable
+
+Keep logical-to-physical lookup available when metadata recovery forces
+the device read-only. Clear MTD_WRITEABLE when entering degraded mode
+and reject remap and unmap operations so reads cannot mutate metadata.
+
+The integrated BMT driver has no NMBM detach or panic-write entry points;
+the corresponding standalone-core changes have no local counterpart.
+
+Signed-off-by: Weijie Gao <weijie.gao@mediatek.com>
+---
+--- a/target/linux/generic/files/drivers/mtd/nand/mtk_bmt_nmbm.c
++++ b/target/linux/generic/files/drivers/mtd/nand/mtk_bmt_nmbm.c
+@@ -1177,6 +1177,7 @@ static bool nmbm_rebuild_info_table(stru
+ 		nlog_err(ni, "Unable to write at least one info table!\n");
+ 		nlog_err(ni, "Please save your data before power off!\n");
+ 		ni->protected = 1;
++		bmtd.mtd->flags &= ~MTD_WRITEABLE;
+ 		return false;
+ 	}
+ 
+@@ -1644,6 +1645,7 @@ static bool nmbm_update_info_table(struc
+ 
+ 			nlog_err(ni, "Failed to update info table\n");
+ 			ni->protected = 1;
++			bmtd.mtd->flags &= ~MTD_WRITEABLE;
+ 			return false;
+ 		}
+ 	}
+@@ -2099,9 +2101,11 @@ static bool nmbm_load_info_table(struct
+ 	if (ni->mapping_blocks_top_ba <= ni->mapping_blocks_ba) {
+ 		nlog_warn(ni, "No spare unmapped blocks. Device is now read-only\n");
+ 		ni->protected = 1;
++		bmtd.mtd->flags &= ~MTD_WRITEABLE;
+ 	} else if (!success) {
+ 		nlog_warn(ni, "Only one info table found. Device is now read-only\n");
+ 		ni->protected = 1;
++		bmtd.mtd->flags &= ~MTD_WRITEABLE;
+ 	}
+ 
+ 	return true;
+@@ -2388,6 +2392,9 @@ static bool remap_block_nmbm(u16 block,
+ 	int32_t old_mapping;
+ 	int new_block, ret;
+ 
++	if (ni->protected)
++		return false;
++
+ 	if (block >= ni->data_block_count || mapped_block >= ni->block_count ||
+ 	    copy_len < 0 || copy_len > bmtd.blk_size)
+ 		return false;
+@@ -2506,7 +2513,7 @@ static void unmap_block_nmbm(u16 block)
+ 	int start, offset;
+ 	int new_block;
+ 
+-	if (block >= ni->data_block_count)
++	if (ni->protected || block >= ni->data_block_count)
+ 		return;
+ 
+ 	start = block;
+@@ -2539,7 +2546,8 @@ static void unmap_block_nmbm(u16 block)
+ 
+ 	ni->mapping_blocks_top_ba = new_block;
+ 
+-	nmbm_update_info_table(ni);
++	if (!nmbm_update_info_table(ni))
++		nlog_err(ni, "Failed to persist unmapped block mapping\n");
+ }
+ 
+ const struct mtk_bmt_ops mtk_bmt_nmbm_ops = {

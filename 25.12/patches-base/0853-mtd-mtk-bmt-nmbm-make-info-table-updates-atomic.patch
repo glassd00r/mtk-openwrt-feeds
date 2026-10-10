@@ -1,0 +1,381 @@
+From 58cef85d9d92e444e515b7505d7ac8c106bb915b Mon Sep 17 00:00:00 2001
+From: Weijie Gao <weijie.gao@mediatek.com>
+Date: Fri, 9 Oct 2026 16:25:40 +0800
+Subject: [PATCH] mtd: nand: nmbm: make info table updates atomic under media failures
+
+Track the changes included in each table-cache snapshot, preserve the
+last valid table during recovery and stop retries after consecutive
+media failures. Correct spare-block allocation and persist repairs
+after loading interrupted updates.
+
+Adapt the logical-erase transaction to the BMT remap callback: check
+erase, copy and metadata results, and restore the original mapping
+when its replacement cannot be committed.
+
+Signed-off-by: Weijie Gao <weijie.gao@mediatek.com>
+---
+--- a/target/linux/generic/files/drivers/mtd/nand/mtk_bmt_nmbm.c
++++ b/target/linux/generic/files/drivers/mtd/nand/mtk_bmt_nmbm.c
+@@ -83,20 +83,24 @@ struct nmbm_instance {
+ 
+ 	u8 *info_table_cache;
+ 	u32 info_table_size;
++	u32 info_table_committed_write_count;
+ 	u32 info_table_spare_blocks;
+ 	struct nmbm_info_table_header info_table;
+ 
+ 	u32 *block_state;
+ 	u32 block_state_changed;
++	u32 block_state_cached;
+ 	u32 state_table_size;
+ 
+ 	int32_t *block_mapping;
+ 	u32 block_mapping_changed;
++	u32 block_mapping_cached;
+ 	u32 mapping_table_size;
+ 
+ 	u8 *page_cache;
+ 
+ 	int protected;
++	bool info_table_update_aborted;
+ 
+ 	u32 block_count;
+ 	u32 data_block_count;
+@@ -1025,6 +1029,7 @@ static bool nmbm_write_mgmt_range(struct
+ 		if (++consecutive_failures >= NMBM_MAX_CONSECUTIVE_FAILURES) {
+ 			nlog_err(ni, "Stopping info-table write after %u consecutive failures\n",
+ 				 consecutive_failures);
++			ni->info_table_update_aborted = true;
+ 			return false;
+ 		}
+ 
+@@ -1050,6 +1055,9 @@ static bool nmbm_generate_info_table_cac
+ {
+ 	bool changed = false;
+ 
++	ni->block_state_cached = ni->block_state_changed;
++	ni->block_mapping_cached = ni->block_mapping_changed;
++
+ 	memset(ni->info_table_cache, 0xff, ni->info_table_size);
+ 
+ 	memcpy(ni->info_table_cache + ni->info_table.state_table_off,
+@@ -1099,8 +1107,20 @@ static bool nmbm_write_info_table(struct
+  */
+ static void nmbm_mark_tables_clean(struct nmbm_instance *ni)
+ {
+-	ni->block_state_changed = 0;
+-	ni->block_mapping_changed = 0;
++	ni->info_table_committed_write_count = ni->info_table.write_count;
++
++	if (ni->block_state_changed >= ni->block_state_cached)
++		ni->block_state_changed -= ni->block_state_cached;
++	else
++		ni->block_state_changed = 0;
++
++	if (ni->block_mapping_changed >= ni->block_mapping_cached)
++		ni->block_mapping_changed -= ni->block_mapping_cached;
++	else
++		ni->block_mapping_changed = 0;
++
++	ni->block_state_cached = 0;
++	ni->block_mapping_cached = 0;
+ }
+ 
+ /*
+@@ -1242,6 +1262,9 @@ static bool nmbm_rescue_single_info_tabl
+ 		return true;
+ 	}
+ 
++	if (ni->info_table_update_aborted)
++		return false;
++
+ 	/* Try to reserve spare blocks for existing table */
+ 	success = nmbm_try_reserve_blocks(ni, ni->mapping_blocks_ba, &write_ba,
+ 					  ni->info_table_spare_blocks, 0,
+@@ -1261,6 +1284,9 @@ static bool nmbm_rescue_single_info_tabl
+ 		if (success)
+ 			break;
+ 
++		if (ni->info_table_update_aborted)
++			return false;
++
+ 		write_ba--;
+ 	}
+ 
+@@ -1320,6 +1346,9 @@ static bool nmbm_update_single_info_tabl
+ 		return true;
+ 	}
+ 
++	if (ni->info_table_update_aborted)
++		return false;
++
+ 	if (update_main_table) {
+ 		/*
+ 		 * If failed to update main table, make backup table the new
+@@ -1376,6 +1405,9 @@ static bool nmbm_rescue_main_info_table(
+ 		if (success)
+ 			break;
+ 
++		if (ni->info_table_update_aborted)
++			return false;
++
+ 		write_ba--;
+ 	}
+ 
+@@ -1400,6 +1432,9 @@ static bool nmbm_rescue_main_info_table(
+ 					&main_table_start_ba,
+ 					&main_table_end_ba);
+ 	if (!success) {
++		if (ni->info_table_update_aborted)
++			return false;
++
+ 		/* Temporary info table becomes the main table */
+ 		ni->main_table_ba = tmp_table_start_ba;
+ 		ni->backup_table_ba = 0;
+@@ -1455,6 +1490,9 @@ static bool nmbm_rescue_main_info_table(
+ 		if (success)
+ 			break;
+ 
++		if (ni->info_table_update_aborted)
++			return false;
++
+ 		write_ba--;
+ 	}
+ 
+@@ -1497,10 +1535,12 @@ static bool nmbm_update_info_table_once(
+ 	if (!nmbm_generate_info_table_cache(ni) && !force)
+ 		return true;
+ 
+-	/* Check whether both two tables exist */
++	/* Never erase the only valid table in place. */
+ 	if (!ni->backup_table_ba) {
+-		main_table_limit = ni->mapping_blocks_top_ba;
+-		goto write_main_table;
++		if (!ni->main_table_ba)
++			goto rebuild_tables;
++
++		return nmbm_rescue_single_info_table(ni);
+ 	}
+ 
+ 	/*
+@@ -1514,15 +1554,17 @@ static bool nmbm_update_info_table_once(
+ 					ni->mapping_blocks_top_ba,
+ 					&table_start_ba, &table_end_ba);
+ 	if (!success) {
++		if (ni->info_table_update_aborted)
++			return false;
++
+ 		/*
+-		 * There is nothing to do if failed to write backup table.
+-		 * Write the main table now.
++		 * The old main table is still valid. Do not overwrite it after
++		 * losing the backup; create a replacement copy elsewhere.
+ 		 */
+ 		nlog_err(ni, "No room for backup table\n");
+ 		ni->mapping_blocks_ba = ni->backup_table_ba;
+ 		ni->backup_table_ba = 0;
+-		main_table_limit = ni->mapping_blocks_top_ba;
+-		goto write_main_table;
++		return nmbm_rescue_single_info_table(ni);
+ 	}
+ 
+ 	/* Backup table is successfully written, record its offset */
+@@ -1538,7 +1580,6 @@ static bool nmbm_update_info_table_once(
+ 
+ 	nlog_table_update(ni, false, table_start_ba, table_end_ba);
+ 
+-write_main_table:
+ 	if (!ni->main_table_ba)
+ 		goto rebuild_tables;
+ 
+@@ -1547,6 +1588,9 @@ write_main_table:
+ 					main_table_limit, &table_start_ba,
+ 					&table_end_ba);
+ 	if (!success) {
++		if (ni->info_table_update_aborted)
++			return false;
++
+ 		/* If failed to write main table, go rescue procedure */
+ 		if (!ni->backup_table_ba)
+ 			goto rebuild_tables;
+@@ -1585,12 +1629,21 @@ static bool nmbm_update_info_table(struc
+ 	bool success;
+ 
+ 	if (ni->protected)
+-		return true;
++		return false;
++
++	ni->info_table_update_aborted = false;
+ 
+ 	while (ni->block_state_changed || ni->block_mapping_changed) {
+ 		success = nmbm_update_info_table_once(ni, false);
+ 		if (!success) {
++			if (ni->info_table_update_aborted) {
++				/* Keep the last committed table usable after a burst failure. */
++				nlog_err(ni, "Info table update aborted after consecutive erase failures\n");
++				return false;
++			}
++
+ 			nlog_err(ni, "Failed to update info table\n");
++			ni->protected = 1;
+ 			return false;
+ 		}
+ 	}
+@@ -1608,7 +1661,7 @@ static bool nmbm_map_block(struct nmbm_i
+ 	uint32_t pb;
+ 	bool success;
+ 
+-	if (ni->mapping_blocks_ba == ni->mapping_blocks_top_ba) {
++	if (ni->mapping_blocks_top_ba <= ni->mapping_blocks_ba) {
+ 		nlog_warn(ni, "No spare unmapped blocks.\n");
+ 		return false;
+ 	}
+@@ -1617,13 +1670,13 @@ static bool nmbm_map_block(struct nmbm_i
+ 				  ni->mapping_blocks_ba);
+ 	if (!success) {
+ 		nlog_warn(ni, "No spare unmapped blocks.\n");
+-		nmbm_update_info_table(ni);
+ 		ni->mapping_blocks_top_ba = ni->mapping_blocks_ba;
++		nmbm_update_info_table(ni);
+ 		return false;
+ 	}
+ 
+ 	ni->block_mapping[lb] = pb;
+-	ni->mapping_blocks_top_ba--;
++	ni->mapping_blocks_top_ba = pb - 1;
+ 	ni->block_mapping_changed++;
+ 
+ 	nlog_info(ni, "Logic block %u mapped to physical block %u\n", lb, pb);
+@@ -1947,7 +2000,7 @@ static bool nmbm_load_info_table(struct
+ 	uint32_t main_table_end_ba, backup_table_end_ba, table_end_ba;
+ 	uint32_t main_mapping_blocks_top_ba, backup_mapping_blocks_top_ba;
+ 	uint32_t main_table_write_count, backup_table_write_count;
+-	uint32_t i;
++	uint32_t i, spare_ba;
+ 	bool success;
+ 
+ 	/* Set initial value */
+@@ -1986,7 +2039,7 @@ static bool nmbm_load_info_table(struct
+ 
+ 	/* Pick mapping_blocks_top_ba */
+ 	if (!ni->backup_table_ba) {
+-		ni->mapping_blocks_top_ba= main_mapping_blocks_top_ba;
++		ni->mapping_blocks_top_ba = main_mapping_blocks_top_ba;
+ 	} else {
+ 		if (main_table_write_count >= backup_table_write_count)
+ 			ni->mapping_blocks_top_ba = main_mapping_blocks_top_ba;
+@@ -1996,6 +2049,13 @@ static bool nmbm_load_info_table(struct
+ 
+ 	/* Set final mapping_blocks_ba */
+ 	ni->mapping_blocks_ba = table_end_ba;
++	if (ni->mapping_blocks_top_ba > ni->mapping_blocks_ba) {
++		if (nmbm_block_walk(ni, false, ni->mapping_blocks_top_ba,
++				    &spare_ba, 0, ni->mapping_blocks_ba))
++			ni->mapping_blocks_top_ba = spare_ba;
++		else
++			ni->mapping_blocks_top_ba = ni->mapping_blocks_ba;
++	}
+ 
+ 	/* Set final data_block_count */
+ 	for (i = ni->signature.mgmt_start_pb; i > 0; i--) {
+@@ -2005,6 +2065,8 @@ static bool nmbm_load_info_table(struct
+ 		}
+ 	}
+ 
++	ni->info_table_committed_write_count = ni->info_table.write_count;
++
+ 	/* Regenerate the info table cache from the final selected info table */
+ 	nmbm_generate_info_table_cache(ni);
+ 
+@@ -2025,11 +2087,16 @@ static bool nmbm_load_info_table(struct
+ 		success = true;
+ 	}
+ 
++	/* Persist bad blocks discovered while repairing an interrupted update. */
++	if (success &&
++	    (ni->block_state_changed || ni->block_mapping_changed))
++		success = nmbm_update_info_table(ni);
++
+ 	/*
+ 	 * If there is no spare unmapped blocks, or still only one table
+ 	 * exists, set the chip to read-only
+ 	 */
+-	if (ni->mapping_blocks_ba == ni->mapping_blocks_top_ba) {
++	if (ni->mapping_blocks_top_ba <= ni->mapping_blocks_ba) {
+ 		nlog_warn(ni, "No spare unmapped blocks. Device is now read-only\n");
+ 		ni->protected = 1;
+ 	} else if (!success) {
+@@ -2242,10 +2309,12 @@ static void nmbm_init_structure(struct n
+ 
+ 	/* Initialize block state table */
+ 	ni->block_state_changed = 0;
++	ni->block_state_cached = 0;
+ 	memset(ni->block_state, 0xff, ni->state_table_size);
+ 
+ 	/* Initialize block mapping table */
+ 	ni->block_mapping_changed = 0;
++	ni->block_mapping_cached = 0;
+ }
+ 
+ /*
+@@ -2314,22 +2383,52 @@ static int nmbm_attach(struct nmbm_insta
+ static bool remap_block_nmbm(u16 block, u16 mapped_block, int copy_len)
+ {
+ 	struct nmbm_instance *ni = bmtd.ni;
+-	int new_block;
+-
+-	if (block >= ni->data_block_count)
++	uint32_t old_mapping_blocks_top_ba, old_mapping_changed;
++	uint32_t old_committed_write_count;
++	int32_t old_mapping;
++	int new_block, ret;
++
++	if (block >= ni->data_block_count || mapped_block >= ni->block_count ||
++	    copy_len < 0 || copy_len > bmtd.blk_size)
+ 		return false;
+ 
+-	nmbm_set_block_state(ni, mapped_block, BLOCK_ST_BAD);
++	old_mapping = ni->block_mapping[block];
++	old_mapping_blocks_top_ba = ni->mapping_blocks_top_ba;
++	old_mapping_changed = ni->block_mapping_changed;
++	old_committed_write_count = ni->info_table_committed_write_count;
++
+ 	if (!nmbm_map_block(ni, block))
+ 		return false;
+ 
+ 	new_block = ni->block_mapping[block];
+-	bbt_nand_erase(new_block);
+-    if (copy_len > 0)
+-		bbt_nand_copy(new_block, mapped_block, copy_len);
+-	nmbm_update_info_table(ni);
++	ret = nmbm_erase_block_and_check(ni, new_block);
++	if (ret) {
++		if (ret > 0) {
++			nmbm_mark_phys_bad_block(ni, new_block);
++			nmbm_set_block_state(ni, new_block, BLOCK_ST_BAD);
++		}
++		goto restore_mapping;
++	}
++
++	if (copy_len > 0 && bbt_nand_copy(new_block, mapped_block, copy_len))
++		goto restore_mapping;
++
++	nmbm_set_block_state(ni, mapped_block, BLOCK_ST_BAD);
++	if (!nmbm_update_info_table(ni)) {
++		/* A table copy already committed the replacement mapping. */
++		if (ni->info_table_committed_write_count != old_committed_write_count)
++			return false;
++		goto restore_mapping;
++	}
+ 
+ 	return true;
++
++restore_mapping:
++	/* Keep the old mapping readable until its replacement is committed. */
++	ni->block_mapping[block] = old_mapping;
++	ni->mapping_blocks_top_ba = old_mapping_blocks_top_ba;
++	ni->block_mapping_changed = old_mapping_changed;
++	return false;
+ }
+ 
+ static int get_mapping_block_index_nmbm(int block)
